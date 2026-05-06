@@ -255,6 +255,23 @@ void AOblivioCharacter::Interact()
 	}
 }
 
+void AOblivioCharacter::TogglePause()
+{
+	//UI 띄우는 로직 연동
+	UE_LOG(LogTemp, Warning, TEXT("Pause Menu Toggled!"));
+
+	// 만약 직접 엔진 일시정지 제어 시
+	/*
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	if (PC)
+	{
+		bool bIsPaused = UGameplayStatics::IsGamePaused(GetWorld());
+		UGameplayStatics::SetGamePaused(GetWorld(), !bIsPaused);
+		PC->SetShowMouseCursor(!bIsPaused);
+	}
+	*/
+}
+
 //=====================
 //무기 장비
 //======================

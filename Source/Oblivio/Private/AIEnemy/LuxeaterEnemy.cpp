@@ -14,7 +14,7 @@ ALuxeaterEnemy::ALuxeaterEnemy()
 	AttackCooldown = 1.2f;
 	ChaseAcceptanceRadius = 65.0f;
 	ChaseProximityBuffer = 45.0f;
-	AggroRadius = 0.0f;
+	// AggroRadius 는 BP/레벨에서 지정한 값 사용. 0이면 무한 추격(베이스 규칙).
 	bAggroUseHorizontalDistance = true;
 	bEnableIdleWander = false;
 	bEnableLightTracking = false;
@@ -26,10 +26,8 @@ void ALuxeaterEnemy::BeginPlay()
 	BaseChaseMoveSpeed = ChaseMoveSpeed > KINDA_SMALL_NUMBER ? ChaseMoveSpeed : MoveSpeed;
 	InitialScale = GetActorScale3D();
 
-	AggroRadius = 0.0f;
-	bEnableIdleWander = false;
-	bEnableLightTracking = false;
-
+	// AggroRadius / bEnableIdleWander / bEnableLightTracking 는 BP 값 존중.
+	// 무한 추격을 원하면 BP에서 AggroRadius 를 0 으로 둘 것.
 	Super::BeginPlay();
 }
 
@@ -70,6 +68,22 @@ void ALuxeaterEnemy::NotifyBossHealthChanged(float NewCurrentHealth, float NewMa
 void ALuxeaterEnemy::NotifyEnemyDamageApplied(float /*AppliedDamage*/)
 {
 	UpdateHealthPhase();
+}
+
+bool ALuxeaterEnemy::HasValidAggroTarget() const
+{
+	// 한 번 어그로 잡힌 뒤엔 거리 무시. 단 타겟이 사라졌거나 죽으면 풀린다.
+	if (bStickyAggroOnceTriggered && bAggroLatched)
+	{
+		return IsValid(TargetActor);
+	}
+
+	const bool bInRange = Super::HasValidAggroTarget();
+	if (bInRange && bStickyAggroOnceTriggered)
+	{
+		bAggroLatched = true;
+	}
+	return bInRange;
 }
 
 void ALuxeaterEnemy::UpdateChase()

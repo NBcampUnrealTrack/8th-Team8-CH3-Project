@@ -1,4 +1,5 @@
 ﻿#include "AIEnemy/EnemySpawner.h"
+#include "AIEnemy/CrawlingFleshMassEnemy.h"
 #include "OblivioGameInstance.h"
 #include "EngineUtils.h"
 #include "Engine/World.h"
@@ -159,6 +160,10 @@ void AEnemySpawner::SpawnNextEnemy()
 	{
 		SpawnedEnemy->OnEnemyDied.AddDynamic(this, &AEnemySpawner::HandleEnemyDied);
 		ActiveEnemies.Add(SpawnedEnemy);
+		if (ACrawlingFleshMassEnemy* Crawler = Cast<ACrawlingFleshMassEnemy>(SpawnedEnemy))
+		{
+			Crawler->InitializeSwarmMembership(this);
+		}
 	}
 	else
 	{
@@ -168,10 +173,12 @@ void AEnemySpawner::SpawnNextEnemy()
 
 	if (!PendingSpawns.IsEmpty())
 	{
-		GetWorldTimerManager().SetTimer(SpawnTimerHandle, this, &AEnemySpawner::SpawnNextEnemy, PendingSpawn.SpawnInterval, false);
+		const float NextDelay = FMath::Max(PendingSpawn.SpawnInterval, KINDA_SMALL_NUMBER);
+		GetWorldTimerManager().SetTimer(SpawnTimerHandle, this, &AEnemySpawner::SpawnNextEnemy, NextDelay, false);
 	}
 	else
 	{
+		OnWaveSpawnQueueEmptied.Broadcast(CurrentWaveIndex, this);
 		CheckWaveCompleted();
 	}
 }

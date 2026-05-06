@@ -229,17 +229,17 @@ void ULightAttackComponent::CreateLightAttack(FVector SourceLocation, FVector Li
 
                 float FinalDamage = 0.f;
 
-                if (Distance <= MaxDamageDistance)
-                {
-                    FinalDamage = Damage;
-                }
-                else
-                {
-                    float AttenuationRatio = 1.f - FMath::Clamp((Distance - MaxDamageDistance) / (LightDistance - MaxDamageDistance), 0.f, 1.f);
-                    FinalDamage = Damage * AttenuationRatio * DamageAttenuationRate;
-                }
+				if (Distance <= MaxDamageDistance)
+				{
+					FinalDamage = Damage;
+				}
+				else
+				{
+					float AttenuationRatio = 1.f - FMath::Clamp((Distance - MaxDamageDistance) / (LightDistance - MaxDamageDistance), 0.f, 1.f);
+					FinalDamage = Damage * AttenuationRatio * DamageAttenuationRate;
+				}
 
-                UGameplayStatics::ApplyDamage(Target, FinalDamage, nullptr, GetOwner(), nullptr);
+				UGameplayStatics::ApplyDamage(Target, FinalDamage, nullptr, GetOwner(), nullptr);
                 UE_LOG(LogTemp, Warning, TEXT("Applying %f damage to the actor %s!"), FinalDamage, *Target->GetName());
                 //하나 성공시 추가 라인트레이스 불필요.
                 break;

@@ -47,11 +47,16 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void UpdateChase() override;
 	virtual void UpdateAttack() override;
+	virtual bool HasValidAggroTarget() const override;
 
 	void ApplyLightEmpowerment();
 	void UpdateHealthPhase();
 
 	virtual void NotifyEnemyDamageApplied(float AppliedDamage) override;
+
+	/** true면 한 번 어그로 반경에 들어온 뒤 거리 무시하고 영구 추격(보스 기본 동작). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Luxeater|Aggro")
+	bool bStickyAggroOnceTriggered = true;
 
 	/** 빛 흡수 누적량 1당 증가하는 이동속도(cm/s). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Luxeater|Light", meta = (ClampMin = "0.0"))
@@ -79,4 +84,7 @@ private:
 	FVector InitialScale = FVector::OneVector;
 	float AbsorbedLight = 0.0f;
 	int32 BossPhase = 1;
+
+	/** 플레이어가 한 번이라도 AggroRadius 안에 들어왔는지(이후엔 거리 무시). bStickyAggroOnceTriggered 와 함께 사용. */
+	mutable bool bAggroLatched = false;
 };
