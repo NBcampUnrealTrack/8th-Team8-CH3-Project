@@ -6,6 +6,7 @@
 #include "Items/OblivioItemBase.h"
 #include "OblivioComponents/SoundPropagationComponent.h"
 #include "OblivioComponents/PlayerCombatComponent.h"
+#include "Items/OblivioInventoryComponent.h"
 
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -47,6 +48,8 @@ AOblivioCharacter::AOblivioCharacter()
 
 	GetCharacterMovement()->bOrientRotationToMovement = false;
 	bUseControllerRotationYaw = false;
+
+	InventoryComponent = CreateDefaultSubobject<UOblivioInventoryComponent>(TEXT("InventoryComponent"));
 
 	WheelControlMultiplier = 3.f;
 }
@@ -178,9 +181,30 @@ void AOblivioCharacter::Interact()
 		//추가: 열쇠/유품 획득 시 정보 저장
 		AActor* HitActor = HitResult.GetActor();
 		UE_LOG(LogTemp, Warning, TEXT("1. Hit Something: %s"), *HitActor->GetName());
+
+		if (CurrentNearbyItem)
+		{
+			// 기존에 작성했던 습득 로직 실행 (인벤토리 추가 등)
+			UE_LOG(LogTemp, Warning, TEXT("Picking up Overlapped Item: %s"), *CurrentNearbyItem->ItemName.ToString());
+
+			//if (InventoryComponent && InventoryComponent->AddItem(CurrentNearbyItem))
+			CurrentNearbyItem->Destroy();
+			SetNearbyItem(nullptr); // 습득 후 정보 초기화
+			return;
+		}
+
+		if (AOblivioItemBase* PickedItem = Cast<AOblivioItemBase>(HitActor))
+		{
+			if (InventoryComponent && InventoryComponent->AddItem(PickedItem))
+			{
+				PickedItem->Destroy();
+				UE_LOG(LogTemp, Warning, TEXT("3. Item Destroyed!"));
+				return;
+			}
+		}
+
 		AOblivioGameMode* GM = Cast<AOblivioGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
 		if (!GM) return;
-
 		AOblivioItemBase* PickedItem = Cast<AOblivioItemBase>(HitActor);
 		if (PickedItem)
 		{
@@ -230,6 +254,13 @@ void AOblivioCharacter::Interact()
 		}
 		//----
 	}
+}
+
+void AOblivioCharacter::SetNearbyItem(AOblivioItemBase* Item)
+{
+	CurrentNearbyItem = Item;
+	// UI 바인딩 필요 press e
+	OnNearbyItemChanged.Broadcast(CurrentNearbyItem);
 }
 
 void AOblivioCharacter::TogglePause()

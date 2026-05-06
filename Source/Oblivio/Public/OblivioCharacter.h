@@ -8,8 +8,10 @@
 
 // 피격 판정용 델리게이트
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FPlayerDamagedSignature, float, DamageAmount, float, CurrentHealth, float, MaxHealth);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnNearbyItemChanged, class AOblivioItemBase*, NearbyItem);
 
 class UOblivioCrafting;
+class UOblivioInventoryComponent;
 class AWeaponBase;
 class AThrowableWeapon;
 class USoundPropagationComponent;
@@ -51,6 +53,9 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components|Combat")
 	TObjectPtr<UPlayerCombatComponent> CombatComp;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components|Inventory")
+	TObjectPtr<UOblivioInventoryComponent> InventoryComponent;
 
 	//===================================
 	//Survival & Status (생존 및 상태)
@@ -131,6 +136,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
 	float InteractionDistance = 200.0f;
 
+	UPROPERTY(BlueprintAssignable, Category = "Events")
+	FOnNearbyItemChanged OnNearbyItemChanged;
+
+	void SetNearbyItem(class AOblivioItemBase* Item);
 	// 컨트롤러 바인딩 함수들
 	void Move(const FVector2D& Value);
 	void StartRunning();
@@ -157,4 +166,8 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Events")
 	FPlayerDamagedSignature OnPlayerDamaged;
+
+private:
+	UPROPERTY()
+	class AOblivioItemBase* CurrentNearbyItem = nullptr;
 };
