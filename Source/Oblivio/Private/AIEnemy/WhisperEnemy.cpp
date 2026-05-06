@@ -2,7 +2,72 @@
 
 #include "AIController.h"
 #include "Components/SpotLightComponent.h"
+#include "DrawDebugHelpers.h"
+#include "Engine/Engine.h"
 #include "OblivioCharacter.h"
+#include "OblivioComponents/LightAttackComponent.h"
+#include "Weapon/WeaponBase.h"
+
+namespace
+{
+	/**
+	 * 위스퍼 회피용 콘 정보:
+	 * - Origin/Dir 은 캐릭터 FlashlightComponent (캐릭터 회전과 동기화돼 안정적)
+	 * - 크기(거리/반각) 는 무기 LightAttackComp (실제 가시 콘과 일치).
+	 *   무기가 없으면 FlashlightComponent 의 자체 값으로 폴백.
+	 */
+	struct FFlashlightCone
+	{
+		FVector Origin = FVector::ZeroVector;
+		FVector Dir = FVector::ForwardVector;
+		float MaxDist = 0.f;
+		float HalfAngleDeg = 0.f;
+		bool bConcentrated = true;
+		bool bValid = false;
+	};
+
+	bool ResolveFlashlightCone(const AOblivioCharacter* Player, FFlashlightCone& Out)
+	{
+		if (!Player || !Player->bIsFlashlightOn || Player->Battery <= 0.0f)
+		{
+			return false;
+		}
+
+		const USpotLightComponent* const CSpot = Player->FlashlightComponent;
+		if (!CSpot)
+		{
+			return false;
+		}
+
+		Out.Origin = CSpot->GetComponentLocation();
+		Out.Dir = CSpot->GetForwardVector().GetSafeNormal();
+		if (Out.Dir.IsNearlyZero())
+		{
+			return false;
+		}
+
+		bool bUsedWeapon = false;
+		if (AWeaponBase* const W = Player->CurrentWeapon.Get())
+		{
+			if (ULightAttackComponent* const LAC = W->FindComponentByClass<ULightAttackComponent>())
+			{
+				Out.MaxDist = LAC->LightDistance;
+				Out.bConcentrated = LAC->bIsConcentrated;
+				Out.HalfAngleDeg = LAC->bIsConcentrated ? LAC->LightAngle * 0.5f : 180.0f;
+				bUsedWeapon = Out.MaxDist > KINDA_SMALL_NUMBER;
+			}
+		}
+		if (!bUsedWeapon)
+		{
+			Out.MaxDist = CSpot->AttenuationRadius;
+			Out.HalfAngleDeg = CSpot->OuterConeAngle;
+			Out.bConcentrated = true;
+		}
+
+		Out.bValid = true;
+		return true;
+	}
+}
 
 AWhisperEnemy::AWhisperEnemy()
 {
@@ -33,6 +98,11 @@ void AWhisperEnemy::BeginPlay()
 	AttackRange = FMath::Max(AttackRange, WhisperRange);
 
 	Super::BeginPlay();
+}
+
+void AWhisperEnemy::ApplyCCStun(float /*Duration*/)
+{
+	// 빛/전투에서 오는 경직 무시 — 둔화(슬로우)만 허용. 회피는 UpdateChase/UpdateAttack.
 }
 
 void AWhisperEnemy::UpdateChase()
@@ -90,29 +160,64 @@ bool AWhisperEnemy::IsWithinWhisperRange() const
 bool AWhisperEnemy::IsPointInsideFlashlightDanger(const FVector& Point) const
 {
 	const AOblivioCharacter* const Player = Cast<AOblivioCharacter>(TargetActor);
-	if (!Player || !Player->FlashlightComponent || !Player->bIsFlashlightOn || Player->Battery <= 0.0f)
+	FFlashlightCone Cone;
+	if (!ResolveFlashlightCone(Player, Cone))
 	{
+#if !UE_BUILD_SHIPPING
+		if (bDebugDrawFlashlightDanger && GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage((uint64)(UPTRINT)this, 0.0f, FColor::Silver,
+				FString::Printf(TEXT("Whisper %s: flashlight gate FAIL (Player=%d On=%d Bat=%.1f)"),
+					*GetNameSafe(this),
+					Player ? 1 : 0,
+					Player ? (Player->bIsFlashlightOn ? 1 : 0) : 0,
+					Player ? Player->Battery : -1.f));
+		}
+#endif
 		return false;
 	}
 
-	const USpotLightComponent* const Spot = Player->FlashlightComponent;
-	const FVector Origin = Spot->GetComponentLocation();
-	const FVector Dir = Spot->GetForwardVector().GetSafeNormal();
-	const FVector ToPoint = Point - Origin;
+	const FVector ToPoint = Point - Cone.Origin;
 	const float Dist = ToPoint.Size();
 	if (Dist <= KINDA_SMALL_NUMBER)
 	{
 		return true;
 	}
 
-	if (Dist > Spot->AttenuationRadius + DangerConeRadiusSlack)
-	{
-		return false;
-	}
+	const float MaxDist = Cone.MaxDist + DangerConeRadiusSlack;
+	const bool bOmni = Cone.HalfAngleDeg >= 90.f; // 비집중(점광원)일 때
 
-	const float HalfOuterDeg = FMath::Min(85.0f, Spot->OuterConeAngle + DangerConeAngleMarginDeg);
+	const float HalfOuterDeg = bOmni ? 90.f : FMath::Min(89.0f, Cone.HalfAngleDeg + DangerConeAngleMarginDeg);
 	const float CosCone = FMath::Cos(FMath::DegreesToRadians(HalfOuterDeg));
-	return FVector::DotProduct(Dir, ToPoint / Dist) >= CosCone - KINDA_SMALL_NUMBER;
+	const float DotVal = FVector::DotProduct(Cone.Dir, ToPoint / Dist);
+
+	const bool bDistOk = Dist <= MaxDist;
+	const bool bAngleOk = bOmni || DotVal >= CosCone - KINDA_SMALL_NUMBER;
+	const bool bResult = bDistOk && bAngleOk;
+
+#if !UE_BUILD_SHIPPING
+	if (bDebugDrawFlashlightDanger && GetWorld())
+	{
+		const float DrawHalfDeg = bOmni ? 89.0f : HalfOuterDeg;
+		DrawDebugCone(GetWorld(), Cone.Origin, Cone.Dir, MaxDist,
+			FMath::DegreesToRadians(DrawHalfDeg), FMath::DegreesToRadians(DrawHalfDeg),
+			16, bResult ? FColor::Red : FColor::Yellow, false, 0.f, 0, 1.5f);
+		DrawDebugLine(GetWorld(), Cone.Origin, Point, bResult ? FColor::Red : FColor::Cyan, false, 0.f, 0, 1.5f);
+
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage((uint64)(UPTRINT)this, 0.0f,
+				bResult ? FColor::Red : FColor::Yellow,
+				FString::Printf(TEXT("Whisper %s: dist=%.0f/%.0f(%s) halfDeg=%.0f dot=%.2f(%s) → %s"),
+					*GetNameSafe(this),
+					Dist, MaxDist, bDistOk ? TEXT("OK") : TEXT("FAR"),
+					DrawHalfDeg, DotVal, bAngleOk ? TEXT("OK") : TEXT("OUT"),
+					bResult ? TEXT("DANGER") : TEXT("safe")));
+		}
+	}
+#endif
+
+	return bResult;
 }
 
 bool AWhisperEnemy::IsSelfInsideFlashlightDanger() const
@@ -134,18 +239,19 @@ void AWhisperEnemy::ApproachTarget(AAIController* AI)
 void AWhisperEnemy::AvoidFlashlightCone(AAIController* AI)
 {
 	const AOblivioCharacter* const Player = Cast<AOblivioCharacter>(TargetActor);
-	if (!AI || !Player || !Player->FlashlightComponent)
+	FFlashlightCone Cone;
+	if (!AI || !Player || !ResolveFlashlightCone(Player, Cone))
 	{
 		return;
 	}
 
-	FVector Forward = Player->FlashlightComponent->GetForwardVector().GetSafeNormal2D();
+	FVector Forward = FVector(Cone.Dir.X, Cone.Dir.Y, 0.0f).GetSafeNormal();
 	if (Forward.IsNearlyZero())
 	{
 		Forward = Player->GetActorForwardVector().GetSafeNormal2D();
 	}
 
-	const FVector Origin = Player->FlashlightComponent->GetComponentLocation();
+	const FVector Origin = Cone.Origin;
 	FVector ToEnemy = GetActorLocation() - Origin;
 	ToEnemy.Z = 0.0f;
 

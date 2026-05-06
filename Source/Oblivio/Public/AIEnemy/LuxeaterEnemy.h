@@ -12,6 +12,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FLuxeaterLightAbsorbedSignature, 
  * - 빛 피격 판단을 받으면 빛을 흡수해 이동속도·스케일만 증가 (체력 회복/상한 증가 없음)
  * - 페이즈는 체력 기준: 1페이즈 시작, 체력 50% 이하에서 2페이즈 (피격·동기화 후 자동 갱신)
  * - 외부 전투 모듈이 단일 진실 원천이면 NotifyBossHealthChanged로 미러링. 로컬 TakeDamage와 동시 사용 시 이중 차감 주의.
+ * - CC 면역: ApplyCCSlow / ApplyCCStun 모두 무시(스킬·빛·컴포넌트 경로 공통).
  */
 UCLASS(Blueprintable)
 class OBLIVIO_API ALuxeaterEnemy : public AEnemyBase
@@ -20,6 +21,9 @@ class OBLIVIO_API ALuxeaterEnemy : public AEnemyBase
 
 public:
 	ALuxeaterEnemy();
+
+	virtual void ApplyCCSlow(float SpeedMultiplier, float Duration = 0.0f) override;
+	virtual void ApplyCCStun(float Duration = 0.0f) override;
 
 	virtual void OnLightHit(float Intensity, float Duration) override;
 
