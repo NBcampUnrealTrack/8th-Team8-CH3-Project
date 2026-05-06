@@ -31,6 +31,16 @@ void ALuxeaterEnemy::BeginPlay()
 	Super::BeginPlay();
 }
 
+void ALuxeaterEnemy::ApplyCCSlow(float /*SpeedMultiplier*/, float /*Duration*/)
+{
+	// 보스 CC 면역
+}
+
+void ALuxeaterEnemy::ApplyCCStun(float /*Duration*/)
+{
+	// 보스 CC 면역
+}
+
 void ALuxeaterEnemy::OnLightHit(float Intensity, float Duration)
 {
 	if (!IsAlive())

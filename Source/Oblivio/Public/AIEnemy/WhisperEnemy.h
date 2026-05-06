@@ -9,8 +9,8 @@ class AAIController;
 /**
  * AWhisperEnemy - "속삭이는 자"
  * - 배회/도주 없이 플레이어에게 계속 접근
- * - 근접하면 손전등을 강제로 끄고 공격 실행은 PerformAttack으로 위임
- * - 빛 노출에 의한 데미지/둔화/정지는 AEnemyBase 처리 그대로 적용
+ * - 근접하면 공격 판단만 PerformAttack으로 위임
+ * - 손전등 콘 안에서는 회피 이동(AvoidFlashlightCone). 빛(저데미지) CC는 슬로우만 적용되고 경직(Stun)은 무시.
  */
 UCLASS(Blueprintable)
 class OBLIVIO_API AWhisperEnemy : public AEnemyBase
@@ -19,6 +19,8 @@ class OBLIVIO_API AWhisperEnemy : public AEnemyBase
 
 public:
 	AWhisperEnemy();
+
+	virtual void ApplyCCStun(float Duration = 0.0f) override;
 
 protected:
 	virtual void BeginPlay() override;
@@ -29,13 +31,17 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Whisper", meta = (ClampMin = "50.0"))
 	float WhisperRange = 150.0f;
 
-	/** 손전등 콘 외각 반경에 더하는 안전 여유(cm). */
+	/** 손전등 콘 거리에 더하는 안전 여유(cm). 시각 빛과 거의 일치시키려면 0~50 권장. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Whisper|Avoid", meta = (ClampMin = "0.0"))
-	float DangerConeRadiusSlack = 96.0f;
+	float DangerConeRadiusSlack = 30.0f;
 
-	/** 손전등 콘 외각 각도에 더하는 안전 마진(deg). */
+	/** 손전등 콘 반각에 더하는 안전 마진(deg). 시각 빛과 거의 일치시키려면 0~5 권장. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Whisper|Avoid", meta = (ClampMin = "0.0", ClampMax = "60.0"))
-	float DangerConeAngleMarginDeg = 22.0f;
+	float DangerConeAngleMarginDeg = 5.0f;
+
+	/** 화면/월드에 콘과 InDanger 결과를 그려서 회피 판정을 시각화. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Whisper|Debug")
+	bool bDebugDrawFlashlightDanger = false;
 
 private:
 	float NextAttackDecisionTime = 0.0f;

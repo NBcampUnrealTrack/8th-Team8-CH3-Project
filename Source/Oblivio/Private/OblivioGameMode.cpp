@@ -18,12 +18,22 @@ void AOblivioGameMode::BeginPlay()
 void AOblivioGameMode::NextFloor()
 {
 	UOblivioGameInstance* GI = Cast<UOblivioGameInstance>(GetGameInstance());
-	if (!GI) return;
+	AOblivioCharacter* Player = Cast<AOblivioCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+
+	if (!GI || !Player) return;
 
 	if (CollectedKeys >= RequiredKeys)
 	{
+		//캐릭터의 현재 스탯을 인스턴스에 백업
+		GI->CurrentHealth = Player->CurrentHealth;
+		GI->CurrentBattery = Player->CurrentHealth;
+		GI->CurrentHunger = Player->CurrentHealth;
+		GI->CurrentThirst = Player->CurrentHealth;
+
 		GI->CurrentFloor--;
-		CollectedKeys = 0; // 이번 층의 열쇠 정보만 리셋
+
+		//다음 층 진행 시 자동 세이브할 경우
+		//GI->SaveGameData();
 
 		if (GI->CurrentFloor <= 1)
 		{
@@ -31,7 +41,7 @@ void AOblivioGameMode::NextFloor()
 		}
 		else
 		{
-			// 다음 층 레벨로 이동하는 로직 자리
+			UGameplayStatics::OpenLevel(GetWorld(), FName("이름 미정"));
 			UE_LOG(LogTemp, Warning, TEXT("Floor changed to: %d"), GI->CurrentFloor);
 		}
 	}
@@ -39,6 +49,54 @@ void AOblivioGameMode::NextFloor()
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Not enough keys!"));
 	}
+}
+
+// 체크포인트에서 상호작용 시 세이브할 경우
+void AOblivioGameMode::RestInteraction()
+{
+	if (UOblivioGameInstance* GI = Cast<UOblivioGameInstance>(GetGameInstance()))
+	{
+		GI->SaveGameData();
+		UE_LOG(LogTemp, Warning, TEXT("Rest Area: Checkpoint Reached and Saved."));
+	}
+}
+
+/* //메뉴 진입해서 수동 세이브할 경우
+void AOblivioGameMode::ManualSaveFromMenu()
+{
+	if (UOblivioGameInstance* GI = Cast<UOblivioGameInstance>(GetGameInstance()))
+	{
+		// 플레이어가 메뉴에서 '저장' 버튼을 눌렀을 때 호출
+		GI->SaveGameData();
+	}
+}
+*/
+
+void AOblivioGameMode::AddResource(FString Type, int32 Amount)
+{
+	if (UOblivioGameInstance* GI = Cast<UOblivioGameInstance>(GetGameInstance()))
+	{
+		if (Type == "Wood") GI->WoodCount += Amount;
+		else if (Type == "Iron") GI->IronCount += Amount;
+
+		//UE_LOG(LogTemp, Log, TEXT("get resource: %s +%d (total: %d)"), *Type, Amount, (Type == "Wood" ? GI->WoodCount : GI->IronCount));
+	}
+}
+
+bool AOblivioGameMode::ConsumeResource(int32 WoodCost, int32 IronCost)
+{
+	UOblivioGameInstance* GI = Cast<UOblivioGameInstance>(GetGameInstance());
+	if (GI && GI->WoodCount >= WoodCost && GI->IronCount >= IronCost)
+	{
+		GI->WoodCount -= WoodCost;
+		GI->IronCount -= IronCost;
+		return true;
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Not enough resources!"));
+	}
+	return false;
 }
 
 void AOblivioGameMode::AddMonsterKill()
@@ -68,7 +126,7 @@ EGameEndingType AOblivioGameMode::DetermineEnding()
 	{
 		FinalEnding = EGameEndingType::Oblivion;
 	}
-	else if (GI->TotalKills > 0 && GI->TotalMementos > 0)
+	else if (GI->TotalKills > 0 && GI->TotalMementos > 0)//수치 조정 필요
 	{
 		FinalEnding = EGameEndingType::DeathRow;
 	}
@@ -84,5 +142,10 @@ EGameEndingType AOblivioGameMode::DetermineEnding()
 
 void AOblivioGameMode::GameOver()
 {
+	UOblivioGameInstance* GI = Cast<UOblivioGameInstance>(GetGameInstance());
+	if (!GI) return;
+
+	GI->ResetGameData();
+
 	UE_LOG(LogTemp, Warning, TEXT("Game Over!"));
 }
