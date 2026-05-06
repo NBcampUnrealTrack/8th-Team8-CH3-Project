@@ -6,6 +6,8 @@
 // · 활성 적은 OnEnemyDied 바인딩으로 추적 → 대기 큐·살아 있는 적 모두 없을 때 웨이브 완료
 // =============================================================================
 
+class AEnemySpawner;
+
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "AIEnemy/EnemyBase.h"
@@ -41,6 +43,8 @@ struct FEnemyWaveDefinition
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FEnemyWaveStartedSignature, int32, WaveIndex, int32, TotalEnemies);
 /** 방금 끝난 웨이브 인덱스 */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FEnemyWaveCompletedSignature, int32, WaveIndex);
+/** 이번 웨이브의 스폰 대기 큐가 모두 소진된 직후(마지막 스폰 1건 처리 후). 활성 적이 남아 있어도 호출된다. swarm 동기용. */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FEnemyWaveSpawnQueueEmptiedSignature, int32, WaveIndex, AEnemySpawner*, Spawner);
 
 UCLASS(Blueprintable)
 class OBLIVIO_API AEnemySpawner : public AActor
@@ -70,6 +74,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Wave|Events")
 	FEnemyWaveCompletedSignature OnWaveCompleted;
+
+	UPROPERTY(BlueprintAssignable, Category = "Wave|Events")
+	FEnemyWaveSpawnQueueEmptiedSignature OnWaveSpawnQueueEmptied;
 
 protected:
 	virtual void BeginPlay() override;
