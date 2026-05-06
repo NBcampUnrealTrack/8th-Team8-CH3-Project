@@ -30,6 +30,7 @@ ULightAttackComponent::ULightAttackComponent()
     LightDistance = 500;
     MaxDamageDistance = 100;
     DamageAttenuationRate = 1.f;
+    BasicLightColor = FColor::White;
 }
 void ULightAttackComponent::OnRegister()
 {
@@ -42,6 +43,7 @@ void ULightAttackComponent::OnRegister()
         SpotLightComp = NewObject<USpotLightComponent>(this, TEXT("SpotLightComp"));
         SpotLightComp->SetupAttachment(this);
         SpotLightComp->RegisterComponent();
+        SpotLightComp->LightColor = BasicLightColor;
     }
     if (!IsValid(PointLightComp))
     {
@@ -49,6 +51,7 @@ void ULightAttackComponent::OnRegister()
         PointLightComp = NewObject<UPointLightComponent>(this, TEXT("PointLightComp"));
         PointLightComp->SetupAttachment(this);
         PointLightComp->RegisterComponent();
+        PointLightComp->LightColor = BasicLightColor;
     }
 }
 
@@ -239,8 +242,14 @@ void ULightAttackComponent::CreateLightAttack(FVector SourceLocation, FVector Li
 					FinalDamage = Damage * AttenuationRatio * DamageAttenuationRate;
 				}
 
-				UGameplayStatics::ApplyDamage(Target, FinalDamage, nullptr, GetOwner(), nullptr);
-                UE_LOG(LogTemp, Warning, TEXT("Applying %f damage to the actor %s!"), FinalDamage, *Target->GetName());
+                //데미지 호출
+                UGameplayStatics::ApplyDamage(Target, FinalDamage, nullptr, GetOwner(), nullptr);
+                UE_LOG(LogTemp, Warning, TEXT("Applying %f damage to the enemy %s!"), FinalDamage, *Target->GetName());
+                //빛판정 호출
+                if (AEnemyBase* TargetEnemy = Cast<AEnemyBase>(Target)) {
+                    UE_LOG(LogTemp, Warning, TEXT("Calling Light event of the enemy %s!"), *Target->GetName());
+                    TargetEnemy->OnLightHit(FinalDamage / Damage, 0.1f);
+                }
                 //하나 성공시 추가 라인트레이스 불필요.
                 break;
             }
