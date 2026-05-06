@@ -29,6 +29,8 @@ public:
 	TObjectPtr<USpotLightComponent> SpotLightComp;   // bIsConcentrated
 	UPROPERTY(VisibleAnywhere, Category = "Light Attack")
 	TObjectPtr<UPointLightComponent> PointLightComp;   // bIsConcentrated
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Light Attack")
+	FColor BasicLightColor;   // bIsConcentrated
 
 	//빛 세기/시간
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Light)
