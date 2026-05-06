@@ -188,23 +188,22 @@ void AOblivioCharacter::Interact()
 
 	DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, 1.0f, 0, 2.0f);
 
+	if (CurrentNearbyItem)
+	{
+		if (InventoryComponent && InventoryComponent->AddItem(CurrentNearbyItem))
+		{
+			CurrentNearbyItem->Destroy();
+			SetNearbyItem(nullptr);
+			return; // 습득 성공 시 종료
+		}
+	}
+
 	if (GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility, Params))
 	{
 		
 		//추가: 열쇠/유품 획득 시 정보 저장
 		AActor* HitActor = HitResult.GetActor();
 		UE_LOG(LogTemp, Warning, TEXT("1. Hit Something: %s"), *HitActor->GetName());
-
-		if (CurrentNearbyItem)
-		{
-			// 기존에 작성했던 습득 로직 실행 (인벤토리 추가 등)
-			UE_LOG(LogTemp, Warning, TEXT("Picking up Overlapped Item: %s"), *CurrentNearbyItem->ItemName.ToString());
-
-			//if (InventoryComponent && InventoryComponent->AddItem(CurrentNearbyItem))
-			CurrentNearbyItem->Destroy();
-			SetNearbyItem(nullptr); // 습득 후 정보 초기화
-			return;
-		}
 
 		if (AOblivioItemBase* PickedItem = Cast<AOblivioItemBase>(HitActor))
 		{
@@ -218,40 +217,6 @@ void AOblivioCharacter::Interact()
 
 		AOblivioGameMode* GM = Cast<AOblivioGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
 		if (!GM) return;
-		AOblivioItemBase* PickedItem = Cast<AOblivioItemBase>(HitActor);
-		if (PickedItem)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("2. Cast Success! Item Type: %d"), (int32)PickedItem->ItemType);
-			switch (PickedItem->ItemType)
-			{
-			case EItemType::Wood:
-				if (CraftingComponent) CraftingComponent->WoodCount++; // 자원 추가
-				break;
-			case EItemType::Iron:
-				if (CraftingComponent) CraftingComponent->IronCount++;
-				break;
-			case EItemType::Battery:
-				BatteryItemCount++; // 배터리 개수 증가
-				break;
-			case EItemType::Food:
-				Hunger = FMath::Min(100.0f, Hunger + PickedItem->RestoreValue);
-				break;
-			case EItemType::Water:
-				Thirst = FMath::Min(100.0f, Thirst + PickedItem->RestoreValue);
-				break;
-			}
-
-			if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Cyan,
-				FString::Printf(TEXT("Picked up: %s"), *UEnum::GetValueAsString(PickedItem->ItemType)));
-
-			PickedItem->Destroy(); // 습득 후 제거
-			UE_LOG(LogTemp, Warning, TEXT("3. Item Destroyed!"));
-			return;
-		}
-		else
-		{
-			UE_LOG(LogTemp, Error, TEXT("2. Cast Failed! %s is not an OblivioItemBase"), *HitActor->GetName());
-		}
 
 		if (HitActor->ActorHasTag("Key"))
 		{
@@ -266,14 +231,10 @@ void AOblivioCharacter::Interact()
 			HitActor->Destroy();
 		}
 		//체크포인트 상호작용 시 저장
-		if (HitActor->ActorHasTag("RestArea")) //체크포인트 태그 확인 후 태그명 수정 필요
+		else if (HitActor->ActorHasTag("RestArea")) //체크포인트 태그 확인 후 태그명 수정 필요
 		{
-			AOblivioGameMode* GM = Cast<AOblivioGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
-			if (GM)
-			{
-				GM->RestInteraction();
+			GM->RestInteraction();
 				//아래에 체크포인트 시 회복 등 넣을 수 있음
-			}
 		}
 		//----
 	}
