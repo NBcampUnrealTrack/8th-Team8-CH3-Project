@@ -1,5 +1,6 @@
 ﻿#include "OblivioCharacter.h"
 #include "OblivioGameMode.h"
+#include "OblivioGameInstance.h"
 #include "Weapon/WeaponBase.h"
 #include "Weapon/ThrowableWeapon.h"
 #include "Crafting/OblivioCrafting.h"
@@ -55,6 +56,18 @@ void AOblivioCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	UpdateFlashlightVisuals();
+
+	//8층부터는 현재 스탯을 인스턴스에 저장된 것으로 대체
+	UOblivioGameInstance* GI = Cast<UOblivioGameInstance>(GetGameInstance());
+	if (!GI) return;
+
+	if (GI->CurrentFloor < 9)
+	{
+		CurrentHealth = GI->CurrentHealth;
+		Battery = GI->CurrentBattery;
+		Hunger = GI->CurrentHunger;
+		Thirst = GI->CurrentThirst;
+	}
 
 	//시작시 손전등 장착
 	if (IsValid(FlashlightWeapon)) {
@@ -227,6 +240,16 @@ void AOblivioCharacter::Interact()
 			GM->AddMemento();
 			UE_LOG(LogTemp, Warning, TEXT("Get Memento!"));
 			HitActor->Destroy();
+		}
+		//체크포인트 상호작용 시 저장
+		if (HitActor->ActorHasTag("RestArea")) //체크포인트 태그 확인 후 태그명 수정 필요
+		{
+			AOblivioGameMode* GM = Cast<AOblivioGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+			if (GM)
+			{
+				GM->RestInteraction();
+				//아래에 체크포인트 시 회복 등 넣을 수 있음
+			}
 		}
 		//----
 	}
