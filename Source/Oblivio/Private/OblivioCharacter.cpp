@@ -3,7 +3,6 @@
 #include "Weapon/WeaponBase.h"
 #include "Weapon/ThrowableWeapon.h"
 #include "Crafting/OblivioCrafting.h"
-#include "Items/OblivioItemBase.h"
 #include "OblivioComponents/SoundPropagationComponent.h"
 #include "OblivioComponents/PlayerCombatComponent.h"
 
@@ -14,7 +13,6 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/GameplayStatics.h"
 #include "Camera/CameraComponent.h"
-#include "Engine/DamageEvents.h"
 
 AOblivioCharacter::AOblivioCharacter()
 {
@@ -65,15 +63,11 @@ void AOblivioCharacter::BeginPlay()
 		if (IsValid(CurrentWeapon)) {
 			UE_LOG(LogTemp, Warning, TEXT("Attaching Weapon"));
 			CurrentWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+			CurrentWeapon->AddActorLocalRotation(FRotator(0,90,0));
 		}
-
 	}
 	FlashlightComponent->SetVisibility(false);
 }
-
-//==========================
-// Tick and Status
-//==========================
 
 void AOblivioCharacter::Tick(float DeltaTime)
 {
@@ -101,40 +95,6 @@ void AOblivioCharacter::Tick(float DeltaTime)
 	}
 }
 
-void AOblivioCharacter::UpdateStatus(float DeltaTime)
-{
-	if (bIsDead) return;
-
-	float DepleteRate = bIsRunning ? 2.0f : 1.0f;
-	Hunger = FMath::Max(0.0f, Hunger - (DeltaTime * 0.3f * DepleteRate));
-	Thirst = FMath::Max(0.0f, Thirst - (DeltaTime * 0.4f * DepleteRate));
-
-	// 배터리 처리
-	if (bIsFlashlightOn && Battery > 0.0f)
-	{
-		float FocusPenalty = FMath::Lerp(1.0f, 1.5f, CurrentFocusAlpha);
-		Battery = FMath::Max(0.0f, Battery - (DeltaTime * BatteryDepletionRate * FocusPenalty));
-
-		if (Battery <= 0.0f)
-		{
-			bIsFlashlightOn = false;
-			UpdateFlashlightVisuals();
-		}
-	}
-
-	// 굶주림/갈증으로 인한 체력 감소
-	if (Hunger <= 0.0f || Thirst <= 0.0f)
-	{
-		ApplyHealth(DeltaTime * 1.0f);
-	}
-
-	GetCharacterMovement()->MaxWalkSpeed = bIsRunning ? RunSpeed : WalkSpeed;
-}
-
-//==========================
-// 입력 and 상호작용
-//==========================
-
 void AOblivioCharacter::Move(const FVector2D& Value)
 {
 	if (Controller != nullptr)
@@ -144,169 +104,46 @@ void AOblivioCharacter::Move(const FVector2D& Value)
 	}
 }
 
-void AOblivioCharacter::StartRunning() { bIsRunning = true; }
-void AOblivioCharacter::StopRunning() { bIsRunning = false; }
-
-
-void AOblivioCharacter::ToggleInventory()
-{
-	bIsInventoryOpen = !bIsInventoryOpen;
-}
-
-void AOblivioCharacter::ToggleCrafting()
-{
-	if (CraftingComponent)
-	{
-		CraftingComponent->ToggleCraftingMode();
-		bIsCraftingOpen = CraftingComponent->bIsCraftingModeActive;
-	}
-}
-
-void AOblivioCharacter::Interact()
-{
-	FHitResult HitResult;
-	FVector Start = GetActorLocation();
-	FVector End = Start + (GetActorForwardVector() * InteractionDistance);
-	FCollisionQueryParams Params;
-	Params.AddIgnoredActor(this);
-
-	DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, 1.0f, 0, 2.0f);
-
-	if (GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility, Params))
-	{
-		
-		//추가: 열쇠/유품 획득 시 정보 저장
-		AActor* HitActor = HitResult.GetActor();
-		UE_LOG(LogTemp, Warning, TEXT("1. Hit Something: %s"), *HitActor->GetName());
-		AOblivioGameMode* GM = Cast<AOblivioGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
-		if (!GM) return;
-
-		AOblivioItemBase* PickedItem = Cast<AOblivioItemBase>(HitActor);
-		if (PickedItem)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("2. Cast Success! Item Type: %d"), (int32)PickedItem->ItemType);
-			switch (PickedItem->ItemType)
-			{
-			case EItemType::Wood:
-				if (CraftingComponent) CraftingComponent->WoodCount++; // 자원 추가
-				break;
-			case EItemType::Iron:
-				if (CraftingComponent) CraftingComponent->IronCount++;
-				break;
-			case EItemType::Battery:
-				BatteryItemCount++; // 배터리 개수 증가
-				break;
-			case EItemType::Food:
-				Hunger = FMath::Min(100.0f, Hunger + PickedItem->RestoreValue);
-				break;
-			case EItemType::Water:
-				Thirst = FMath::Min(100.0f, Thirst + PickedItem->RestoreValue);
-				break;
-			}
-
-			if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Cyan,
-				FString::Printf(TEXT("Picked up: %s"), *UEnum::GetValueAsString(PickedItem->ItemType)));
-
-			PickedItem->Destroy(); // 습득 후 제거
-			UE_LOG(LogTemp, Warning, TEXT("3. Item Destroyed!"));
-			return;
-		}
-		else
-		{
-			UE_LOG(LogTemp, Error, TEXT("2. Cast Failed! %s is not an OblivioItemBase"), *HitActor->GetName());
-		}
-
-		if (HitActor->ActorHasTag("Key"))
-		{
-			GM->CollectedKeys++;
-			UE_LOG(LogTemp, Warning, TEXT("You Get a Key! Current: %d / %d"), GM->CollectedKeys, GM->RequiredKeys);
-			HitActor->Destroy();
-		}
-		else if (HitActor->ActorHasTag("Memento"))
-		{
-			GM->AddMemento();
-			UE_LOG(LogTemp, Warning, TEXT("Get Memento!"));
-			HitActor->Destroy();
-		}
-		//----
-	}
-}
-
-//=====================
-//무기 장비
-//======================
-
 void AOblivioCharacter::AdjustFocus(float Value)
 {
-	if (bCanAdjustFocus && CurrentWeapon)
-	{
-		CurrentWeapon->ChangeWeaponAngle(Value * WheelControlMultiplier);
-	}
+	if (!bCanAdjustFocus) return;
+	/*
+	CurrentFocusAlpha = FMath::Clamp(CurrentFocusAlpha + (Value * 0.1f), 0.0f, 1.0f);
+	UpdateFlashlightVisuals();*/
+	CurrentWeapon->ChangeWeaponAngle(Value * WheelControlMultiplier);
 }
 
-
-void AOblivioCharacter::ToggleFlashlight()
-{
-	if (Battery > 0.0f)
-	{
-		bIsFlashlightOn = !bIsFlashlightOn;
-		UpdateFlashlightVisuals();
-	}
-}
-
-void AOblivioCharacter::UpdateFlashlightVisuals()
-{
-	if (!IsValid(CurrentWeapon)) return;
-
-	if (bIsFlashlightOn) {	//On
-		CurrentWeapon->UseWeapon();
-	}
-	else {	//Off
-		CurrentWeapon->StopWeapon();
-	}
-}
-
-
-void AOblivioCharacter::ReloadBattery()
-{
-	if (bIsDead) return;
-
-	//인벤토리/배터리 아이템 생길 시 조건추가.
-	bool bHasBatteryItem = true; // 현재 있다고 가정
-
-	if (bHasBatteryItem)
-	{
-		if (Battery >= 100.0f)
-		{
-			if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Yellow, TEXT("Battery is already full."));
-			return;
-		}
-
-		// 충전 로직
-		Battery = 100.0f;
-
-		if (!bIsFlashlightOn)
-		{
-			bIsFlashlightOn = true;
-			UpdateFlashlightVisuals();
-		}
-
-		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Green, TEXT("Flashlight Recharged!"));
-	}
-}
+void AOblivioCharacter::StartRunning() { bIsRunning = true; }
+void AOblivioCharacter::StopRunning() { bIsRunning = false; }
 
 void AOblivioCharacter::UseFlashbang()//섬광탄 무기 투척으로 변경
 {
 	ThrowWeapon(FlashbangWeapon);
-}
+	/*
+	if (Battery >= 50.0f)
+	{
+		Battery -= 50.0f;
 
+		FlashbangIntensity = 50000.0f;
+		FlashbangLight->SetIntensity(FlashbangIntensity);
+		FlashbangLight->SetVisibility(true);
+
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::White, TEXT("!!! FLASHBANG !!!"));
+		}
+
+		GetWorldTimerManager().SetTimer(FlashbangTimerHandle, this, &AOblivioCharacter::FadeOutFlashbang, 0.01f, true);
+
+		// 일정 시간 동안 소리가 안 들리는 연출이나 몬스터 소멸 로직 호출
+	}*/
+}
 void AOblivioCharacter::UseFlare()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Using Flare"));
 	ThrowWeapon(FlareWeapon);
-	if(SoundPropagationComp) SoundPropagationComp->PropagateSound();
+	SoundPropagationComp->PropagateSound();
 }
-
 void AOblivioCharacter::ThrowWeapon(TSubclassOf<AThrowableWeapon> Weapon) {
 	if (!IsValid(Weapon)) {
 		UE_LOG(LogTemp, Warning, TEXT("ThrowWeapon invalid call!"));
@@ -321,7 +158,7 @@ void AOblivioCharacter::ThrowWeapon(TSubclassOf<AThrowableWeapon> Weapon) {
 		Params);
 	FVector temp = GetAimingLocation();
 	UE_LOG(LogTemp, Warning, TEXT("Throwing Weapon %s to %f %f!"), *ThrowingWeapon->GetName(), temp.X, temp.Y);
-	if(ThrowingWeapon) ThrowingWeapon->StartThrow(GetAimingLocation());
+	ThrowingWeapon->StartThrow(GetAimingLocation());
 }
 
 FVector AOblivioCharacter::GetAimingLocation() {
@@ -357,59 +194,154 @@ void AOblivioCharacter::FadeOutFlashbang()
 	}
 }
 
-//========================
-// 전투 and 피해
-//========================
-
-void AOblivioCharacter::ApplyHealth(float Damage)
+void AOblivioCharacter::ToggleFlashlight()
 {
-	if (bIsDead) return;
-
-	// 체력을 차감하고 최소값을 0으로 유지
-	CurrentHealth = FMath::Clamp(CurrentHealth - Damage, 0.0f, MaxHealth);
-
-	if (CurrentHealth <= 0.0f)
+	if (Battery > 0.0f)
 	{
-		HandleDeath();
+		bIsFlashlightOn = !bIsFlashlightOn;
+		UpdateFlashlightVisuals();
 	}
 }
 
-float AOblivioCharacter::TakeDamage(float DamageAmount, const FDamageEvent& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+void AOblivioCharacter::ToggleInventory()
 {
-	const float AppliedDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
-
-	ApplyHealth(AppliedDamage); // 통합된 데미지 처리 함수 호출
-
-	// 블루프린트나 UI 갱신을 위해 델리게이트 방송
-	OnPlayerDamaged.Broadcast(AppliedDamage, CurrentHealth, MaxHealth);
-
-	return AppliedDamage;
+	bIsInventoryOpen = !bIsInventoryOpen;
 }
 
-void AOblivioCharacter::HandleDeath()
+void AOblivioCharacter::ToggleCrafting()
 {
-	if (bIsDead) return;
-
-	bIsDead = true;
-	DisableInput(Cast<APlayerController>(GetController()));
-
-	if (AOblivioGameMode* GM = Cast<AOblivioGameMode>(UGameplayStatics::GetGameMode(GetWorld())))
+	if (CraftingComponent)
 	{
+		CraftingComponent->ToggleCraftingMode();
+		bIsCraftingOpen = CraftingComponent->bIsCraftingModeActive;
+	}
+}
+
+void AOblivioCharacter::Interact()
+{
+	FHitResult HitResult;
+	FVector Start = GetActorLocation();
+	FVector End = Start + (GetActorForwardVector() * InteractionDistance);
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
+
+	if (GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility, Params))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Interacted with: %s"), *HitResult.GetActor()->GetName());
+		//추가: 열쇠/유품 획득 시 정보 저장
+		AActor* HitActor = HitResult.GetActor();
+		AOblivioGameMode* GM = Cast<AOblivioGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+		if (!GM) return;
+		if (HitActor->ActorHasTag("Key"))
+		{
+			GM->CollectedKeys++;
+			UE_LOG(LogTemp, Warning, TEXT("You Get a Key! Current: %d / %d"), GM->CollectedKeys, GM->RequiredKeys);
+			HitActor->Destroy();
+		}
+		else if (HitActor->ActorHasTag("Memento"))
+		{
+			GM->AddMemento();
+			UE_LOG(LogTemp, Warning, TEXT("Get Memento!"));
+			HitActor->Destroy();
+		}
+		//----
+	}
+}
+
+void AOblivioCharacter::UpdateStatus(float DeltaTime)
+{
+	float DepleteRate = bIsRunning ? 2.0f : 1.0f;
+	Hunger = FMath::Max(0.0f, Hunger - (DeltaTime * 0.3f * DepleteRate));
+	Thirst = FMath::Max(0.0f, Thirst - (DeltaTime * 0.4f * DepleteRate));
+
+	if (bIsFlashlightOn && Battery > 0.0f)
+	{
+		float FocusPenalty = FMath::Lerp(1.0f, 1.5f, CurrentFocusAlpha);
+		Battery = FMath::Max(0.0f, Battery - (DeltaTime * BatteryDepletionRate * FocusPenalty));
+
+		if (Battery <= 0.0f)
+		{
+			bIsFlashlightOn = false;
+			UpdateFlashlightVisuals();
+		}
+	}
+
+	if (Hunger <= 0.0f || Thirst <= 0.0f) CurrentHealth -= DeltaTime * 1.0f;
+	GetCharacterMovement()->MaxWalkSpeed = bIsRunning ? RunSpeed : WalkSpeed;
+
+	//추가: 체력 0이 되면 게임오버
+	if (CurrentHealth <= 0 && bIsDead == false)
+	{
+		bIsDead = true;
+		DisableInput(Cast<APlayerController>(GetController()));
+		AOblivioGameMode* GM = Cast<AOblivioGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+		if (!GM) return;
 		GM->GameOver();
 	}
 }
 
-bool AOblivioCharacter::IsAlive() const
+void AOblivioCharacter::UpdateFlashlightVisuals()
 {
-	return (CurrentHealth > 0.0f && !bIsDead);
+	if (!IsValid(CurrentWeapon)) return;
+
+	if (bIsFlashlightOn) {	//On
+		CurrentWeapon->UseWeapon();
+	}
+	else {	//Off
+		CurrentWeapon->StopWeapon();
+	}
+	/*
+	if (!FlashlightComponent) return;
+	FlashlightComponent->SetVisibility(bIsFlashlightOn);
+	if (bIsFlashlightOn)
+	{
+		float TargetAngle = FMath::Lerp(60.0f, 15.0f, CurrentFocusAlpha);
+		float TargetRadius = FMath::Lerp(600.0f, 1800.0f, CurrentFocusAlpha);
+		FlashlightComponent->SetOuterConeAngle(TargetAngle);
+		FlashlightComponent->SetAttenuationRadius(TargetRadius);
+	}*/
 }
 
-void AOblivioCharacter::ApplyCCSlow(float SpeedMultiplier, float Duration)
+//체력 적용
+void AOblivioCharacter::ApplyHealth(float Damage)
 {
-	// 슬로우 로직 구현
+	UE_LOG(LogTemp, Warning, TEXT("%f damage to the player!"), Damage);
+	CurrentHealth -= Damage;
+	if (CurrentHealth <= 0) {
+		UE_LOG(LogTemp, Warning, TEXT("player health is below 0!"), Damage);
+	}
+	return;
 }
 
-void AOblivioCharacter::ApplyCCStun(float Duration)
+//슬로우 적용
+void AOblivioCharacter::ApplyCCSlow(float SpeedMultiplier, float Duration) {
+	UE_LOG(LogTemp, Warning, TEXT("slow to the player!"));
+	//슬로우 적용할거면 구현
+}
+
+//스턴 적용
+void AOblivioCharacter::ApplyCCStun(float Duration) {
+	UE_LOG(LogTemp, Warning, TEXT("Stun the player!"));
+	//스턴 적용할거면 구현
+}
+
+//생존여부 반환
+bool AOblivioCharacter::IsAlive() const {	
+	if (CurrentHealth >= 0) {
+		UE_LOG(LogTemp, Warning, TEXT("Player Alive!"));
+	}
+	else {
+		UE_LOG(LogTemp, Warning, TEXT("Player Dead!"));
+	}
+	return CurrentHealth >= 0;
+	
+}
+//플레이어 피격 호출
+float AOblivioCharacter::TakeDamage(float DamageAmount, const FDamageEvent& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
-	// 스턴 로직 구현
+	const float AppliedDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+
+	UE_LOG(LogTemp, Warning, TEXT("Player is taking %f Damage!"), DamageAmount);
+	OnPlayerDamaged.Broadcast(AppliedDamage, CurrentHealth, MaxHealth);
+	return DamageAmount;
 }
