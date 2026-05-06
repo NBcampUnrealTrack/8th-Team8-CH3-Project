@@ -10,6 +10,7 @@ AFlare::AFlare()
 	AttackInterval = 0.1f;
 	LastDuration = 5.f;
 	LightAttackComp->Damage = 1;
+	LightAttackComp->BasicLightColor = FColor::Red;
 }
 
 void AFlare::BeginPlay()

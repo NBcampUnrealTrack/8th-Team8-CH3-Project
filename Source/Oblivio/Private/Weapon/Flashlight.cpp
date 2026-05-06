@@ -19,6 +19,7 @@ AFlashlight::AFlashlight()
 	LightAttackComp->LightDistance = 1000.f;
 	LightAttackComp->MaxDamageDistance = 500.f;
 	LightAttackComp->DamageAttenuationRate = 2.f;
+	LightAttackComp->BasicLightColor = FColor::White;
 }
 
 void AFlashlight::BeginPlay()

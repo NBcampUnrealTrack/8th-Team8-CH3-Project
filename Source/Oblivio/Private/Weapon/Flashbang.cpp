@@ -8,6 +8,7 @@ AFlashbang::AFlashbang()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	LightAttackComp->Damage = 10000;
+	LightAttackComp->BasicLightColor = FColor::White;
 	BangDelay = 2.0f;
 	FlashDuration = 0.2f;
 }
