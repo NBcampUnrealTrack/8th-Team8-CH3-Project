@@ -8,7 +8,6 @@
 AOblivioCharacterController::AOblivioCharacterController()
 	: DefaultMappingContext(nullptr)
 	, InventoryMappingContext(nullptr)
-	, CraftingMappingContext(nullptr)
 	, MoveAction(nullptr)
 	, LookAction(nullptr)
 	, WheelAction(nullptr)
@@ -22,8 +21,10 @@ AOblivioCharacterController::AOblivioCharacterController()
 	, RotateAction(nullptr)
 	, PlaceObstacleAction(nullptr)
 	, InteractAction(nullptr)
-	, SelectObstacleAction(nullptr)
 	, PauseAction(nullptr)
+	, CraftingMappingContext(nullptr)
+	, SelectObstacleAction(nullptr)
+
 {
 	bShowMouseCursor = true;
 	bEnableClickEvents = true;
