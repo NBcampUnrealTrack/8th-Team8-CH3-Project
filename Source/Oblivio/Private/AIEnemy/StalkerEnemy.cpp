@@ -145,10 +145,13 @@ bool AStalkerEnemy::ComputeInPlayerFlashlightCone() const
 	}
 
 	const USpotLightComponent* Spot = Player->FlashlightComponent;
-	if (!Spot || !Spot->IsVisible())
+	if (!Spot)
 	{
 		return false;
 	}
+
+	// 캐릭터 쪽에서 조명 연출용으로 Spot을 숨길 수 있음(BeginPlay SetVisibility false 등).
+	// 손전등 “논리적 ON”은 아래 bIsFlashlightOn / Battery 로만 본다.
 
 	if (!Player->bIsFlashlightOn || Player->Battery <= 0.0f)
 	{

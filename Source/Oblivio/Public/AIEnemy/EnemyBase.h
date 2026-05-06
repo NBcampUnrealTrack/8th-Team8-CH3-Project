@@ -368,7 +368,8 @@ protected:
 	/** TakeDamage로 CurrentHealth를 차감한 직후(사망 처리 전). 보스 페이즈 갱신 등에 사용. */
 	virtual void NotifyEnemyDamageApplied(float AppliedDamage);
 	bool IsTargetInAttackRange() const;
-	bool HasValidAggroTarget() const;
+	/** AggroRadius 내(또는 0이면 무한)일 때 true. 보스 등은 “한 번 들어오면 영구 추격”용으로 오버라이드 가능. */
+	virtual bool HasValidAggroTarget() const;
 	void StopEnemyMovement();
 
 	void RefreshWalkSpeedFromSources();
