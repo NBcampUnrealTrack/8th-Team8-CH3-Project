@@ -91,6 +91,7 @@ public:
 	bool bIsRunning = false;
 	bool bIsInventoryOpen = false;
 	bool bIsCraftingOpen = false;
+	bool bIsPauseOpen = false;
 	float CurrentFocusAlpha = 0.5f;
 
 	void UpdateStatus(float DeltaTime);
@@ -152,7 +153,12 @@ public:
 	void ToggleCrafting();
 	void PlaceObstacle();
 	void Interact();
+	
+	UFUNCTION(BlueprintCallable, Category = "UI")
 	void TogglePause();
+	
+	UFUNCTION(BlueprintImplementableEvent, Category = "UI")
+	void OnPauseToggle(bool bIsOpen);
 
 	//===============================
 	// Combat Interface (전투 시스템)

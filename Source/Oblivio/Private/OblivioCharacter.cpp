@@ -251,6 +251,10 @@ void AOblivioCharacter::TogglePause()
 {
 	//UI 띄우는 로직 연동
 	UE_LOG(LogTemp, Warning, TEXT("Pause Menu Toggled!"));
+	
+	bIsPauseOpen = !bIsPauseOpen;
+	
+	OnPauseToggle(bIsPauseOpen);
 
 	// 만약 직접 엔진 일시정지 제어 시
 	/*
