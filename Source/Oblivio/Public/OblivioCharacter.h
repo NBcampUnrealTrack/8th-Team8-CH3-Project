@@ -143,6 +143,7 @@ public:
 	void ToggleCrafting();
 	void PlaceObstacle();
 	void Interact();
+	void TogglePause();
 
 	//===============================
 	// Combat Interface (전투 시스템)
