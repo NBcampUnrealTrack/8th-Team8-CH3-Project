@@ -64,6 +64,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Input")
 	class UInputAction* InteractAction;
 
+	UPROPERTY(EditAnywhere, Category = "Input")
+	class UInputAction* PauseAction;
+
 	// --- 입력 처리 함수 ---
 	void OnMove(const FInputActionValue& Value);
 	void OnLook(const FInputActionValue& Value);
@@ -79,6 +82,7 @@ protected:
 	void OnRotatePreview(const FInputActionValue& Vlaue);
 	void OnPlaceObstacle(const FInputActionValue& Value);
 	void OnInteract(const FInputActionValue& Value);
+	void OnPauseToggle(const FInputActionValue& Value);
 
 	void UpdateMouseRotation();
 

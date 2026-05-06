@@ -23,6 +23,7 @@ AOblivioCharacterController::AOblivioCharacterController()
 	, PlaceObstacleAction(nullptr)
 	, InteractAction(nullptr)
 	, SelectObstacleAction(nullptr)
+	, PauseAction(nullptr)
 {
 	bShowMouseCursor = true;
 	bEnableClickEvents = true;
@@ -67,6 +68,7 @@ void AOblivioCharacterController::SetupInputComponent()
 		//EIC->BindAction(SelectObstacleAction, ETriggerEvent::Started, this, &AOblivioCharacterController::OnSelectObstacle);
 		EIC->BindAction(SelectObstacleAction, ETriggerEvent::Triggered, this, &AOblivioCharacterController::OnSelectObstacle);
 		EIC->BindAction(InteractAction, ETriggerEvent::Started, this, &AOblivioCharacterController::OnInteract);
+		EIC->BindAction(PauseAction, ETriggerEvent::Started, this, &AOblivioCharacterController::OnPauseToggle);
 	}
 }
 
@@ -227,4 +229,11 @@ void AOblivioCharacterController::OnInteract(const FInputActionValue& Value)
 {
 	if (AOblivioCharacter* ObjChar = Cast<AOblivioCharacter>(GetPawn()))
 		ObjChar->Interact();
+}
+void AOblivioCharacterController::OnPauseToggle(const FInputActionValue& Value)
+{
+	if (AOblivioCharacter* ObjChar = Cast<AOblivioCharacter>(GetPawn()))
+	{
+		ObjChar->TogglePause();
+	}
 }
