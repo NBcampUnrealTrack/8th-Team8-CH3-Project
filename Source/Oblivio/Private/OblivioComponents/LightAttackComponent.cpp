@@ -108,8 +108,8 @@ void ULightAttackComponent::CreateLightAttack(FVector SourceLocation, FVector Li
     }
     else
     {
-        // 전방위 구형 범위
-        DrawDebugSphere(GetWorld(), SourceLocation, LightDistance, 16, FColor::Yellow, false, .5f);
+        // 전방위 원형 영역
+        DrawDebugCircle(GetWorld(), SourceLocation + FVector::UpVector * 20, LightDistance, 16, FColor::Yellow, false, .1f, 0, 2.0f, FVector::ForwardVector, FVector::RightVector, false);
     }
 
     //광원 출력
