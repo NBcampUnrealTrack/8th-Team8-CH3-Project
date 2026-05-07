@@ -49,6 +49,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaSeconds) override;
 	virtual void UpdateChase() override;
 	virtual void UpdateAttack() override;
 	virtual bool HasValidAggroTarget() const override;
@@ -67,12 +68,16 @@ protected:
 	float SpeedGainPerLight = 35.0f;
 
 	/**
-	 * 빛 흡수 누적량 1당 증가하는 스케일.
-	 * 튜닝 메모: 0.04(1당 +4%) → 0.005(1당 +0.5%) → 0.0005(흡수량 10당 +0.5%) 로 단위를 더 느슨하게 변경.
-	 * 즉 "흡수량 10이 차야 0.5% 커진다" 의미. 짧은 노출에는 거의 변하지 않고, 보스전 후반에 누적되며 서서히 커짐.
+	 * 빛 흡수 누적량 1단위당 증가하는 목표 스케일.
+	 * 실제 스케일은 ScaleInterpSpeed 속도로 목표치에 부드럽게 보간된다.
+	 * 튜닝 메모: 0.04(너무 빠름) → 0.005(1단위당, 보간으로 점진 표현)
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Luxeater|Light", meta = (ClampMin = "0.0"))
-	float ScaleGainPerLight = 0.0005f;
+	float ScaleGainPerLight = 0.005f;
+
+	/** 현재 스케일이 목표 스케일로 보간되는 속도(FInterpTo 속도값). 낮을수록 느리게 커짐. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Luxeater|Light", meta = (ClampMin = "0.01"))
+	float ScaleInterpSpeed = 0.4f;
 
 	/** 빛 흡수량으로 오를 수 있는 최대 추가 이동속도. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Luxeater|Light", meta = (ClampMin = "0.0"))
@@ -92,6 +97,10 @@ private:
 	FVector InitialScale = FVector::OneVector;
 	float AbsorbedLight = 0.0f;
 	int32 BossPhase = 1;
+	/** 빛 흡수량으로 계산된 목표 스케일 배율. 실제 스케일은 Tick에서 이 값으로 보간됨. */
+	float TargetScaleMultiplier = 1.0f;
+	/** 현재 적용 중인 스케일 배율(보간 중간값). */
+	float CurrentScaleMultiplier = 1.0f;
 
 	/** 플레이어가 한 번이라도 AggroRadius 안에 들어왔는지(이후엔 거리 무시). bStickyAggroOnceTriggered 와 함께 사용. */
 	mutable bool bAggroLatched = false;

@@ -50,6 +50,10 @@ public:
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void Die() override;
 
+	/** Ghost 이동(벽 통과)을 항상 사용하므로 NavMesh 기반 막힘 복구를 비활성화한다. */
+	virtual bool IsStuckRecoveryEnabled()   const override { return false; }
+	virtual bool IsObstacleAttackEnabled()  const override { return false; }
+
 	UFUNCTION(BlueprintPure, Category = "Enemy|Scream")
 	EScreamAbilityPhase GetAbilityPhase() const { return AbilityPhase; }
 
@@ -110,9 +114,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Scream|Ability", meta = (ClampMin = "0.0"))
 	float PostBlinkRootSeconds = 3.0f;
 
-	/** 능력 사이클 종료 후 다시 차지 가능까지 대기 시간(초). 1분 30초 = 90. */
+	/** 능력 사이클 종료 후 다시 차지 가능까지 대기 시간(초). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Scream|Ability", meta = (ClampMin = "0.0"))
-	float AbilityCooldownSeconds = 90.0f;
+	float AbilityCooldownSeconds = 30.0f;
 
 	/**
 	 * true 면 게임 시작 시 즉시 차지가 아니라 한 번의 쿨다운(AbilityCooldownSeconds)부터 시작한다.
@@ -172,13 +176,8 @@ protected:
 
 	// === CC: 광원 노출 누적 → 경직 → 면역 ===
 
-	/** 누적이 이 값(초)을 넘으면 라이트 스턴 트리거. 기본 3초. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Scream|CC", meta = (ClampMin = "0.1"))
-	float LightStunBuildupSeconds = 3.0f;
-
-	/** 라이트 스턴 지속 시간(초). 기본 3초. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Scream|CC", meta = (ClampMin = "0.0"))
-	float LightStunDuration = 3.0f;
+	// LightStunBuildupSeconds, LightStunDuration 은 EnemyBase에서 상속.
+	// 기본값을 ScreamEnemy에 맞게 생성자에서 재설정한다.
 
 	/** 스턴 종료 후 라이트 스턴 면역 시간(초). 기본 30초. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Scream|CC", meta = (ClampMin = "0.0"))

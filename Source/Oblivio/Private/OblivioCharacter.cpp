@@ -158,8 +158,9 @@ void AOblivioCharacter::Move(const FVector2D& Value)
 {
 	if (Controller != nullptr)
 	{
-		AddMovementInput(FVector::ForwardVector, Value.Y);
-		AddMovementInput(FVector::RightVector, Value.X);
+		const float Dir = bMovementInverted ? -1.0f : 1.0f;
+		AddMovementInput(FVector::ForwardVector, Value.Y * Dir);
+		AddMovementInput(FVector::RightVector,   Value.X * Dir);
 	}
 }
 
@@ -286,6 +287,7 @@ void AOblivioCharacter::AdjustFocus(float Value)
 
 void AOblivioCharacter::ToggleFlashlight()
 {
+	if (bFlashlightForcedOff) return;   // 암전 효과 진행 중 — 토글 차단
 	if (Battery > 0.0f)
 	{
 		bIsFlashlightOn = !bIsFlashlightOn;
@@ -343,7 +345,7 @@ void AOblivioCharacter::UseFlare()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Using Flare"));
 	ThrowWeapon(FlareWeapon);
-	if(SoundPropagationComp) SoundPropagationComp->PropagateSound();
+	// 소리 자극은 ThrowableWeapon::OnLanded 에서 착지 위치 기준으로 전파한다.
 }
 
 void AOblivioCharacter::ThrowWeapon(TSubclassOf<AThrowableWeapon> Weapon) {
@@ -451,4 +453,42 @@ void AOblivioCharacter::ApplyCCSlow(float SpeedMultiplier, float Duration)
 void AOblivioCharacter::ApplyCCStun(float Duration)
 {
 	// 스턴 로직 구현
+}
+
+void AOblivioCharacter::ApplyFlashlightBlackout(float Duration)
+{
+	if (Duration <= 0.0f) return;
+
+	bFlashlightForcedOff = true;
+
+	// 켜져 있으면 즉시 끄기
+	if (bIsFlashlightOn)
+	{
+		bIsFlashlightOn = false;
+		UpdateFlashlightVisuals();
+	}
+
+	// Duration 후 강제 해제
+	GetWorldTimerManager().SetTimer(
+		FlashlightBlackoutTimer,
+		[this]()
+		{
+			bFlashlightForcedOff = false;
+		},
+		Duration, /*bLoop=*/false);
+}
+
+void AOblivioCharacter::ApplyMovementInversion(float Duration)
+{
+	if (Duration <= 0.0f) return;
+
+	bMovementInverted = true;
+
+	GetWorldTimerManager().SetTimer(
+		MovementInversionTimer,
+		[this]()
+		{
+			bMovementInverted = false;
+		},
+		Duration, /*bLoop=*/false);
 }

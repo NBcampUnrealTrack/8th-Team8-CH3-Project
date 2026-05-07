@@ -243,6 +243,46 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy|Navigation", meta = (ClampMin = "1.0", ClampMax = "500.0"))
 	float ChaseProximityBuffer = 40.0f;
 
+	/**
+	 * 타겟이 이 거리(cm) 이상 이동해야 Chase 경로를 재요청한다.
+	 * 매 프레임 MoveToActor를 호출하면 진행 중인 경로가 중단·재시작되어 적이 제자리에 멈추는 현상이 생기므로,
+	 * 이미 이동 중일 때는 타겟이 충분히 움직인 경우에만 재요청한다.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Navigation", meta = (ClampMin = "0.0"))
+	float ChasePathRefreshDistance = 120.0f;
+
+	/**
+	 * false를 반환하면 Chase 중 막힘 감지·NavMesh 복구를 건너뛴다.
+	 * 벽을 통과하는 Ghost형 적에서 오버라이드해 사용한다.
+	 */
+	virtual bool IsStuckRecoveryEnabled() const { return true; }
+
+	/**
+	 * false를 반환하면 플레이어 방향 장애물 감지·공격을 건너뛴다.
+	 * 벽을 통과하는 Ghost형 적(ScreamEnemy 등)에서 오버라이드해 사용한다.
+	 */
+	virtual bool IsObstacleAttackEnabled() const { return true; }
+
+	/** 에너미→플레이어 라인트레이스 주기(초). 장애물 감지에 사용. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Navigation", meta = (ClampMin = "0.1"))
+	float ObstacleScanInterval = 0.5f;
+
+	/** Chase 중 이 간격(초)마다 '막힘' 여부를 검사한다. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Navigation", meta = (ClampMin = "0.2"))
+	float StuckCheckInterval = 1.2f;
+
+	/** 체크 간격 동안 이 거리(cm) 이하로 이동하면 막힘으로 판단한다. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Navigation", meta = (ClampMin = "1.0"))
+	float StuckDistanceThreshold = 30.0f;
+
+	/** 연속 막힘 판정 N회 시 우회 NavMesh 지점으로 이동을 시도한다. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Navigation", meta = (ClampMin = "1"))
+	int32 StuckCountThreshold = 2;
+
+	/** 우회 지점 탐색 반경(cm). 좌·우·앞-대각 방향으로 이 거리 안의 NavMesh 위 지점을 찾는다. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Navigation", meta = (ClampMin = "50.0"))
+	float StuckRecoveryRadius = 300.0f;
+
 	/** 0이면 플레이어가 있으면 항상 어그로. 0보다 크면 이 거리(cm) 밖은 추격 해제. BP·레벨 액터에서 조정 가능. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|FSM", meta = (ClampMin = "0.0"))
 	float AggroRadius = 0.0f;
@@ -292,6 +332,29 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Idle", meta = (ClampMin = "1.0"))
 	float IdleWanderAcceptanceRadius = 64.0f;
+
+	// ------------------------------------------------------------------
+	// 빛 CC (Light Crowd Control)
+	// ------------------------------------------------------------------
+
+	/**
+	 * 빛 경직 발동에 필요한 누적 노출 시간(초).
+	 * 0이면 빛에 닿는 즉시 경직.  > 0이면 이 초만큼 빛을 맞아야 경직 발동.
+	 * ScreamEnemy는 자체 LightStunBuildupSeconds를 가지므로 이 값을 사용하지 않는다.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Light|CC", meta = (ClampMin = "0.0"))
+	float LightStunBuildupSeconds = 0.0f;
+
+	/**
+	 * 빛 경직 지속 시간(초).
+	 * 0이면 CombatComp→StunDuration 값을 사용한다.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Light|CC", meta = (ClampMin = "0.0"))
+	float LightStunDuration = 0.0f;
+
+	// ------------------------------------------------------------------
+	// Light Track (손전등 추적)
+	// ------------------------------------------------------------------
 
 	/** true면 플레이어 손전등(앞면+콘) 조건일 때 TrackLight FSM 사용. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Light|Track")
@@ -351,6 +414,17 @@ protected:
 	virtual void UpdateState();
 	virtual void UpdateChase();
 	virtual void UpdateAttack();
+
+	/** Chase 중 주기적 막힘 감지. StuckCountThreshold 회 연속 감지 시 TryRecoverFromStuck 호출. */
+	void CheckAndRecoverFromStuck(float DeltaSeconds);
+	/** NavMesh 위 우회 지점(좌·우·앞-대각)으로 임시 이동해 막힘에서 벗어난다. 후보 없으면 수용반경 확대 재요청. */
+	void TryRecoverFromStuck();
+
+	/**
+	 * Chase 상태에서 주기적으로 에너미→플레이어 사이 장애물을 감지하고,
+	 * 장애물이 있으면 직접 접근·공격·파괴 처리를 수행한다.
+	 */
+	void HandleBlockingObstacle(float DeltaSeconds);
 	virtual void UpdatePatrol(float DeltaSeconds);
 	virtual void UpdateInvestigate(float DeltaSeconds);
 	virtual void UpdateSearch(float DeltaSeconds);
@@ -397,6 +471,15 @@ private:
 	FVector LastKnownTargetLocation = FVector::ZeroVector;
 	int32 CurrentPatrolIndex = 0;
 
+	/** 마지막 MoveToActor 요청 시 타겟 위치. 경로 재요청 여부 판단에 사용. */
+	FVector LastChaseRequestedTargetPos = FVector::ZeroVector;
+	/** 마지막 막힘 체크 시 자신의 위치. */
+	FVector LastStuckCheckLocation = FVector::ZeroVector;
+	/** 막힘 체크 경과 시간(초). */
+	float StuckCheckTimer = 0.0f;
+	/** 연속 막힘 판정 횟수. */
+	int32 StuckCounter = 0;
+
 	bool bHasPendingInvestigate = false;
 	FVector PendingInvestigateLocation = FVector::ZeroVector;
 	float InvestigateTimerRemaining = 0.0f;
@@ -408,6 +491,16 @@ private:
 	float SearchRetargetCooldown = 0.0f;
 
 	float IdleWanderRetargetCooldown = 0.0f;
+
+	/** 빛 경직 누적 노출 시간(초). LightStunBuildupSeconds에 도달하면 경직 발동 후 리셋. */
+	float LightExposureAccum = 0.0f;
+
+	/** 현재 경로를 막고 있는 플레이어 설치 장애물. nullptr이면 비활성. */
+	TObjectPtr<AActor> BlockingObstacle;
+	/** 장애물 스캔 누적 시간(초). */
+	float ObstacleScanTimer = 0.0f;
+	/** 장애물 공격 쿨타임 누적(초). */
+	float ObstacleAttackTimer = 0.0f;
 
 	bool bLightTrackGoalValid = false;
 	bool bLightTrackSealed = false;
