@@ -4,6 +4,7 @@
 #include "Components/ActorComponent.h"
 #include "PlayerCombatComponent.generated.h"
 
+class AEnemyBase;
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class OBLIVIO_API UPlayerCombatComponent : public UActorComponent
 {
@@ -17,5 +18,5 @@ protected:
 
 	//플레이어의 피격 처리
 	UFUNCTION()
-	void HandleOwnerDamaged(float DamageAmount, float CurrentHealth, float MaxHealth);
+	void HandleOwnerDamaged(AEnemyBase* Enemy, AActor* Target, float DamageAmount);
 };
