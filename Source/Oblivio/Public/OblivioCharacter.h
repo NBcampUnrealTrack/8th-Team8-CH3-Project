@@ -1,6 +1,8 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "Weapon/WeaponBase.h"
+#include "Weapon/ThrowableWeapon.h"
 #include "GameFramework/Character.h"
 #include "InputActionValue.h"
 #include "OblivioComponents/CombatInterface.h"
@@ -9,6 +11,7 @@
 // 피격 판정용 델리게이트
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FPlayerDamagedSignature, float, DamageAmount, float, CurrentHealth, float, MaxHealth);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnNearbyItemChanged, class AOblivioItemBase*, NearbyItem);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPlayerAnimationEvent);
 
 class UOblivioCrafting;
 class UOblivioInventoryComponent;
@@ -119,7 +122,14 @@ public:
 	float WheelControlMultiplier = 3.0f;
 
 	FVector GetAimingLocation();
-	void ThrowWeapon(TSubclassOf<AThrowableWeapon> Weapon);
+	void BeginThrow(TSubclassOf<AThrowableWeapon> Weapon);
+	FPlayerAnimationEvent OnPlayerThrow;
+	UFUNCTION()
+	void ThrowWeapon();
+	TSubclassOf<AThrowableWeapon> PendingThrowClass;
+	bool bIsThrowing;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Animation")
+	UAnimMontage* ThrowMontage;
 
 	FTimerHandle FlashbangTimerHandle;
 	float FlashbangIntensity = 0.0f;
@@ -173,7 +183,30 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Events")
 	FPlayerDamagedSignature OnPlayerDamaged;
 
+	//===============================
+	// Fear Effects (공포 효과)
+	//===============================
+	/** 후레시를 Duration초 동안 강제 OFF한다. 그 동안 플레이어가 켤 수 없다. */
+	UFUNCTION(BlueprintCallable, Category = "Fear")
+	void ApplyFlashlightBlackout(float Duration);
+
+	/** Move 입력 방향을 Duration초 동안 반전한다. */
+	UFUNCTION(BlueprintCallable, Category = "Fear")
+	void ApplyMovementInversion(float Duration);
+
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sound|Animation")
+	TObjectPtr<USoundBase> FootstepSound;
+	UFUNCTION(BlueprintCallable)
+	void GenerateFootstep();
+	FPlayerAnimationEvent OnPlayerFootstep;
+	FTimerHandle FootstepTimerHandle;
 private:
 	UPROPERTY()
 	class AOblivioItemBase* CurrentNearbyItem = nullptr;
+
+	bool bFlashlightForcedOff = false;
+	bool bMovementInverted    = false;
+	FTimerHandle FlashlightBlackoutTimer;
+	FTimerHandle MovementInversionTimer;
 };

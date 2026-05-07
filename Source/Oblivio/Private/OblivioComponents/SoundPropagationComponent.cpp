@@ -20,7 +20,7 @@ void USoundPropagationComponent::PropagateSound()
 	// 소리 전파 범위 표시
 	if (bShowDebugSphere)
 	{
-		DrawDebugSphere(GetWorld(), SoundLocation, Radius, 16, FColor::Cyan, false, 0.5f);
+		DrawDebugCircle(GetWorld(), SoundLocation + FVector::UpVector * 20, Radius, 16, FColor::Cyan, false, 0.5f, 0, 2.0f, FVector::ForwardVector, FVector::RightVector, false);
 	}
 	//주변 적 파악
 	TArray<AActor*> OverlapActors;
