@@ -91,7 +91,7 @@ void ULightAttackComponent::TickComponent(float DeltaTime, ELevelTick TickType, 
     // ...
 }
 
-void ULightAttackComponent::CreateLightAttack(FVector SourceLocation, FVector LightDirection)
+void ULightAttackComponent::CreateLightAttack(FVector SourceLocation, FVector LightDirection, float ExposureDt)
 {
     FVector LightDir = LightDirection.GetSafeNormal();
     float HalfAngle = LightAngle / 2.f;
@@ -126,13 +126,18 @@ void ULightAttackComponent::CreateLightAttack(FVector SourceLocation, FVector Li
     GetWorld()->GetTimerManager().SetTimer(LightOffTimerHandle, this, &ULightAttackComponent::TurnOffLight, LightTime, false);
 
     //LightDistance안의 모든 적 얻기
-    TArray<AActor*> OverlapActors;
+    // ObjectTypes 가 비어 있으면 UE5 는 검색 채널이 없어 항상 0개를 반환한다.
+    // 캐릭터(Pawn) + 동적 물체(WorldDynamic) 채널을 명시해 적 캐릭터를 찾는다.
+    TArray<TEnumAsByte<EObjectTypeQuery>> EnemyObjectTypes;
+    EnemyObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECC_Pawn));
+    EnemyObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECC_WorldDynamic));
 
+    TArray<AActor*> OverlapActors;
     UKismetSystemLibrary::SphereOverlapActors(
         GetWorld(),
         SourceLocation,
         LightDistance,
-        TArray<TEnumAsByte<EObjectTypeQuery>>(),
+        EnemyObjectTypes,
         AEnemyBase::StaticClass(),
         TArray<AActor*>{GetOwner()},
         OverlapActors
@@ -242,13 +247,19 @@ void ULightAttackComponent::CreateLightAttack(FVector SourceLocation, FVector Li
 					FinalDamage = Damage * AttenuationRatio * DamageAttenuationRate;
 				}
 
-                //데미지 호출
                 UGameplayStatics::ApplyDamage(Target, FinalDamage, nullptr, GetOwner(), nullptr);
-                UE_LOG(LogTemp, Warning, TEXT("Applying %f damage to the enemy %s!"), FinalDamage, *Target->GetName());
-                //빛판정 호출
-                if (AEnemyBase* TargetEnemy = Cast<AEnemyBase>(Target)) {
-                    UE_LOG(LogTemp, Warning, TEXT("Calling Light event of the enemy %s!"), *Target->GetName());
-                    TargetEnemy->OnLightHit(FinalDamage / Damage, 0.1f);
+                UE_LOG(LogTemp, Warning, TEXT("Applying %f damage to the actor %s!"), FinalDamage, *Target->GetName());
+
+                // 빛 노출 콜백 — Intensity = 거리 감쇠 비율(0~1), ExposureDt = 호출자가 선언한 노출 시간(AttackInterval 등).
+                if (AEnemyBase* EnemyTarget = Cast<AEnemyBase>(Target))
+                {
+                    const float NormIntensity = (Damage > 0.f)
+                        ? FMath::Clamp(FinalDamage / Damage, 0.f, 1.f)
+                        : 1.f;
+                    const float EffectiveExposureDt = ExposureDt > 0.f
+                        ? ExposureDt
+                        : (GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.f);
+                    EnemyTarget->OnLightHit(NormIntensity, FMath::Max(EffectiveExposureDt, 0.05f));
                 }
                 //하나 성공시 추가 라인트레이스 불필요.
                 break;

@@ -28,8 +28,9 @@ void UEnemyCombatComponent::HandleOwnerDamaged(float DamageAmount, float Current
 	UE_LOG(LogTemp, Warning, TEXT("HandleOwnerDamaged() applies %f damage to %s"), DamageAmount, *GetOwner()->GetName())
 	if (DamageAmount >= DamageThreshold)//데미지 기준치 이상일때 데미지 적용 및 스턴
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Enemy damage applied and stunned"));
-		CombatOwner->ApplyHealth(DamageAmount);
+		// EnemyBase::TakeDamage 또는 ApplyHealth 호출 지점에서 이미 체력은 차감된다.
+		// 여기서는 피격량 기준 CC만 결정한다. 체력을 다시 깎으면 이중 차감이 발생한다.
+		UE_LOG(LogTemp, Warning, TEXT("Enemy damage threshold reached, applying stun"));
 		if (!CombatOwner->IsAlive()) {
 			//사망 처리 호출
 			UE_LOG(LogTemp, Warning, TEXT("Enemy Died!"));

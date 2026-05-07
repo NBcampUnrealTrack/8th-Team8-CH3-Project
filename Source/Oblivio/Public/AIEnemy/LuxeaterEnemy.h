@@ -66,17 +66,21 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Luxeater|Light", meta = (ClampMin = "0.0"))
 	float SpeedGainPerLight = 35.0f;
 
-	/** 빛 흡수 누적량 1당 증가하는 스케일. */
+	/**
+	 * 빛 흡수 누적량 1당 증가하는 스케일.
+	 * 튜닝 메모: 0.04(1당 +4%) → 0.005(1당 +0.5%) → 0.0005(흡수량 10당 +0.5%) 로 단위를 더 느슨하게 변경.
+	 * 즉 "흡수량 10이 차야 0.5% 커진다" 의미. 짧은 노출에는 거의 변하지 않고, 보스전 후반에 누적되며 서서히 커짐.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Luxeater|Light", meta = (ClampMin = "0.0"))
-	float ScaleGainPerLight = 0.04f;
+	float ScaleGainPerLight = 0.0005f;
 
 	/** 빛 흡수량으로 오를 수 있는 최대 추가 이동속도. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Luxeater|Light", meta = (ClampMin = "0.0"))
 	float MaxLightSpeedBonus = 420.0f;
 
-	/** 빛 흡수로 도달할 수 있는 최대 스케일 배율. */
+	/** 빛 흡수로 도달할 수 있는 최대 스케일 배율. (튜닝 메모: 1.6 → 1.12 → 1.3 으로 재조정 — 끝까지 자라야 +30%.) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Luxeater|Light", meta = (ClampMin = "1.0"))
-	float MaxLightScaleMultiplier = 1.6f;
+	float MaxLightScaleMultiplier = 1.3f;
 
 	/** 2페이즈 진입 체력 비율. 기본 0.5 = 체력 절반 이하. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Luxeater|Phase", meta = (ClampMin = "0.01", ClampMax = "1.0"))

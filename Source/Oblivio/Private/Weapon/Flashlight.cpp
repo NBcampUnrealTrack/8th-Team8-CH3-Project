@@ -39,10 +39,11 @@ void AFlashlight::UseWeapon()
 			[this]() {
 				FVector SourceLocation = LightAttackComp->GetComponentLocation();
 				FVector LightDirection = LightAttackComp->GetForwardVector();
-				LightAttackComp->CreateLightAttack(SourceLocation, LightDirection); },
+				// 누적형 기믹(Luxeater 흡수 / Scream 광원 누적 경직)을 위해 이번 틱의 노출 시간을 함께 전달.
+				LightAttackComp->CreateLightAttack(SourceLocation, LightDirection, AttackInterval); },
 			AttackInterval,
 			true);
-		LightAttackComp->CreateLightAttack(GetActorLocation(), GetActorForwardVector());
+		LightAttackComp->CreateLightAttack(GetActorLocation(), GetActorForwardVector(), AttackInterval);
 	}
 }
 
