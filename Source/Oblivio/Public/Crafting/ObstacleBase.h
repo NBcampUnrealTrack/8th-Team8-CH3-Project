@@ -67,5 +67,6 @@ public:
     int32 GetWoodCost() const { return WoodCost; }
     int32 GetIronCost() const { return IronCost; }
     float GetBatteryCost() const { return BatteryCostPercent; }
+    float GetCurrentHealth() const { return CurrentHealth; }
 
 };

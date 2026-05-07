@@ -1,7 +1,7 @@
 //ThrowableWeapon.cpp
 
-
 #include "Weapon/ThrowableWeapon.h"
+#include "OblivioComponents/SoundPropagationComponent.h"
 
 AThrowableWeapon::AThrowableWeapon()
 {
@@ -9,6 +9,8 @@ AThrowableWeapon::AThrowableWeapon()
     ThrowOffset = 50.f;
     SecondsPerDistance = 0.001f;
     HeightPerDistance = 0.2f;
+
+    SoundPropagationComp = CreateDefaultSubobject<USoundPropagationComponent>(TEXT("SoundPropagationComp"));
 }
 
 void AThrowableWeapon::BeginPlay()
@@ -56,5 +58,15 @@ void AThrowableWeapon::Tick(float DeltaTime)
     {
         bIsFlying = false;
         SetActorLocation(TargetLocation);
+        OnLanded();
+    }
+}
+
+void AThrowableWeapon::OnLanded()
+{
+    // 착지 위치(= 현재 액터 위치)에서 주변 에너미에게 소리 자극 전파
+    if (SoundPropagationComp)
+    {
+        SoundPropagationComp->PropagateSound();
     }
 }

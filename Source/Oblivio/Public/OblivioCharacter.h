@@ -173,7 +173,23 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Events")
 	FPlayerDamagedSignature OnPlayerDamaged;
 
+	//===============================
+	// Fear Effects (공포 효과)
+	//===============================
+	/** 후레시를 Duration초 동안 강제 OFF한다. 그 동안 플레이어가 켤 수 없다. */
+	UFUNCTION(BlueprintCallable, Category = "Fear")
+	void ApplyFlashlightBlackout(float Duration);
+
+	/** Move 입력 방향을 Duration초 동안 반전한다. */
+	UFUNCTION(BlueprintCallable, Category = "Fear")
+	void ApplyMovementInversion(float Duration);
+
 private:
 	UPROPERTY()
 	class AOblivioItemBase* CurrentNearbyItem = nullptr;
+
+	bool bFlashlightForcedOff = false;
+	bool bMovementInverted    = false;
+	FTimerHandle FlashlightBlackoutTimer;
+	FTimerHandle MovementInversionTimer;
 };

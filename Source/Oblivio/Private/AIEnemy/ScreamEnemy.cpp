@@ -43,8 +43,8 @@ void AScreamEnemy::BeginPlay()
 	{
 		AggroRadius = 1800.0f;
 	}
-	// 기존 BP에 잘못 저장된 값이 있어도 기획 고정값(3초 누적 -> 3초 경직 -> 30초 면역)을 보장한다.
-	LightStunBuildupSeconds = 3.0f;
+	// 기획 고정값(1.5초 누적 -> 3초 경직 -> 30초 면역)을 보장한다.
+	LightStunBuildupSeconds = 1.5f;
 	LightStunDuration = 3.0f;
 	LightStunImmunitySeconds = 30.0f;
 
@@ -83,8 +83,10 @@ void AScreamEnemy::BeginPlay()
 	}
 	UpdateHealthPhase();
 
-	// 시작 시 즉시 차지하지 않고 한 번의 쿨다운(AbilityCooldownSeconds, 기본 90초)부터 진입.
-	// 의도: 첫 사이클은 wall-ignore wander 로 압박만 주고, 이후 첫 블링크가 발동.
+	// Ghost 이동을 항상 활성화 — 스크림 에너미는 모든 페이즈에서 벽을 통과한다.
+	EnableGhostMovement(true);
+
+	// 시작 시 즉시 차지하지 않고 한 번의 쿨다운(AbilityCooldownSeconds, 기본 30초)부터 진입.
 	if (bStartOnCooldown)
 	{
 		StartCooldown();
@@ -395,9 +397,10 @@ void AScreamEnemy::StartCooldown()
 	GhostWanderRetargetCooldown = 0.0f;
 	BlinksRemainingInCycle = 0;
 
-	if (bGhostMovementDuringCooldown)
+	// Ghost 이동은 항상 활성 상태이므로 MaxFlySpeed를 배회 속도(GhostFlySpeed)로 복원한다.
+	if (UCharacterMovementComponent* Move = GetCharacterMovement())
 	{
-		EnableGhostMovement(true);
+		Move->MaxFlySpeed = FMath::Max(GhostFlySpeed, 1.0f);
 	}
 
 	TransitionToPhase(EScreamAbilityPhase::Cooldown);
@@ -429,10 +432,7 @@ void AScreamEnemy::EndCooldown()
 {
 	CooldownRemaining = 0.0f;
 	ReadyArmDelayRemaining = 0.0f;
-	if (bGhostActive)
-	{
-		EnableGhostMovement(false);
-	}
+	// Ghost 이동은 항상 유지 — 쿨다운 종료 후에도 벽 통과 상태를 해제하지 않는다.
 	TransitionToPhase(EScreamAbilityPhase::Ready);
 }
 
@@ -593,11 +593,35 @@ void AScreamEnemy::UpdateChase()
 		StopEnemyMovement();
 		return;
 	}
-	if (AbilityPhase == EScreamAbilityPhase::Cooldown && bGhostActive)
+	if (AbilityPhase == EScreamAbilityPhase::Cooldown)
 	{
-		// Ghost 비행 배회는 TickCooldown 이 직접 운영한다. 베이스 MoveTo 는 NavMesh 와 충돌.
+		// Cooldown 중 이동은 TickGhostWander 가 전담한다.
 		return;
 	}
+
+	// Ghost 항상 활성 → NavMesh 없이 플레이어를 향해 직선 비행(벽 통과).
+	if (bGhostActive && IsValid(TargetActor))
+	{
+		const FVector MyLoc = GetActorLocation();
+		FVector Dir = (TargetActor->GetActorLocation() - MyLoc).GetSafeNormal();
+
+		// Z 클램프: 스폰 Z 기준 ±GhostVerticalClamp 이탈 시 수직 보정
+		const float ZOffset = MyLoc.Z - SpawnZ;
+		if (FMath::Abs(ZOffset) > GhostVerticalClamp)
+		{
+			Dir.Z = ZOffset > 0.0f ? -0.5f : 0.5f;
+			Dir = Dir.GetSafeNormal();
+		}
+
+		// 추격 속도는 ChaseMoveSpeed(배회보다 빠름)
+		if (UCharacterMovementComponent* Move = GetCharacterMovement())
+		{
+			Move->MaxFlySpeed = FMath::Max(ChaseMoveSpeed, GhostFlySpeed);
+		}
+		AddMovementInput(Dir, 1.0f);
+		return;
+	}
+
 	Super::UpdateChase();
 }
 
@@ -622,10 +646,24 @@ void AScreamEnemy::UpdateIdle(float DeltaSeconds)
 		StopEnemyMovement();
 		return;
 	}
-	if (AbilityPhase == EScreamAbilityPhase::Cooldown && bGhostActive)
+	if (AbilityPhase == EScreamAbilityPhase::Cooldown)
 	{
+		// Cooldown 중 이동은 TickGhostWander 가 전담한다.
 		return;
 	}
+
+	// Ghost 항상 활성 → NavMesh wander 대신 유령 배회로 벽 통과 이동
+	if (bGhostActive)
+	{
+		// GhostFlySpeed로 복원(배회 중에는 느리게)
+		if (UCharacterMovementComponent* Move = GetCharacterMovement())
+		{
+			Move->MaxFlySpeed = FMath::Max(GhostFlySpeed, 1.0f);
+		}
+		TickGhostWander(DeltaSeconds);
+		return;
+	}
+
 	Super::UpdateIdle(DeltaSeconds);
 }
 
