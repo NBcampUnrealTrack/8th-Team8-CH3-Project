@@ -24,8 +24,8 @@ protected:
 	void HandleOwnerDamaged(float DamageAmount, float CurrentHealth, float MaxHealth);
 
 	//공격 로직 함수
-	UFUNCTION()
-	void HandleOwnerAttack(class AEnemyBase* Enemy, AActor* Target, float DamageAmount);
+	//UFUNCTION()
+	//void HandleOwnerAttack(class AEnemyBase* Enemy, AActor* Target, float DamageAmount);
 
 public:
 	//데미지 기준치

@@ -14,9 +14,9 @@ void UEnemyCombatComponent::BeginPlay()
 	//이벤트 구독 추가
 	if (AEnemyBase* OwnerEnemy = Cast<AEnemyBase>(GetOwner()))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Enemy AddDynamic"));
 		OwnerEnemy->OnEnemyDamaged.AddDynamic(this, &UEnemyCombatComponent::HandleOwnerDamaged);
-		OwnerEnemy->OnEnemyAttackCommitted.AddDynamic(this, &UEnemyCombatComponent::HandleOwnerAttack);
+		//공격은 레지스트리 전파 사용으로 대체, Enemybase에서 바로 reg호출하기에 필요없음.
+		//OwnerEnemy->OnEnemyAttackCommitted.AddDynamic(this, &UEnemyCombatComponent::HandleOwnerAttack);
 	}
 }
 
@@ -45,10 +45,14 @@ void UEnemyCombatComponent::HandleOwnerDamaged(float DamageAmount, float Current
 	}
 }
 
+/*
 //적 클래스 공격 로직
 void UEnemyCombatComponent::HandleOwnerAttack(AEnemyBase* Enemy, AActor* Target, float DamageAmount)
 {
 	if (!Target) return;
-	UE_LOG(LogTemp, Log, TEXT("Enemy Component HandleOwnerAttack Called"));
-	UGameplayStatics::ApplyDamage(Target, DamageAmount, nullptr, Enemy, UDamageType::StaticClass());
-}
+	UE_LOG(LogTemp, Log, TEXT("EnemyCombatComponent HandleOwnerAttack Called"));
+
+
+	//ApplyDamage호출 대신 레지스트리를 통한 델리게이트 전파로 변경
+	//UGameplayStatics::ApplyDamage(Target, DamageAmount, nullptr, Enemy, UDamageType::StaticClass()); 
+}*/

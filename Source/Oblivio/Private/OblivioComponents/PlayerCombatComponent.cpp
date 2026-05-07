@@ -2,6 +2,7 @@
 #include "OblivioComponents/CombatInterface.h"
 #include "Kismet/GameplayStatics.h"
 #include "OblivioCharacter.h"
+#include "Combat/EnemyCombatRegistrySubsystem.h"
 
 UPlayerCombatComponent::UPlayerCombatComponent()
 {
@@ -11,20 +12,24 @@ UPlayerCombatComponent::UPlayerCombatComponent()
 void UPlayerCombatComponent::BeginPlay()
 {
 	Super::BeginPlay();
+
+
 	//이벤트 구독 추가
-	if (AOblivioCharacter* OwnerPlayer = Cast<AOblivioCharacter>(GetOwner()))
+	UEnemyCombatRegistrySubsystem* Reg =
+		UEnemyCombatRegistrySubsystem::GetEnemyCombatRegistry(this);
+	if (Reg)
 	{
-		OwnerPlayer->OnPlayerDamaged.AddDynamic(this, &UPlayerCombatComponent::HandleOwnerDamaged);
-		//OwnerPlayer->OnEnemyAttackCommitted.AddDynamic(this, &UEnemyCombatComponent::HandleOwnerAttack);
+		Reg->OnAnyEnemyAttackCommitted.AddDynamic(this, &UPlayerCombatComponent::HandleOwnerDamaged);
 	}
 }
 
-void UPlayerCombatComponent::HandleOwnerDamaged(float DamageAmount, float CurrentHealth, float MaxHealth)
+void UPlayerCombatComponent::HandleOwnerDamaged(AEnemyBase* Enemy, AActor* Target, float DamageAmount)
 {
 	ICombatInterface* MyOwner = Cast<ICombatInterface>(GetOwner());
 	//체력 감소 적용
 	if (MyOwner)
-	{ 
+	{
+		UE_LOG(LogTemp, Warning, TEXT("enemy %s Applies %f damage to the player"), *Enemy->GetName(), DamageAmount);
 		MyOwner->ApplyHealth(DamageAmount);
 		//CC 호출하고싶으면 추가
 	}

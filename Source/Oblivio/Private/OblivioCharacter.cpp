@@ -1,12 +1,12 @@
 ﻿#include "OblivioCharacter.h"
 #include "OblivioGameMode.h"
 #include "OblivioGameInstance.h"
-#include "Weapon/WeaponBase.h"
-#include "Weapon/ThrowableWeapon.h"
-#include "Crafting/OblivioCrafting.h"
-#include "Items/OblivioItemBase.h"
 #include "OblivioComponents/SoundPropagationComponent.h"
 #include "OblivioComponents/PlayerCombatComponent.h"
+#include "Notify/PlayerFootstep.h"
+#include "Notify/PlayerThrow.h"
+#include "Crafting/OblivioCrafting.h"
+#include "Items/OblivioItemBase.h"
 #include "Items/OblivioInventoryComponent.h"
 
 #include "GameFramework/SpringArmComponent.h"
@@ -84,7 +84,13 @@ void AOblivioCharacter::BeginPlay()
 		}
 
 	}
+	//기존 기본부착 손전등 off
 	FlashlightComponent->SetVisibility(false);
+
+	//AnimNotify 델리게이트 장착
+	OnPlayerFootstep.AddDynamic(this, &AOblivioCharacter::GenerateFootstep);
+	OnPlayerThrow.AddDynamic(this, &AOblivioCharacter::ThrowWeapon);
+	bIsThrowing = false;
 }
 
 //==========================
@@ -334,27 +340,29 @@ void AOblivioCharacter::ReloadBattery()
 	}
 }
 
-void AOblivioCharacter::UseFlashbang()//섬광탄 무기 투척으로 변경
+
+
+void AOblivioCharacter::BeginThrow(TSubclassOf<AThrowableWeapon> Weapon)
 {
-	ThrowWeapon(FlashbangWeapon);
+	if (!bIsThrowing) {
+		UE_LOG(LogTemp, Warning, TEXT("AnimateThrow!"));
+		PlayAnimMontage(ThrowMontage);
+		PendingThrowClass = Weapon;
+		bIsThrowing = true;
+	}
+	
 }
 
-void AOblivioCharacter::UseFlare()
-{
-	UE_LOG(LogTemp, Warning, TEXT("Using Flare"));
-	ThrowWeapon(FlareWeapon);
-	if(SoundPropagationComp) SoundPropagationComp->PropagateSound();
-}
-
-void AOblivioCharacter::ThrowWeapon(TSubclassOf<AThrowableWeapon> Weapon) {
-	if (!IsValid(Weapon)) {
-		UE_LOG(LogTemp, Warning, TEXT("ThrowWeapon invalid call!"));
+void AOblivioCharacter::ThrowWeapon() {
+	bIsThrowing = false;
+	if (!IsValid(PendingThrowClass)) {
+		UE_LOG(LogTemp, Warning, TEXT("PendingThrowClass invalid!"));
 		return;
 	}
 	FActorSpawnParameters Params;
 	Params.Owner = this;
 	AThrowableWeapon* ThrowingWeapon = GetWorld()->SpawnActor<AThrowableWeapon>(
-		Weapon,
+		PendingThrowClass,
 		GetActorLocation(),
 		FRotator::ZeroRotator,
 		Params);
@@ -402,10 +410,16 @@ void AOblivioCharacter::FadeOutFlashbang()
 
 void AOblivioCharacter::ApplyHealth(float Damage)
 {
+	UE_LOG(LogTemp, Warning, TEXT("Player ApplyHealth called, isdead: %d"), bIsDead);
 	if (bIsDead) return;
 
 	// 체력을 차감하고 최소값을 0으로 유지
 	CurrentHealth = FMath::Clamp(CurrentHealth - Damage, 0.0f, MaxHealth);
+	UE_LOG(LogTemp, Warning, TEXT("Player has %f health"), CurrentHealth);
+
+	//TakeDamage에서 호출하던 델리게이트 이동
+	// 블루프린트나 UI 갱신을 위해 델리게이트 방송
+	OnPlayerDamaged.Broadcast(Damage, CurrentHealth, MaxHealth);
 
 	if (CurrentHealth <= 0.0f)
 	{
@@ -419,10 +433,25 @@ float AOblivioCharacter::TakeDamage(float DamageAmount, const FDamageEvent& Dama
 
 	ApplyHealth(AppliedDamage); // 통합된 데미지 처리 함수 호출
 
-	// 블루프린트나 UI 갱신을 위해 델리게이트 방송
-	OnPlayerDamaged.Broadcast(AppliedDamage, CurrentHealth, MaxHealth);
-
 	return AppliedDamage;
+}
+
+void AOblivioCharacter::GenerateFootstep()
+{
+	if (GetWorld()->GetTimerManager().IsTimerActive(FootstepTimerHandle)) {
+		return;
+	}
+	GetWorld()->GetTimerManager().SetTimer(FootstepTimerHandle, 0.2f, false);
+	UE_LOG(LogTemp, Warning, TEXT("GenerateFootstep Called"));
+	//발걸음 SFX 출력
+	if (IsValid(FootstepSound)) {
+		UGameplayStatics::PlaySound2D(GetWorld(), FootstepSound);
+	}
+	
+	//추적용 소리 전파
+	if (IsValid(SoundPropagationComp)) {
+		SoundPropagationComp->PropagateSound();
+	}
 }
 
 void AOblivioCharacter::HandleDeath()
