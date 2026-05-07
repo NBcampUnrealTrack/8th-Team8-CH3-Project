@@ -25,10 +25,22 @@ void ALuxeaterEnemy::BeginPlay()
 	BaseMoveSpeed = MoveSpeed;
 	BaseChaseMoveSpeed = ChaseMoveSpeed > KINDA_SMALL_NUMBER ? ChaseMoveSpeed : MoveSpeed;
 	InitialScale = GetActorScale3D();
+	CurrentScaleMultiplier = 1.0f;
+	TargetScaleMultiplier = 1.0f;
 
-	// AggroRadius / bEnableIdleWander / bEnableLightTracking 는 BP 값 존중.
-	// 무한 추격을 원하면 BP에서 AggroRadius 를 0 으로 둘 것.
 	Super::BeginPlay();
+}
+
+void ALuxeaterEnemy::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	// 목표 스케일을 향해 부드럽게 보간 — 빛을 받을수록 서서히 커지는 시각 효과.
+	if (!FMath::IsNearlyEqual(CurrentScaleMultiplier, TargetScaleMultiplier, 0.0001f))
+	{
+		CurrentScaleMultiplier = FMath::FInterpTo(CurrentScaleMultiplier, TargetScaleMultiplier, DeltaSeconds, ScaleInterpSpeed);
+		SetActorScale3D(InitialScale * CurrentScaleMultiplier);
+	}
 }
 
 void ALuxeaterEnemy::ApplyCCSlow(float /*SpeedMultiplier*/, float /*Duration*/)
@@ -120,8 +132,8 @@ void ALuxeaterEnemy::ApplyLightEmpowerment()
 	ChaseMoveSpeed = BaseChaseMoveSpeed + SpeedBonus;
 	RefreshWalkSpeedFromSources();
 
-	const float ScaleMultiplier = FMath::Min(MaxLightScaleMultiplier, 1.0f + AbsorbedLight * ScaleGainPerLight);
-	SetActorScale3D(InitialScale * ScaleMultiplier);
+	// 목표 스케일만 갱신. 실제 SetActorScale3D 는 Tick 의 보간이 처리한다.
+	TargetScaleMultiplier = FMath::Min(MaxLightScaleMultiplier, 1.0f + AbsorbedLight * ScaleGainPerLight);
 }
 
 void ALuxeaterEnemy::UpdateHealthPhase()

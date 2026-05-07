@@ -14,6 +14,7 @@
 #include "OblivioComponents/EnemyCombatComponent.h"
 #include "Components/SpotLightComponent.h"
 #include "Engine/World.h"
+#include "Crafting/ObstacleBase.h"
 
 // =============================================================================
 // AEnemyBase 구현 요약
@@ -47,6 +48,11 @@ void AEnemyBase::BeginPlay()
 	CurrentHealth = MaxHealth;
 	RefreshWalkSpeedFromSources();
 	FindDefaultTarget();
+
+	LastChaseRequestedTargetPos = FVector::ZeroVector;
+	LastStuckCheckLocation = GetActorLocation();
+	StuckCheckTimer = 0.0f;
+	StuckCounter = 0;
 
 	if (HasValidAggroTarget())
 	{
@@ -123,7 +129,12 @@ void AEnemyBase::Tick(float DeltaSeconds)
 		UpdateIdle(DeltaSeconds);
 		break;
 	case EEnemyAIState::Chase:
-		UpdateChase();
+		CheckAndRecoverFromStuck(DeltaSeconds);
+		HandleBlockingObstacle(DeltaSeconds);
+		if (!IsValid(BlockingObstacle))
+		{
+			UpdateChase();
+		}
 		break;
 	case EEnemyAIState::Attack:
 		UpdateAttack();
@@ -296,17 +307,36 @@ void AEnemyBase::NotifyEnemyDamageApplied(float /*AppliedDamage*/)
 {
 }
 
-// 손전등 피격 판단만 수행. 빛 피해·둔화·정지·사망 처리는 전투 시스템에서 담당.
+// 손전등 피격 — LightStunBuildupSeconds 누적 후 경직 발동.
+// 파생 클래스(ScreamEnemy, HeadlessLoverEnemy)는 이 메서드를 완전 오버라이드한다.
 void AEnemyBase::OnLightHit(float Intensity, float Duration)
 {
-	if (!IsAlive())
-	{
-		return;
-	}
+	if (!IsAlive()) return;
 
-	const float ClampedDuration = FMath::Max(0.0f, Duration);
+	const float ClampedDuration  = FMath::Max(0.0f, Duration);
 	const float ClampedIntensity = FMath::Clamp(Intensity, 0.0f, 1.0f);
 	OnEnemyLightHit.Broadcast(this, ClampedIntensity, ClampedDuration);
+
+	// 경직 지속 시간: LightStunDuration > 0 이면 그 값, 아니면 CombatComp->StunDuration 사용
+	const float ResolvedStunDur = (LightStunDuration > 0.0f)
+		? LightStunDuration
+		: (CombatComp ? CombatComp->StunDuration : 1.5f);
+
+	if (LightStunBuildupSeconds <= 0.0f)
+	{
+		// 즉시 경직
+		ApplyCCStun(ResolvedStunDur);
+	}
+	else
+	{
+		// 누적 후 임계치 도달 시 경직
+		LightExposureAccum += ClampedDuration;
+		if (LightExposureAccum >= LightStunBuildupSeconds)
+		{
+			LightExposureAccum = 0.0f;
+			ApplyCCStun(ResolvedStunDur);
+		}
+	}
 }
 
 static void BroadcastEnemyDamageToRegistry(AEnemyBase* Self, float Amount, float Cur, float Max)
@@ -744,14 +774,204 @@ void AEnemyBase::UpdateChase()
 		return;
 	}
 
-	// Chase 수용이 AttackRange에 너무 가깝거나 크면 미세하게 밖에서 멈춰 Attack 미전환 → AttackRange - ChaseProximityBuffer 로 상한.
 	const float MaxAcceptanceForAttack = FMath::Max(1.0f, AttackRange - ChaseProximityBuffer);
 	const float EffectiveChaseAcceptance = FMath::Min(ChaseAcceptanceRadius, MaxAcceptanceForAttack);
+
+	// 이미 NavMesh 경로를 따라 이동 중이고 타겟이 ChasePathRefreshDistance 이하로만 움직였으면 재요청 생략.
+	// 매 프레임 MoveToActor를 호출하면 PathFollowingComponent가 진행 중인 경로를 취소·재시작하여
+	// 적이 경로 재계획 중에 멈추는 현상이 생긴다.
+	if (const UPathFollowingComponent* PFC = EnemyController->GetPathFollowingComponent())
+	{
+		if (PFC->GetStatus() == EPathFollowingStatus::Moving)
+		{
+			const float MovedSq = FVector::DistSquared(TargetActor->GetActorLocation(), LastChaseRequestedTargetPos);
+			if (MovedSq < FMath::Square(ChasePathRefreshDistance))
+			{
+				return;
+			}
+		}
+	}
 
 	const EPathFollowingRequestResult::Type MoveResult = EnemyController->MoveToActor(TargetActor, EffectiveChaseAcceptance);
 	if (MoveResult == EPathFollowingRequestResult::Failed)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("%s failed to request path to %s"), *GetNameSafe(this), *GetNameSafe(TargetActor));
+		// NavMesh로 직접 도달 불가 → 우회 지점 탐색
+		UE_LOG(LogTemp, Warning, TEXT("%s: NavMesh path to %s failed — attempting stuck recovery"), *GetNameSafe(this), *GetNameSafe(TargetActor));
+		TryRecoverFromStuck();
+	}
+	else
+	{
+		LastChaseRequestedTargetPos = TargetActor->GetActorLocation();
+	}
+}
+
+// Chase 중 주기적으로 '막힘' 여부를 판단한다.
+// StuckCheckInterval 마다 현재 위치와 이전 체크 위치를 비교해
+// StuckDistanceThreshold 이하로 이동했으면 막힘 카운터를 증가시키고
+// StuckCountThreshold 회 연속 시 TryRecoverFromStuck을 호출한다.
+void AEnemyBase::CheckAndRecoverFromStuck(float DeltaSeconds)
+{
+	if (!IsStuckRecoveryEnabled())
+	{
+		return;
+	}
+
+	StuckCheckTimer += DeltaSeconds;
+	if (StuckCheckTimer < StuckCheckInterval)
+	{
+		return;
+	}
+	StuckCheckTimer = 0.0f;
+
+	const FVector CurrentLocation = GetActorLocation();
+	const float MovedDist = FVector::Dist(CurrentLocation, LastStuckCheckLocation);
+	LastStuckCheckLocation = CurrentLocation;
+
+	if (MovedDist < StuckDistanceThreshold)
+	{
+		StuckCounter++;
+		if (StuckCounter >= StuckCountThreshold)
+		{
+			StuckCounter = 0;
+			TryRecoverFromStuck();
+		}
+	}
+	else
+	{
+		StuckCounter = 0;
+	}
+}
+
+// 적이 벽 등에 막혔을 때 NavMesh 위 우회 지점(좌·우·앞-대각 방향)으로 임시 이동한다.
+// 후보 지점이 없으면 수용 반경을 넓혀 원래 타겟으로 재요청(폴백).
+void AEnemyBase::TryRecoverFromStuck()
+{
+	AAIController* EnemyController = Cast<AAIController>(GetController());
+	UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
+	if (!EnemyController || !NavSys || !IsValid(TargetActor))
+	{
+		return;
+	}
+
+	const FVector MyLocation = GetActorLocation();
+	const FVector ToTarget   = (TargetActor->GetActorLocation() - MyLocation).GetSafeNormal();
+	const FVector RightDir   = FVector::CrossProduct(ToTarget, FVector::UpVector).GetSafeNormal();
+	const FVector QueryExtent(StuckRecoveryRadius * 0.6f, StuckRecoveryRadius * 0.6f, 200.0f);
+
+	// 우선순위: 좌/우 측면 → 앞+우/앞+좌 대각
+	const TArray<FVector> Candidates =
+	{
+		MyLocation + RightDir  * StuckRecoveryRadius,
+		MyLocation - RightDir  * StuckRecoveryRadius,
+		MyLocation + ToTarget  * (StuckRecoveryRadius * 0.5f) + RightDir * (StuckRecoveryRadius * 0.5f),
+		MyLocation + ToTarget  * (StuckRecoveryRadius * 0.5f) - RightDir * (StuckRecoveryRadius * 0.5f),
+	};
+
+	for (const FVector& Candidate : Candidates)
+	{
+		FNavLocation NavLoc;
+		if (NavSys->ProjectPointToNavigation(Candidate, NavLoc, QueryExtent))
+		{
+			EnemyController->MoveToLocation(NavLoc.Location, 40.0f, false);
+			// 우회 이동 완료 후 UpdateChase가 타겟 경로를 다시 계획하도록 강제.
+			LastChaseRequestedTargetPos = FVector::ZeroVector;
+			UE_LOG(LogTemp, Warning, TEXT("%s: stuck recovery → offset NavMesh point"), *GetNameSafe(this));
+			return;
+		}
+	}
+
+	// 우회 후보 없음(좁은 공간 등): 수용 반경 2배로 직접 재요청
+	const float MaxAcceptance   = FMath::Max(1.0f, AttackRange - ChaseProximityBuffer);
+	const float WiderAcceptance = FMath::Min(ChaseAcceptanceRadius * 2.0f, MaxAcceptance);
+	EnemyController->MoveToActor(TargetActor, WiderAcceptance);
+	LastChaseRequestedTargetPos = FVector::ZeroVector;
+	UE_LOG(LogTemp, Warning, TEXT("%s: stuck recovery fallback — wider acceptance re-request"), *GetNameSafe(this));
+}
+
+// =============================================================================
+// HandleBlockingObstacle
+// Chase 상태에서 매 틱 호출.
+// 1) BlockingObstacle 이 유효하면: 접근·공격·파괴 처리
+// 2) 아니면 ObstacleScanInterval 마다 라인트레이스로 장애물 감지
+// =============================================================================
+void AEnemyBase::HandleBlockingObstacle(float DeltaSeconds)
+{
+	if (!IsObstacleAttackEnabled()) return;
+
+	// ── 플레이어 우선: 공격 범위 내면 장애물 타겟 해제 후 즉시 반환
+	// (FSM이 Chase→Attack으로 전환해 플레이어를 공격한다)
+	if (IsValid(TargetActor) &&
+		FVector::DistSquared(GetActorLocation(), TargetActor->GetActorLocation()) <= FMath::Square(AttackRange))
+	{
+		BlockingObstacle = nullptr;
+		return;
+	}
+
+	// ── 기존 타겟 유효성 확인 ──────────────────────────────────────────
+	if (IsValid(BlockingObstacle))
+	{
+		AObstacleBase* Obs = Cast<AObstacleBase>(BlockingObstacle);
+		if (!Obs)
+		{
+			BlockingObstacle = nullptr;
+			return;
+		}
+
+		const float DistToObs = FVector::Dist(GetActorLocation(), Obs->GetActorLocation());
+
+		if (DistToObs <= AttackRange)
+		{
+			// 사거리 내 → 쿨타임 맞으면 피해 적용
+			ObstacleAttackTimer += DeltaSeconds;
+			if (ObstacleAttackTimer >= AttackCooldown)
+			{
+				ObstacleAttackTimer = 0.0f;
+				UGameplayStatics::ApplyDamage(
+					Obs,
+					AttackDamage,
+					GetController(),
+					this,
+					UDamageType::StaticClass());
+				UE_LOG(LogTemp, Log, TEXT("%s attacking obstacle %s (%.0f hp remaining)"),
+					*GetNameSafe(this), *GetNameSafe(Obs), Obs->GetCurrentHealth());
+			}
+			StopEnemyMovement();
+		}
+		else
+		{
+			// 아직 멀다 → 장애물로 이동
+			if (AAIController* AC = Cast<AAIController>(GetController()))
+			{
+				AC->MoveToActor(Obs, FMath::Min(AttackRange * 0.8f, 80.0f));
+			}
+		}
+		return;
+	}
+
+	// ── 주기적 스캔 ────────────────────────────────────────────────────
+	ObstacleScanTimer += DeltaSeconds;
+	if (ObstacleScanTimer < ObstacleScanInterval) return;
+	ObstacleScanTimer = 0.0f;
+
+	if (!IsValid(TargetActor)) return;
+
+	// 에너미 눈높이(+50 cm) → 플레이어 사이 라인트레이스
+	const FVector TraceStart = GetActorLocation() + FVector(0.f, 0.f, 50.f);
+	const FVector TraceEnd   = TargetActor->GetActorLocation();
+
+	FHitResult Hit;
+	FCollisionQueryParams Params(TEXT("ObstacleScan"), false, this);
+	Params.AddIgnoredActor(TargetActor);
+
+	if (GetWorld()->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, ECC_Visibility, Params))
+	{
+		if (AObstacleBase* HitObs = Cast<AObstacleBase>(Hit.GetActor()))
+		{
+			BlockingObstacle    = HitObs;
+			ObstacleAttackTimer = AttackCooldown; // 첫 틱에 바로 공격
+			UE_LOG(LogTemp, Log, TEXT("%s detected blocking obstacle: %s"),
+				*GetNameSafe(this), *GetNameSafe(HitObs));
+		}
 	}
 }
 
@@ -998,6 +1218,21 @@ void AEnemyBase::SetEnemyState(EEnemyAIState NewState)
 	if (NewState == EEnemyAIState::Idle && bEnableIdleWander)
 	{
 		IdleWanderRetargetCooldown = FMath::FRandRange(0.3f, 1.5f);
+	}
+	if (NewState == EEnemyAIState::Chase)
+	{
+		// Chase 진입 시 막힘 감지 상태 초기화 — 직전 경로 이력이 오탐을 유발하지 않도록.
+		LastStuckCheckLocation = GetActorLocation();
+		LastChaseRequestedTargetPos = FVector::ZeroVector;
+		StuckCheckTimer = 0.0f;
+		StuckCounter = 0;
+	}
+	// Chase 이외 상태로 전환되면 장애물 타겟 해제
+	if (NewState != EEnemyAIState::Chase)
+	{
+		BlockingObstacle = nullptr;
+		ObstacleScanTimer = 0.0f;
+		ObstacleAttackTimer = 0.0f;
 	}
 	NotifyEnemyStateChanged(OldState, NewState);
 	OnEnemyFSMStateChanged.Broadcast(this, OldState, NewState);
