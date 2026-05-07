@@ -22,13 +22,15 @@ public:
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
-	virtual void CreateLightAttack(FVector SourceLocation, FVector LightDirection) override;
+	virtual void CreateLightAttack(FVector SourceLocation, FVector LightDirection, float ExposureDt = 0.f) override;
 
 	//실제 광원
 	UPROPERTY(VisibleAnywhere, Category = "Light Attack")
 	TObjectPtr<USpotLightComponent> SpotLightComp;   // bIsConcentrated
 	UPROPERTY(VisibleAnywhere, Category = "Light Attack")
 	TObjectPtr<UPointLightComponent> PointLightComp;   // bIsConcentrated
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Light Attack")
+	FColor BasicLightColor;   // LightColor
 
 	//빛 세기/시간
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Light)

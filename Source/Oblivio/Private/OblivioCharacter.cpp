@@ -80,7 +80,7 @@ void AOblivioCharacter::BeginPlay()
 		CurrentWeapon = GetWorld()->SpawnActor<AWeaponBase>(FlashlightWeapon, GetActorTransform(), Params);
 		if (IsValid(CurrentWeapon)) {
 			UE_LOG(LogTemp, Warning, TEXT("Attaching Weapon"));
-			CurrentWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+			CurrentWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("WeaponSocket"));
 		}
 
 	}
@@ -114,6 +114,9 @@ void AOblivioCharacter::Tick(float DeltaTime)
 		FString MoveMsg = FString::Printf(TEXT("Movement: %s | Speed: %.1f"),
 			bIsRunning ? TEXT("RUNNING") : TEXT("WALKING"), GetVelocity().Size());
 		GEngine->AddOnScreenDebugMessage(3, DeltaTime, FColor::Yellow, MoveMsg);
+	}
+	if (IsValid(CurrentWeapon)) {
+		CurrentWeapon->SetActorRotation(GetActorRotation());
 	}
 }
 

@@ -10,6 +10,7 @@ AFlare::AFlare()
 	AttackInterval = 0.1f;
 	LastDuration = 5.f;
 	LightAttackComp->Damage = 1;
+	LightAttackComp->BasicLightColor = FColor::Red;
 }
 
 void AFlare::BeginPlay()
@@ -29,7 +30,8 @@ void AFlare::UseWeapon()
 			[this]() {
 				FVector SourceLocation = LightAttackComp->GetComponentLocation();
 				FVector LightDirection = LightAttackComp->GetForwardVector();
-				LightAttackComp->CreateLightAttack(SourceLocation, LightDirection); },
+				// 누적형 기믹용 노출 시간(이번 틱 = AttackInterval) 동봉.
+				LightAttackComp->CreateLightAttack(SourceLocation, LightDirection, AttackInterval); },
 			AttackInterval,
 			true);
 		GetWorld()->GetTimerManager().SetTimer(DestroyTimerHandle, this, &AFlare::StopWeapon, LastDuration, false);

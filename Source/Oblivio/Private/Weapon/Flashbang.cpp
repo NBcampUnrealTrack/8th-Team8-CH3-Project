@@ -8,6 +8,7 @@ AFlashbang::AFlashbang()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	LightAttackComp->Damage = 10000;
+	LightAttackComp->BasicLightColor = FColor::White;
 	BangDelay = 2.0f;
 	FlashDuration = 0.2f;
 }
@@ -29,7 +30,8 @@ void AFlashbang::UseWeapon()
 			[this]() {
 				FVector SourceLocation = LightAttackComp->GetComponentLocation();
 				FVector LightDirection = LightAttackComp->GetForwardVector();
-				LightAttackComp->CreateLightAttack(SourceLocation, LightDirection); },
+				// 단발 섬광 — 빛이 켜져 있는 시간(FlashDuration) 만큼을 노출량으로 한 번에 전달.
+				LightAttackComp->CreateLightAttack(SourceLocation, LightDirection, FlashDuration); },
 			BangDelay,
 			false);
 		GetWorld()->GetTimerManager().SetTimer(DestroyTimerHandle, this, &AFlashbang::StopWeapon, BangDelay + FlashDuration, false);

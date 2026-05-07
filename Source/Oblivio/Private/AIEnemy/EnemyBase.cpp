@@ -1124,6 +1124,17 @@ void AEnemyBase::ApplyEnemySoundVolumes()
 }
 
 void AEnemyBase::ApplyHealth(float Damage) {	//전투 컴포넌트 체력 업데이트용
-	UE_LOG(LogTemp, Warning, TEXT("Enemy %s ApplyHealth called!"), *GetName());
-	return;
+	if (EnemyState == EEnemyAIState::Dead || Damage <= 0.0f)
+	{
+		return;
+	}
+
+	CurrentHealth = FMath::Max(0.0f, CurrentHealth - Damage);
+	NotifyEnemyDamageApplied(Damage);
+	BroadcastEnemyDamageToRegistry(this, Damage, CurrentHealth, MaxHealth);
+
+	if (CurrentHealth <= 0.0f)
+	{
+		Die();
+	}
 }
