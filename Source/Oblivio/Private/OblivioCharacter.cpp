@@ -8,6 +8,7 @@
 #include "Items/OblivioItemBase.h"
 #include "Items/OblivioInventoryComponent.h"
 #include "Crafting/OblivioCrafting.h"
+#include "DoorBase.h"
 
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -214,6 +215,12 @@ void AOblivioCharacter::Interact()
 		//추가: 열쇠/유품 획득 시 정보 저장
 		AActor* HitActor = HitResult.GetActor();
 		UE_LOG(LogTemp, Warning, TEXT("1. Hit Something: %s"), *HitActor->GetName());
+
+		if (ADoorBase* HitDoor = Cast<ADoorBase>(HitActor))
+		{
+			HitDoor->InteractDoor(); // 문 열기 애니메이션 실행!
+			return; // 문을 열었으니 함수 종료
+		}
 
 		if (AOblivioItemBase* PickedItem = Cast<AOblivioItemBase>(HitActor))
 		{
