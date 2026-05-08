@@ -25,6 +25,14 @@ void UEnemyCombatComponent::HandleOwnerDamaged(float DamageAmount, float Current
 {
 	ICombatInterface* CombatOwner = Cast<ICombatInterface>(GetOwner());
 	if (!CombatOwner) return;
+	if (const AEnemyBase* OwnerEnemy = Cast<AEnemyBase>(GetOwner()))
+	{
+		if (OwnerEnemy->WasLastDamageFromLight())
+		{
+			// 빛 CC는 EnemyBase::OnLightHit의 누적 설정값으로만 처리한다.
+			return;
+		}
+	}
 	UE_LOG(LogTemp, Warning, TEXT("HandleOwnerDamaged() applies %f damage to %s"), DamageAmount, *GetOwner()->GetName())
 	if (DamageAmount >= DamageThreshold)//데미지 기준치 이상일때 데미지 적용 및 스턴
 	{

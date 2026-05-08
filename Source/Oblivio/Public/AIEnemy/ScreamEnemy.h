@@ -76,8 +76,7 @@ public:
 	bool IsLightImmune() const;
 
 	/** 0~LightStunBuildupSeconds. UI/디버깅용. */
-	UFUNCTION(BlueprintPure, Category = "Enemy|Scream|CC")
-	float GetLightExposureAccum() const { return LightExposureAccum; }
+	virtual float GetLightExposureAccum() const override { return LightExposureAccum; }
 
 	/** 일반 전투 경직 무시(Whisper/Luxeater 패턴). 라이트 누적 경직은 내부에서 별도로 처리. */
 	virtual void ApplyCCStun(float Duration = 0.0f) override;

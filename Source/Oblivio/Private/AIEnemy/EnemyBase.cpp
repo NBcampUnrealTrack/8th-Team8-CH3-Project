@@ -6,10 +6,12 @@
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/DamageType.h"
+#include "Engine/DamageEvents.h"
 #include "Navigation/PathFollowingComponent.h"
 #include "NavigationSystem.h"
 #include "TimerManager.h"
 #include "DrawDebugHelpers.h"
+#include "Combat/LightDamageType.h"
 #include "OblivioCharacter.h"
 #include "OblivioComponents/EnemyCombatComponent.h"
 #include "Components/SpotLightComponent.h"
@@ -278,6 +280,8 @@ void AEnemyBase::OnCCStunExpired()
 float AEnemyBase::TakeDamage(float DamageAmount, const FDamageEvent& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
 	const float AppliedDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+	bLastDamageWasLight = DamageEvent.DamageTypeClass &&
+		DamageEvent.DamageTypeClass->IsChildOf(ULightDamageType::StaticClass());
 
 	if (!IsAlive() || AppliedDamage <= 0.0f)
 	{
@@ -407,6 +411,10 @@ void AEnemyBase::SetTargetActor(AActor* NewTarget)
 void AEnemyBase::ReportStimulus(FVector WorldLocation, EEnemyStimulusType StimulusType)
 {
 	if (!IsAlive())
+	{
+		return;
+	}
+	if (!IsSoundInvestigationEnabled())
 	{
 		return;
 	}
@@ -1050,9 +1058,14 @@ void AEnemyBase::UpdatePatrol(float DeltaSeconds)
 // 어그로 밖·Patrol 없음: 주변 Nav 랜덤 지점으로 배회
 void AEnemyBase::UpdateIdle(float DeltaSeconds)
 {
-	(void)DeltaSeconds;
+	// 어그로가 생긴 채로 Idle에 남아 있는 경우(AggroRadius=0 등) 즉시 Chase로 전환
+	if (HasValidAggroTarget())
+	{
+		SetEnemyState(EEnemyAIState::Chase);
+		return;
+	}
 
-	if (!bEnableIdleWander || HasValidAggroTarget())
+	if (!bEnableIdleWander)
 	{
 		StopEnemyMovement();
 		return;
@@ -1215,6 +1228,11 @@ void AEnemyBase::SetEnemyState(EEnemyAIState NewState)
 
 	const EEnemyAIState OldState = EnemyState;
 	EnemyState = NewState;
+
+	// Chase/Attack/TrackLight 진입 시 ChaseMoveSpeed를, Idle/Investigate/Search 등에서는 MoveSpeed를 반영한다.
+	// BP에 낮은 MoveSpeed가 저장된 적이 Chase 상태로 바뀌어도 이전 MaxWalkSpeed에 묶여 멈추는 문제를 방지.
+	RefreshWalkSpeedFromSources();
+
 	if (NewState == EEnemyAIState::Idle && bEnableIdleWander)
 	{
 		IdleWanderRetargetCooldown = FMath::FRandRange(0.3f, 1.5f);
