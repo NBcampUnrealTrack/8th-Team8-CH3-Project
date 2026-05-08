@@ -1,6 +1,7 @@
 #include "AIEnemy/LuxeaterEnemy.h"
 
 #include "AIController.h"
+#include "Components/SkeletalMeshComponent.h"
 
 ALuxeaterEnemy::ALuxeaterEnemy()
 {
@@ -28,6 +29,11 @@ void ALuxeaterEnemy::BeginPlay()
 	CurrentScaleMultiplier = 1.0f;
 	TargetScaleMultiplier = 1.0f;
 
+	// 부유 기준 Z — 스폰 위치 기준으로 고정
+	FloatBaseMeshRelativeZ = GetMesh() ? GetMesh()->GetRelativeLocation().Z : 0.0f;
+	// 인스턴스마다 위상 랜덤 오프셋 (여러 마리 배치 시 동기화 방지)
+	FloatTime = FMath::FRandRange(0.0f, 2.0f * PI);
+
 	Super::BeginPlay();
 }
 
@@ -35,12 +41,26 @@ void ALuxeaterEnemy::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	// 목표 스케일을 향해 부드럽게 보간 — 빛을 받을수록 서서히 커지는 시각 효과.
+	// ── 빛 흡수 스케일 보간 ──────────────────────────────────────
 	if (!FMath::IsNearlyEqual(CurrentScaleMultiplier, TargetScaleMultiplier, 0.0001f))
 	{
 		CurrentScaleMultiplier = FMath::FInterpTo(CurrentScaleMultiplier, TargetScaleMultiplier, DeltaSeconds, ScaleInterpSpeed);
 		SetActorScale3D(InitialScale * CurrentScaleMultiplier);
 	}
+
+	// ── 부유 연출 ────────────────────────────────────────────────
+	if (FloatAmplitude > KINDA_SMALL_NUMBER)
+	{
+		FloatTime += DeltaSeconds * FloatSpeed;
+
+		if (USkeletalMeshComponent* MeshComp = GetMesh())
+		{
+			FVector RelativeLoc = MeshComp->GetRelativeLocation();
+			RelativeLoc.Z = FloatBaseMeshRelativeZ + FMath::Sin(FloatTime) * FloatAmplitude;
+			MeshComp->SetRelativeLocation(RelativeLoc);
+		}
+	}
+
 }
 
 void ALuxeaterEnemy::ApplyCCSlow(float /*SpeedMultiplier*/, float /*Duration*/)
@@ -106,17 +126,6 @@ bool ALuxeaterEnemy::HasValidAggroTarget() const
 		bAggroLatched = true;
 	}
 	return bInRange;
-}
-
-void ALuxeaterEnemy::UpdateChase()
-{
-	AAIController* const AI = Cast<AAIController>(GetController());
-	if (!AI || !IsValid(TargetActor))
-	{
-		return;
-	}
-
-	AI->MoveToActor(TargetActor, FMath::Max(5.0f, AttackRange - ChaseProximityBuffer), false);
 }
 
 void ALuxeaterEnemy::UpdateAttack()

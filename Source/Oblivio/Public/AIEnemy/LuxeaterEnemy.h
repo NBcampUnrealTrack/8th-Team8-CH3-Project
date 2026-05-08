@@ -50,7 +50,6 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
-	virtual void UpdateChase() override;
 	virtual void UpdateAttack() override;
 	virtual bool HasValidAggroTarget() const override;
 
@@ -91,6 +90,16 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Luxeater|Phase", meta = (ClampMin = "0.01", ClampMax = "1.0"))
 	float PhaseTwoHealthPercentThreshold = 0.5f;
 
+	// === 부유 연출 ===
+
+	/** 위아래 부유 진폭(cm). 0이면 부유 비활성. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Luxeater|Float", meta = (ClampMin = "0.0"))
+	float FloatAmplitude = 25.0f;
+
+	/** 부유 사인파 속도(라디안/초). 클수록 빠르게 출렁임. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Luxeater|Float", meta = (ClampMin = "0.1"))
+	float FloatSpeed = 1.2f;
+
 private:
 	float BaseMoveSpeed = 0.0f;
 	float BaseChaseMoveSpeed = 0.0f;
@@ -104,4 +113,7 @@ private:
 
 	/** 플레이어가 한 번이라도 AggroRadius 안에 들어왔는지(이후엔 거리 무시). bStickyAggroOnceTriggered 와 함께 사용. */
 	mutable bool bAggroLatched = false;
+
+	float FloatBaseMeshRelativeZ = 0.0f;
+	float FloatTime  = 0.0f;
 };
