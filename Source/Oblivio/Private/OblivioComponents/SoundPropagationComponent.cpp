@@ -4,6 +4,8 @@
 #include "Engine/World.h"
 #include "Engine/OverlapResult.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Kismet/GameplayStatics.h"
+#include "Engine/EngineTypes.h"
 
 USoundPropagationComponent::USoundPropagationComponent()
 {
@@ -22,14 +24,17 @@ void USoundPropagationComponent::PropagateSound()
 	{
 		DrawDebugCircle(GetWorld(), SoundLocation + FVector::UpVector * 20, Radius, 16, FColor::Cyan, false, 0.5f, 0, 2.0f, FVector::ForwardVector, FVector::RightVector, false);
 	}
-	//주변 적 파악
+	//주변 적 파악 (ECC_Pawn + ECC_WorldDynamic 명시 — 빈 배열이면 아무것도 감지 안 됨)
 	TArray<AActor*> OverlapActors;
+	TArray<TEnumAsByte<EObjectTypeQuery>> EnemyObjectTypes;
+	EnemyObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECC_Pawn));
+	EnemyObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECC_WorldDynamic));
 
 	UKismetSystemLibrary::SphereOverlapActors(
 		GetWorld(),
 		SoundLocation,
 		Radius,
-		TArray<TEnumAsByte<EObjectTypeQuery>>(),
+		EnemyObjectTypes,
 		AEnemyBase::StaticClass(),
 		TArray{ GetOwner() },
 		OverlapActors);

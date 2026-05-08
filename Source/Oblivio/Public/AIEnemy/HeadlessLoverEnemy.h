@@ -32,6 +32,9 @@ public:
 	/** 불사 — HP가 0 이하가 돼도 사망하지 않는다. */
 	virtual void Die() override;
 
+	/** 소리에 반응하지 않는다. */
+	virtual bool IsSoundInvestigationEnabled() const override { return false; }
+
 	// === 암전 능력 ===
 
 	/** 암전 지속 시간(초). 후레시가 꺼진 채로 유지되는 시간. */

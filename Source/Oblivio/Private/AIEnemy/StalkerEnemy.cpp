@@ -20,9 +20,12 @@ AStalkerEnemy::AStalkerEnemy()
 	AttackCooldown = 1.55f;
 	ChaseAcceptanceRadius = 55.0f;
 	ChaseProximityBuffer = 48.0f;
-	AggroRadius = 1100.0f;
+	AggroRadius = 1100.0f;        // 0이면 항상 추격 → 배회 불가. 반드시 양수 유지.
 	CorpseLifeSpan = 3.0f;
 	InvestigateStimulusTimeout = 18.0f;
+
+	// 어그로 밖에서 반드시 배회하도록 명시
+	bEnableIdleWander = true;
 }
 
 void AStalkerEnemy::BeginPlay()

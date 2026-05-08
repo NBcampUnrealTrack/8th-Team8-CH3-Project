@@ -2,6 +2,7 @@
 
 #include "OblivioComponents/LightAttackComponent.h"
 #include "AIEnemy/EnemyBase.h"
+#include "Combat/LightDamageType.h"
 
 #include "Engine/OverlapResult.h"
 #include "Components/CapsuleComponent.h"
@@ -247,7 +248,7 @@ void ULightAttackComponent::CreateLightAttack(FVector SourceLocation, FVector Li
 					FinalDamage = Damage * AttenuationRatio * DamageAttenuationRate;
 				}
 
-                UGameplayStatics::ApplyDamage(Target, FinalDamage, nullptr, GetOwner(), nullptr);
+                UGameplayStatics::ApplyDamage(Target, FinalDamage, nullptr, GetOwner(), ULightDamageType::StaticClass());
                 UE_LOG(LogTemp, Warning, TEXT("Applying %f damage to the actor %s!"), FinalDamage, *Target->GetName());
 
                 // 빛 노출 콜백 — Intensity = 거리 감쇠 비율(0~1), ExposureDt = 호출자가 선언한 노출 시간(AttackInterval 등).

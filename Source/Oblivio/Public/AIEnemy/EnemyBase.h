@@ -29,7 +29,7 @@ class AEnemyBase;
 class USpotLightComponent;
 class UEnemyCombatComponent;
 
-/** 적 행동 상태(FSM). CC(경직 등)는 별도 플래그로 처리 — 상태 이름은 '의도'만 표현. */
+/** 적 행동 상태(FSM). Stunned는 bCCStunned 플래그를 ABP에서 읽기 위한 래핑 상태. */
 UENUM(BlueprintType)
 enum class EEnemyAIState : uint8
 {
@@ -41,6 +41,8 @@ enum class EEnemyAIState : uint8
 	Patrol UMETA(DisplayName = "Patrol"),
 	Investigate UMETA(DisplayName = "Investigate"),
 	Search UMETA(DisplayName = "Search"),
+	/** CC 경직 중. 내부 FSM 상태는 유지, ABP 전용 표현 상태. */
+	Stunned UMETA(DisplayName = "Stunned"),
 	Dead UMETA(DisplayName = "Dead")
 };
 
@@ -93,8 +95,9 @@ public:
 	// 엔진 damage 파이프라인. 부모 처리 후 현재 적 체력 반영 및 OnEnemyDamaged, 사망 시 Die().
 	virtual float TakeDamage(float DamageAmount, const FDamageEvent& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
+	/** 스턴 중이면 Stunned를 반환. ABP 스테이트 머신에서 경직 애니메이션 분기에 사용. */
 	UFUNCTION(BlueprintCallable, Category = "Enemy|State")
-	EEnemyAIState GetEnemyState() const { return EnemyState; }
+	EEnemyAIState GetEnemyState() const { return bCCStunned ? EEnemyAIState::Stunned : EnemyState; }
 
 	UFUNCTION(BlueprintCallable, Category = "Enemy|State")
 	bool IsAlive() const override { return EnemyState != EEnemyAIState::Dead && CurrentHealth > 0.0f; } //인터페이스 오버라이드 키워드 추가
@@ -119,8 +122,14 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Enemy|CrowdControl")
 	bool IsCCStunned() const { return bCCStunned; }
 
+	UFUNCTION(BlueprintPure, Category = "Enemy|Damage")
+	bool WasLastDamageFromLight() const { return bLastDamageWasLight; }
+
 	UFUNCTION(BlueprintCallable, Category = "Enemy|Light")
 	virtual void OnLightHit(float Intensity, float Duration);
+
+	UFUNCTION(BlueprintPure, Category = "Enemy|Light|CC")
+	virtual float GetLightExposureAccum() const { return LightExposureAccum; }
 
 	UFUNCTION(BlueprintCallable, Category = "Enemy|Target")
 	void SetTargetActor(AActor* NewTarget);
@@ -262,6 +271,12 @@ protected:
 	 * 벽을 통과하는 Ghost형 적(ScreamEnemy 등)에서 오버라이드해 사용한다.
 	 */
 	virtual bool IsObstacleAttackEnabled() const { return true; }
+
+	/**
+	 * false를 반환하면 ReportStimulus(소리 자극)를 무시하고 Investigate 상태로 전환하지 않는다.
+	 * 소리에 반응하지 않아야 하는 적(HeadlessLoverEnemy 등)에서 오버라이드해 사용한다.
+	 */
+	virtual bool IsSoundInvestigationEnabled() const { return true; }
 
 	/** 에너미→플레이어 라인트레이스 주기(초). 장애물 감지에 사용. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Navigation", meta = (ClampMin = "0.1"))
@@ -465,6 +480,8 @@ private:
 
 	bool bCCStunned = false;
 	FTimerHandle CCStunTimerHandle;
+
+	bool bLastDamageWasLight = false;
 
 	bool bHadAggroLastTick = false;
 	/** 마지막으로 플레이어를 어그로로 본 월드 위치(Search 앵커용) */
