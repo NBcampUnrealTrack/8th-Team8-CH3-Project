@@ -44,3 +44,9 @@ void AFlashbang::StopWeapon()
 	LightAttackComp->TurnOffLight();
 	Destroy();
 }
+
+void AFlashbang::EndPlay(const EEndPlayReason::Type EndPlayReason) {
+	Super::EndPlay(EndPlayReason);
+	GetWorld()->GetTimerManager().ClearTimer(BangTimerHandle);
+	GetWorld()->GetTimerManager().ClearTimer(DestroyTimerHandle);
+}

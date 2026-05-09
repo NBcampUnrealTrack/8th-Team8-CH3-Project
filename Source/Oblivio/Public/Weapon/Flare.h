@@ -25,4 +25,5 @@ protected:
 	float LastDuration;
 	FTimerHandle AttackTimerHandle;
 	FTimerHandle DestroyTimerHandle;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 };
