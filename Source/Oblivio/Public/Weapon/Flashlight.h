@@ -23,4 +23,5 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Attack)
 	float AttackInterval;
 	FTimerHandle AttackTimerHandle;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 };

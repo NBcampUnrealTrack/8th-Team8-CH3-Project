@@ -46,3 +46,9 @@ void AFlare::StopWeapon()
 	}
 	Destroy();
 }
+
+void AFlare::EndPlay(const EEndPlayReason::Type EndPlayReason) {
+	Super::EndPlay(EndPlayReason);
+	GetWorld()->GetTimerManager().ClearTimer(AttackTimerHandle);
+	GetWorld()->GetTimerManager().ClearTimer(DestroyTimerHandle);
+}

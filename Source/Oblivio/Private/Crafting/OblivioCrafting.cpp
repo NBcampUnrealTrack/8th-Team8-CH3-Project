@@ -3,6 +3,10 @@
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
 
+#include "OblivioCharacter.h"
+#include "Items/OblivioInventoryComponent.h"
+#include "Items/OblivioItemBase.h"
+
 UOblivioCrafting::UOblivioCrafting()
 {
 	PrimaryComponentTick.bCanEverTick = true;
@@ -175,9 +179,58 @@ void UOblivioCrafting::PlaceObstacle()
         }
     }
 }
+/*
+void UOblivioCrafting::PlaceObstacle()
+{
+    if (bIsCraftingModeActive && PreviewActor)
+    {
+        // 최종 자원 소모 로직 적용 후 설치 확정
+        if (CanAfford(PreviewActor))
+        {
+            // 인벤토리에서 자원을 차감
+            AOblivioCharacter* Player = Cast<AOblivioCharacter>(GetOwner());
+            if (Player && Player->InventoryComponent)
+            {
+                // 인벤토리 컴포넌트의 자원 소모 함수 호출
+                Player->InventoryComponent->ConsumeItem(EItemType::Wood, PreviewActor->WoodCost);
+                Player->InventoryComponent->ConsumeItem(EItemType::Iron, PreviewActor->IronCost);
 
+                if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Orange, TEXT("Resources Consumed!"));
+            }
+
+            PreviewActor->OnPlaced();
+            PreviewActor = nullptr; // 소유권 해제
+            bIsCraftingModeActive = false; // 설치 후 모드 종료
+        }
+        else
+        {
+            if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("Cannot Place: Not enough resources!"));
+        }
+    }
+}
+*/
 bool UOblivioCrafting::CanAfford(AObstacleBase* TargetObstacle)
 {
     // Character 클래스나 Inventory 시스템에서 자원값을 가져와 비교
     return true;
 }
+/*
+bool UOblivioCrafting::CanAfford(AObstacleBase* TargetObstacle)
+{
+    if (!TargetObstacle) return false;
+
+    //인벤토리 가져오기
+    AOblivioCharacter* Player = Cast<AOblivioCharacter>(GetOwner());
+    if (!Player || !Player->InventoryComponent) return false;
+
+    // 장애물 필요 자원 가져오기
+    int32 RequiredWood = TargetObstacle->WoodCost;
+    int32 RequiredIron = TargetObstacle->IronCost;
+
+    // 현재 보유 중인 개수 확인 
+    int32 CurrentWood = Player->InventoryComponent->GetItemCount(EItemType::Wood);
+    int32 CurrentIron = Player->InventoryComponent->GetItemCount(EItemType::Iron);
+
+    return (CurrentWood >= RequiredWood) && (CurrentIron >= RequiredIron);
+}
+*/

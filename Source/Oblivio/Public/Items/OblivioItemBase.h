@@ -20,7 +20,9 @@ enum class EItemType : uint8
 	Iron    UMETA(DisplayName = "Iron"),
 	Food    UMETA(DisplayName = "Food"),
 	Water   UMETA(DisplayName = "Water"),
-	Battery UMETA(DisplayName = "Battery")
+	Battery UMETA(DisplayName = "Battery"),
+    Key     UMETA(DisplayName = "Key"),
+    Memento UMETA(DisplayName = "Memento")
 };
 
 UCLASS()
@@ -87,4 +89,12 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Settings")
     float RestoreValue = 30.0f;
+
+    // 이 아이템을 주웠을 때 연쇄적으로 작동시킬 액터들의 배열
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Story Events")
+    TArray<AActor*> LinkedActors;
+
+    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Interaction")
+    void OnInteract(AActor* Interactor);
+    virtual void OnInteract_Implementation(AActor* Interactor);
 };

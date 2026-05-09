@@ -40,7 +40,8 @@ void AFlashlight::UseWeapon()
 				FVector SourceLocation = LightAttackComp->GetComponentLocation();
 				FVector LightDirection = LightAttackComp->GetForwardVector();
 				// 누적형 기믹(Luxeater 흡수 / Scream 광원 누적 경직)을 위해 이번 틱의 노출 시간을 함께 전달.
-				LightAttackComp->CreateLightAttack(SourceLocation, LightDirection, AttackInterval); },
+				if(IsValid(LightAttackComp))
+					LightAttackComp->CreateLightAttack(SourceLocation, LightDirection, AttackInterval); },
 			AttackInterval,
 			true);
 		LightAttackComp->CreateLightAttack(GetActorLocation(), GetActorForwardVector(), AttackInterval);
@@ -57,4 +58,9 @@ void AFlashlight::ChangeWeaponAngle(float DeltaAngle)
 {
 	UE_LOG(LogTemp, Warning, TEXT("ChangeWeaponAngle Called"));
 	LightAttackComp->ChangeLightAngle(DeltaAngle);
+}
+
+void AFlashlight::EndPlay(const EEndPlayReason::Type EndPlayReason) {
+	Super::EndPlay(EndPlayReason);
+	GetWorld()->GetTimerManager().ClearTimer(AttackTimerHandle);
 }

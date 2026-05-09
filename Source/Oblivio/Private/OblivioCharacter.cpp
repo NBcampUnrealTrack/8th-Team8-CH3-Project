@@ -155,6 +155,17 @@ void AOblivioCharacter::UpdateStatus(float DeltaTime)
 	}
 
 	GetCharacterMovement()->MaxWalkSpeed = bIsRunning ? RunSpeed : WalkSpeed;
+
+	if (bIsStunned)
+	{
+		// 스턴 상태면 아예 움직이지 못함
+		GetCharacterMovement()->MaxWalkSpeed = 0.0f;
+	}
+	else
+	{
+		float BaseSpeed = bIsRunning ? RunSpeed : WalkSpeed;
+		GetCharacterMovement()->MaxWalkSpeed = bIsSlowed ? (BaseSpeed * CurrentSlowMultiplier) : BaseSpeed;
+	}
 }
 
 //==========================
@@ -201,6 +212,7 @@ void AOblivioCharacter::Interact()
 
 	if (CurrentNearbyItem)
 	{
+		CurrentNearbyItem->OnInteract(this);
 		if (InventoryComponent && InventoryComponent->AddItem(CurrentNearbyItem))
 		{
 			CurrentNearbyItem->Destroy();
@@ -224,6 +236,7 @@ void AOblivioCharacter::Interact()
 
 		if (AOblivioItemBase* PickedItem = Cast<AOblivioItemBase>(HitActor))
 		{
+			PickedItem->OnInteract(this);
 			if (InventoryComponent && InventoryComponent->AddItem(PickedItem))
 			{
 				PickedItem->Destroy();
@@ -325,18 +338,14 @@ void AOblivioCharacter::ReloadBattery()
 {
 	if (bIsDead) return;
 
-	//인벤토리/배터리 아이템 생길 시 조건추가.
-	bool bHasBatteryItem = true; // 현재 있다고 가정
-
-	if (bHasBatteryItem)
+	if (Battery >= 100.0f)
 	{
-		if (Battery >= 100.0f)
-		{
-			if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Yellow, TEXT("Battery is already full."));
-			return;
-		}
+		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Yellow, TEXT("Battery is already full."));
+		return;
+	}
 
-		// 충전 로직
+	if (InventoryComponent && InventoryComponent->ConsumeItem(EItemType::Battery, 1))
+	{
 		Battery = 100.0f;
 
 		if (!bIsFlashlightOn)
@@ -346,6 +355,13 @@ void AOblivioCharacter::ReloadBattery()
 		}
 
 		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Green, TEXT("Flashlight Recharged!"));
+
+		// UGameplayStatics::PlaySound2D(GetWorld(), ReloadSound);
+	}
+	else
+	{
+		// 배터리 아이템이 없을 때의 경고 메시지
+		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("No Battery in Inventory!"));
 	}
 }
 
@@ -480,11 +496,35 @@ bool AOblivioCharacter::IsAlive() const
 void AOblivioCharacter::ApplyCCSlow(float SpeedMultiplier, float Duration)
 {
 	// 슬로우 로직 구현
+	if (Duration <= 0.0f || bIsDead) return;
+
+	bIsSlowed = true;
+	CurrentSlowMultiplier = FMath::Clamp(SpeedMultiplier, 0.0f, 1.0f);
+
+	GetWorldTimerManager().SetTimer(
+		SlowTimerHandle,
+		[this]()
+		{
+			bIsSlowed = false;
+			CurrentSlowMultiplier = 1.0f;
+		},
+		Duration, /*bLoop=*/false);
 }
 
 void AOblivioCharacter::ApplyCCStun(float Duration)
 {
 	// 스턴 로직 구현
+	if (Duration <= 0.0f || bIsDead) return;
+
+	bIsStunned = true;
+
+	GetWorldTimerManager().SetTimer(
+		StunTimerHandle,
+		[this]()
+		{
+			bIsStunned = false;
+		},
+		Duration, /*bLoop=*/false);
 }
 
 void AOblivioCharacter::ApplyFlashlightBlackout(float Duration)

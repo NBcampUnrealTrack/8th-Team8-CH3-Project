@@ -29,7 +29,7 @@ protected:
     float LightIntensity = 5000.0f;
 
     UPROPERTY(EditDefaultsOnly, Category = "Fire | Stats")
-    float BurnDuration = 10.0f; // 배터리 1회 소모당 유지 시간
+    float BurnDuration = 500.0f; // 배터리 1회 소모당 유지 시간
 
 private:
     float RemainingTime;

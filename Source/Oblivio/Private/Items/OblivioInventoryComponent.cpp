@@ -19,6 +19,19 @@ void UOblivioInventoryComponent::BeginPlay()
 	
 }
 
+bool UOblivioInventoryComponent::HasItem(FName SearchItemID) const
+{
+	// 인벤토리 슬롯을 처음부터 끝까지 검사
+	for (const FInventorySlot& Slot : InventorySlots)
+	{
+		if (!Slot.IsEmpty() && Slot.ItemID == SearchItemID)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 bool UOblivioInventoryComponent::AddItem(AOblivioItemBase* Item)
 {
 	if (!Item) return false;
@@ -67,11 +80,16 @@ void UOblivioInventoryComponent::UseItem(int32 SlotIndex)
 	FInventorySlot& Slot = InventorySlots[SlotIndex];
 	AOblivioCharacter* Player = Cast<AOblivioCharacter>(GetOwner());
 
-	// 아이템 타입에 따른 효과 적용
 	if (Player)
 	{
 		if (Slot.ItemType == EItemType::Food) Player->Hunger = FMath::Min(100.0f, Player->Hunger + 30.0f);
 		if (Slot.ItemType == EItemType::Water) Player->Thirst = FMath::Min(100.0f, Player->Thirst + 20.0f);
+
+		if (Slot.ItemType == EItemType::Key || Slot.ItemType == EItemType::Memento)
+		{
+			// (나중에 일기장 UI 띄우기)
+			return;
+		}
 
 		// 수량 감소
 		Slot.Quantity--;
@@ -125,4 +143,57 @@ int32 UOblivioInventoryComponent::FindStackableSlot(FName ID)
 		}
 	}
 	return INDEX_NONE;
+}
+
+int32 UOblivioInventoryComponent::GetItemCount(EItemType Type) const
+{
+	int32 TotalCount = 0;
+
+	for (const FInventorySlot& Slot : InventorySlots)
+	{
+		if (!Slot.IsEmpty() && Slot.ItemType == Type)
+		{
+			TotalCount += Slot.Quantity;
+		}
+	}
+
+	return TotalCount;
+}
+
+bool UOblivioInventoryComponent::ConsumeItem(EItemType Type, int32 Amount)
+{
+	if (GetItemCount(Type) < Amount)
+	{
+		return false;
+	}
+
+	int32 RemainingToConsume = Amount;
+
+	for (FInventorySlot& Slot : InventorySlots)
+	{
+		if (!Slot.IsEmpty() && Slot.ItemType == Type)
+		{
+			// 현재 슬롯의 개수가 빼야 할 개수보다 많거나 같으면
+			if (Slot.Quantity >= RemainingToConsume)
+			{
+				Slot.Quantity -= RemainingToConsume;
+				RemainingToConsume = 0;
+
+				// 만약 슬롯이 텅 비게 되면 초기화
+				if (Slot.Quantity <= 0)
+				{
+					Slot = FInventorySlot();
+				}
+				break; // 다 뺐으므로 루프 종료
+			}
+			else
+			{
+				// 현재 슬롯의 개수로는 부족하면 있는 거 다 빼고 다음 슬롯으로 넘어감
+				RemainingToConsume -= Slot.Quantity;
+				Slot = FInventorySlot(); // 슬롯 텅 빔
+			}
+		}
+	}
+	OnInventoryUpdated.Broadcast();
+	return true;
 }

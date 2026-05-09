@@ -162,6 +162,7 @@ public:
 	void ToggleInventory();
 	void ToggleCrafting();
 	void PlaceObstacle();
+	UFUNCTION(BlueprintCallable, Category = "Interaction")
 	void Interact();
 	
 	UFUNCTION(BlueprintCallable, Category = "UI")
@@ -177,6 +178,13 @@ public:
 	virtual void ApplyCCSlow(float SpeedMultiplier, float Duration) override;
 	virtual void ApplyCCStun(float Duration) override;
 	virtual bool IsAlive() const override;
+
+	bool bIsStunned = false;
+	bool bIsSlowed = false;
+	float CurrentSlowMultiplier = 1.0f;
+
+	FTimerHandle StunTimerHandle;
+	FTimerHandle SlowTimerHandle;
 
 	virtual float TakeDamage(float DamageAmount, const FDamageEvent& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
