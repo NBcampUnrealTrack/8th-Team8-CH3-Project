@@ -59,3 +59,7 @@ void AOblivioItemBase::OnSphereEndOverlap(UPrimitiveComponent* OverlappedCompone
         UE_LOG(LogTemp, Warning, TEXT("Overlap Ended with Player! Item: %s"), *ItemName.ToString());
     }
 }
+
+void AOblivioItemBase::OnInteract_Implementation(AActor* Interactor)
+{
+}

@@ -201,6 +201,7 @@ void AOblivioCharacter::Interact()
 
 	if (CurrentNearbyItem)
 	{
+		CurrentNearbyItem->OnInteract(this);
 		if (InventoryComponent && InventoryComponent->AddItem(CurrentNearbyItem))
 		{
 			CurrentNearbyItem->Destroy();
@@ -224,6 +225,7 @@ void AOblivioCharacter::Interact()
 
 		if (AOblivioItemBase* PickedItem = Cast<AOblivioItemBase>(HitActor))
 		{
+			PickedItem->OnInteract(this);
 			if (InventoryComponent && InventoryComponent->AddItem(PickedItem))
 			{
 				PickedItem->Destroy();
