@@ -83,6 +83,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	void SwapSlots(int32 FromIndex, int32 ToIndex);
 
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	bool HasItem(FName SearchItemID) const;
+
 private:
 	/** 비어있는 슬롯 찾기 */
 	int32 FindEmptySlot();

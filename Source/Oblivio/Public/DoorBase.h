@@ -22,4 +22,10 @@ public:
 	// 이 문이 레벨을 이동시키는 문인지 체크하는 플래그
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Level Transition")
 	bool bIsExitDoor = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
+	bool bRequiresKey = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
+	FName RequiredKeyID;
 };

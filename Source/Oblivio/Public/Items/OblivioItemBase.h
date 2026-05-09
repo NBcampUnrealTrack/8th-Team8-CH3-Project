@@ -20,7 +20,9 @@ enum class EItemType : uint8
 	Iron    UMETA(DisplayName = "Iron"),
 	Food    UMETA(DisplayName = "Food"),
 	Water   UMETA(DisplayName = "Water"),
-	Battery UMETA(DisplayName = "Battery")
+	Battery UMETA(DisplayName = "Battery"),
+    Key     UMETA(DisplayName = "Key"),
+    Memento UMETA(DisplayName = "Memento")
 };
 
 UCLASS()
