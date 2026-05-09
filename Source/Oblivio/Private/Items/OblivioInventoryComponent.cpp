@@ -19,6 +19,19 @@ void UOblivioInventoryComponent::BeginPlay()
 	
 }
 
+bool UOblivioInventoryComponent::HasItem(FName SearchItemID) const
+{
+	// 인벤토리 슬롯을 처음부터 끝까지 검사
+	for (const FInventorySlot& Slot : InventorySlots)
+	{
+		if (!Slot.IsEmpty() && Slot.ItemID == SearchItemID)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 bool UOblivioInventoryComponent::AddItem(AOblivioItemBase* Item)
 {
 	if (!Item) return false;
@@ -67,11 +80,16 @@ void UOblivioInventoryComponent::UseItem(int32 SlotIndex)
 	FInventorySlot& Slot = InventorySlots[SlotIndex];
 	AOblivioCharacter* Player = Cast<AOblivioCharacter>(GetOwner());
 
-	// 아이템 타입에 따른 효과 적용
 	if (Player)
 	{
 		if (Slot.ItemType == EItemType::Food) Player->Hunger = FMath::Min(100.0f, Player->Hunger + 30.0f);
 		if (Slot.ItemType == EItemType::Water) Player->Thirst = FMath::Min(100.0f, Player->Thirst + 20.0f);
+
+		if (Slot.ItemType == EItemType::Key || Slot.ItemType == EItemType::Memento)
+		{
+			// (나중에 일기장 UI 띄우기)
+			return;
+		}
 
 		// 수량 감소
 		Slot.Quantity--;
