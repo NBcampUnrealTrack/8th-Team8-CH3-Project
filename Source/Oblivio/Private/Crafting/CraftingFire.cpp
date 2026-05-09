@@ -2,6 +2,12 @@
 #include "Components/PointLightComponent.h"
 #include "Components/SphereComponent.h"
 
+#include "OblivioCharacter.h"
+#include "AIEnemy/EnemyBase.h"
+#include "OblivioComponents/CombatInterface.h"
+#include "GameFramework/Character.h"
+#include "GameFramework/CharacterMovementComponent.h"
+
 ACraftingFire::ACraftingFire()
 {
     PrimaryActorTick.bCanEverTick = true;
@@ -59,6 +65,23 @@ void ACraftingFire::ApplyFireEffect()
 
     for (AActor* Actor : OverlappingActors)
     {
+        if (!IsValid(Actor) || Actor == this) continue;
+        if (AOblivioCharacter* Player = Cast<AOblivioCharacter>(Actor))
+        {
+            Player->CurrentHealth = Player->MaxHealth;
+            Player->Battery = 100.0f;
+            Player->OnPlayerDamaged.Broadcast(0.0f, Player->CurrentHealth, Player->MaxHealth);
+            if (!Player->bIsFlashlightOn)
+            {
+                Player->bIsFlashlightOn = true;
+                Player->UpdateFlashlightVisuals();
+            }
+            continue;
+        }
         // 몬스터 클래스인지 확인 후 스턴 혹은 속도 저하 적용
+        else if (AEnemyBase* Enemy = Cast<AEnemyBase>(Actor))
+        {
+            Enemy->ApplyCCSlow(0.5f, 1.0f);
+        }
     }
 }

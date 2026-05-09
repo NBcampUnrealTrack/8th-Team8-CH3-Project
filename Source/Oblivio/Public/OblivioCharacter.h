@@ -179,6 +179,13 @@ public:
 	virtual void ApplyCCStun(float Duration) override;
 	virtual bool IsAlive() const override;
 
+	bool bIsStunned = false;
+	bool bIsSlowed = false;
+	float CurrentSlowMultiplier = 1.0f;
+
+	FTimerHandle StunTimerHandle;
+	FTimerHandle SlowTimerHandle;
+
 	virtual float TakeDamage(float DamageAmount, const FDamageEvent& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
 	UPROPERTY(BlueprintAssignable, Category = "Events")
