@@ -162,6 +162,7 @@ public:
 	void ToggleInventory();
 	void ToggleCrafting();
 	void PlaceObstacle();
+	UFUNCTION(BlueprintCallable, Category = "Interaction")
 	void Interact();
 	
 	UFUNCTION(BlueprintCallable, Category = "UI")
