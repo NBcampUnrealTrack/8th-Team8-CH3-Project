@@ -118,9 +118,13 @@ public:
 
 	TObjectPtr<AWeaponBase> CurrentWeapon;
 
+	//손전등 조절
+	UFUNCTION(BlueprintCallable)
+	void EnableAdjustFocus();
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	float WheelControlMultiplier = 3.0f;
 
+	//투척무기 관련
 	FVector GetAimingLocation();
 	void BeginThrow(TSubclassOf<AThrowableWeapon> Weapon);
 	FPlayerAnimationEvent OnPlayerThrow;

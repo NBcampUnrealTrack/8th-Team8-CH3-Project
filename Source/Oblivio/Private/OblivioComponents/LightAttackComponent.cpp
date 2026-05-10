@@ -43,6 +43,7 @@ void ULightAttackComponent::OnRegister()
         UE_LOG(LogTemp, Warning, TEXT("Registering Spotlight"));
         SpotLightComp = NewObject<USpotLightComponent>(this, TEXT("SpotLightComp"));
         SpotLightComp->SetupAttachment(this);
+        SpotLightComp->bCastVolumetricShadow = true;
         SpotLightComp->RegisterComponent();
         SpotLightComp->LightColor = BasicLightColor;
     }
@@ -51,6 +52,7 @@ void ULightAttackComponent::OnRegister()
         UE_LOG(LogTemp, Warning, TEXT("Registering PointLightComp"));
         PointLightComp = NewObject<UPointLightComponent>(this, TEXT("PointLightComp"));
         PointLightComp->SetupAttachment(this);
+        PointLightComp->bCastVolumetricShadow = true;
         PointLightComp->RegisterComponent();
         PointLightComp->LightColor = BasicLightColor;
     }
