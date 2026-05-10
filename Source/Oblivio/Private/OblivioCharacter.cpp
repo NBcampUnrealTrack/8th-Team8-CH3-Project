@@ -299,6 +299,11 @@ void AOblivioCharacter::AdjustFocus(float Value)
 	}
 }
 
+void AOblivioCharacter::EnableAdjustFocus()
+{
+	bCanAdjustFocus = true;
+}
+
 
 void AOblivioCharacter::ToggleFlashlight()
 {

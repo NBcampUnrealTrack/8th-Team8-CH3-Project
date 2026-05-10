@@ -4,6 +4,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Kismet/KismetMathLibrary.h"
+#define ECC_Floor ECC_GameTraceChannel1
 
 AOblivioCharacterController::AOblivioCharacterController()
 	: DefaultMappingContext(nullptr)
@@ -84,6 +85,8 @@ void AOblivioCharacterController::UpdateMouseRotation()
 	if (APawn* MyPawn = GetPawn())
 	{
 		FHitResult Hit;
+		//나중에 변경, 기본이 Ignore이니 Floor만 block으로 교체
+		//if(GetHitResultUnderCursor(ECC_Floor, false, Hit))
 		if (GetHitResultUnderCursor(ECC_Visibility, false, Hit))
 		{
 			FRotator LookRot = UKismetMathLibrary::FindLookAtRotation(MyPawn->GetActorLocation(), Hit.ImpactPoint);
