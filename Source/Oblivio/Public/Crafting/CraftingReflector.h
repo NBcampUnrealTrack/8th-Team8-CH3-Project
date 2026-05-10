@@ -17,6 +17,7 @@ protected:
 
 public:
 	virtual void OnPlaced() override;
+	virtual void Tick(float DeltaTime) override;
 
 protected:
 	// 반사되는 빛을 시뮬레이션하기 위한 SpotLight 컴포넌트
