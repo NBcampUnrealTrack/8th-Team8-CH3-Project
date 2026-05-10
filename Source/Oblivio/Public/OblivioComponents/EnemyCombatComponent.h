@@ -30,7 +30,7 @@ protected:
 public:
 	//데미지 기준치
 	UPROPERTY(EditAnywhere, Category = "Combat Settings")
-	float DamageThreshold = 2.f;
+	float DamageThreshold = 3.5f;
 
 	//슬로우 배율
 	UPROPERTY(EditAnywhere, Category = "Combat Settings|Slow")
