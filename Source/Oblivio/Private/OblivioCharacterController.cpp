@@ -10,6 +10,7 @@ AOblivioCharacterController::AOblivioCharacterController()
 	, InventoryMappingContext(nullptr)
 	, MoveAction(nullptr)
 	, LookAction(nullptr)
+	, JumpAction(nullptr)
 	, WheelAction(nullptr)
 	, RunAction(nullptr)
 	, FlashlightToggleAction(nullptr)
@@ -55,6 +56,8 @@ void AOblivioCharacterController::SetupInputComponent()
 	{
 		EIC->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AOblivioCharacterController::OnMove);
 		EIC->BindAction(LookAction, ETriggerEvent::Triggered, this, &AOblivioCharacterController::OnLook);
+		EIC->BindAction(JumpAction, ETriggerEvent::Started, this, &AOblivioCharacterController::OnJumpStarted);
+		EIC->BindAction(JumpAction, ETriggerEvent::Completed, this, &AOblivioCharacterController::OnJumpCompleted);
 		EIC->BindAction(WheelAction, ETriggerEvent::Triggered, this, &AOblivioCharacterController::OnWheel);
 		EIC->BindAction(RunAction, ETriggerEvent::Started, this, &AOblivioCharacterController::OnRunStarted);
 		EIC->BindAction(RunAction, ETriggerEvent::Completed, this, &AOblivioCharacterController::OnRunCompleted);
@@ -101,6 +104,22 @@ void AOblivioCharacterController::OnMove(const FInputActionValue& Value)
 void AOblivioCharacterController::OnLook(const FInputActionValue& Value)
 {
 	// Tick에서 자동 처리 중
+}
+
+void AOblivioCharacterController::OnJumpStarted(const FInputActionValue& Value)
+{
+	if (AOblivioCharacter* ObjChar = Cast<AOblivioCharacter>(GetPawn()))
+	{
+		ObjChar->Jump();
+	}
+}
+
+void AOblivioCharacterController::OnJumpCompleted(const FInputActionValue& Value)
+{
+	if (AOblivioCharacter* ObjChar = Cast<AOblivioCharacter>(GetPawn()))
+	{
+		ObjChar->StopJumping();
+	}
 }
 
 void AOblivioCharacterController::OnWheel(const FInputActionValue& Value)
