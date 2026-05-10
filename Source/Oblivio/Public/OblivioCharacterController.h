@@ -32,6 +32,9 @@ protected:
 	class UInputAction* LookAction;
 
 	UPROPERTY(EditAnywhere, Category = "Input")
+	class UInputAction* JumpAction;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
 	class UInputAction* WheelAction;
 
 	UPROPERTY(EditAnywhere, Category = "Input")
@@ -70,6 +73,8 @@ protected:
 	// --- 입력 처리 함수 ---
 	void OnMove(const FInputActionValue& Value);
 	void OnLook(const FInputActionValue& Value);
+	void OnJumpStarted(const FInputActionValue& Value);
+	void OnJumpCompleted(const FInputActionValue& Value);
 	void OnWheel(const FInputActionValue& Value);
 	void OnRunStarted(const FInputActionValue& Value);
 	void OnRunCompleted(const FInputActionValue& Value);
