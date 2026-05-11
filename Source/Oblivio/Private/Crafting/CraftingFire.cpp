@@ -42,16 +42,15 @@ void ACraftingFire::BeginPlay()
 void ACraftingFire::OnPlaced()
 {
     Super::OnPlaced();
-
+    UE_LOG(LogTemp, Warning, TEXT("OnPlace Called"));
     bIsActive = true;
     RemainingTime = BurnDuration;
     FireLight->SetIntensity(LightIntensity);
     BaseLightIntensity = LightIntensity;
 
-    if (FireEffectAsset)
+    if (IsValid(FireParticleComponent) && IsValid(FireParticleComponent->GetFXSystemAsset()))
     {
-        FireParticleComponent->SetAsset(FireEffectAsset);
-        FireParticleComponent->Activate();
+        FireParticleComponent->Activate(true);
     }
 }
 

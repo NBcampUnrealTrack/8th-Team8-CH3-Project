@@ -29,8 +29,8 @@ protected:
     class UNiagaraComponent* FireParticleComponent;
 
     /** 에디터에서 선택할 불 이펙트 에셋 (나이아가라) */
-    UPROPERTY(EditDefaultsOnly, Category = "Fire | Visuals")
-    class UNiagaraSystem* FireEffectAsset;
+    //UPROPERTY(EditDefaultsOnly, Category = "Fire | Visuals")
+    //class UNiagaraSystem* FireEffectAsset;
 
     /** 불빛 일렁임 효과를 위한 기본 강도 */
     float BaseLightIntensity;
