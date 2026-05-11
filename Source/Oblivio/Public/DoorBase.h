@@ -12,8 +12,9 @@ class OBLIVIO_API ADoorBase : public AActor
 public:
 	ADoorBase();
 
-	UFUNCTION(BlueprintImplementableEvent, Category = "Interaction")
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Interaction")
 	void InteractDoor();
+	virtual void InteractDoor_Implementation();
 
 	// 다음 레벨의 이름을 저장하는 변수
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Level Transition")
