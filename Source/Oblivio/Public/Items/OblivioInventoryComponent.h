@@ -95,6 +95,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	bool ConsumeItem(EItemType Type, int32 Amount);
 
+	//인벤토리 상태를 GameInstance에 업데이트하고 즉시 저장하는 함수
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void SyncInventoryToGameInstance();
+
 private:
 	/** 비어있는 슬롯 찾기 */
 	int32 FindEmptySlot();

@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/GameInstance.h"
+#include "Items/OblivioInventoryComponent.h"
 #include "OblivioGameInstance.generated.h"
 
 UCLASS()
@@ -17,9 +18,7 @@ public:
 		TotalKills = 0;
 		TotalMementos = 0;
 		CurrentFloor = 9;		
-		WoodCount = 0; 
-		IronCount = 0;
-		BatteryItemCount = 0;
+		SavedInventorySlots.Empty();
 		CurrentHealth = 100.f;
 		CurrentBattery = 100.f;
 		CurrentHunger = 100.f;
@@ -27,19 +26,15 @@ public:
 	}
 
 	//세이브/로드 함수
+	UFUNCTION(BlueprintCallable, Category = "SaveSystem")
 	void SaveGameData();
+	UFUNCTION(BlueprintCallable, Category = "SaveSystem")
 	void LoadGameData();
 
 	//게임 도중 계속 유지되어야 하는 자원 정보
-	//자원/인벤토리
+	//인벤토리
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Inventory")
-	int32 WoodCount = 0;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Inventory")
-	int32 IronCount = 0;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "PlayerStatus")
-	int32 BatteryItemCount = 0;
+	TArray<FInventorySlot> SavedInventorySlots;
 
 	//플레이어의 현재 스탯
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "PlayerStatus")
@@ -63,4 +58,8 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Persistence")
 	int32 CurrentFloor = 9;
+
+	//레벨 이름 저장하는 맵
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Game Data")
+	TMap<int32, FName> FloorMapNames;
 };

@@ -1,6 +1,8 @@
 ﻿#include "Items/OblivioInventoryComponent.h"
 #include "Items/OblivioItemBase.h"
 #include "OblivioCharacter.h"
+#include "OblivioGameInstance.h"
+#include "Kismet/GameplayStatics.h"
 
 UOblivioInventoryComponent::UOblivioInventoryComponent()
 {
@@ -16,7 +18,17 @@ void UOblivioInventoryComponent::BeginPlay()
 	Super::BeginPlay();
 
 	InventorySlots.SetNum(InventorySize);
-	
+
+	//게임 시작 시 GameInstance에서 인벤토리 정보 로드
+	if (UOblivioGameInstance* GI = Cast<UOblivioGameInstance>(UGameplayStatics::GetGameInstance(GetWorld())))
+	{
+		//저장된 인벤토리가 있다면 가져오고, 없으면 기본 크기로 세팅
+		if (GI->SavedInventorySlots.Num() > 0)
+		{
+			InventorySlots = GI->SavedInventorySlots;
+			OnInventoryUpdated.Broadcast();
+		}
+	}
 }
 
 bool UOblivioInventoryComponent::HasItem(FName SearchItemID) const
@@ -68,6 +80,7 @@ bool UOblivioInventoryComponent::AddItem(AOblivioItemBase* Item)
 		}
 
 		OnInventoryUpdated.Broadcast(); // UI에 알림
+		SyncInventoryToGameInstance(); //인스턴스와 동기화
 		return true;
 	}
 
@@ -97,6 +110,7 @@ void UOblivioInventoryComponent::UseItem(int32 SlotIndex)
 		if (Slot.Quantity <= 0) Slot = FInventorySlot(); // 슬롯 초기화
 
 		OnInventoryUpdated.Broadcast();
+		SyncInventoryToGameInstance(); //인스턴스와 동기화
 	}
 }
 
@@ -113,6 +127,7 @@ void UOblivioInventoryComponent::DropItem(int32 SlotIndex)
 
 		Slot = FInventorySlot(); // 슬롯 초기화
 		OnInventoryUpdated.Broadcast();
+		SyncInventoryToGameInstance(); //인스턴스와 동기화
 	}
 }
 
@@ -122,6 +137,7 @@ void UOblivioInventoryComponent::SwapSlots(int32 FromIndex, int32 ToIndex)
 	{
 		InventorySlots.Swap(FromIndex, ToIndex);
 		OnInventoryUpdated.Broadcast();
+		SyncInventoryToGameInstance(); //인스턴스와 동기화
 	}
 }
 
@@ -196,5 +212,16 @@ bool UOblivioInventoryComponent::ConsumeItem(EItemType Type, int32 Amount)
 		}
 	}
 	OnInventoryUpdated.Broadcast();
+	SyncInventoryToGameInstance(); //인스턴스와 동기화
 	return true;
+}
+
+//게임 인스턴스에 인벤토리 동기화 및 자동 저장
+void UOblivioInventoryComponent::SyncInventoryToGameInstance()
+{
+	if (UOblivioGameInstance* GI = Cast<UOblivioGameInstance>(UGameplayStatics::GetGameInstance(GetWorld())))
+	{
+		//인스턴스 배열을 덮어씌움
+		GI->SavedInventorySlots = InventorySlots;
+	}
 }
