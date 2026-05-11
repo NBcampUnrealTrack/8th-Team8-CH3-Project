@@ -163,6 +163,8 @@ public:
 	void UseFlashbang();
 	void UseFlare();
 	void AdjustFocus(float Value);
+	
+	UFUNCTION(BlueprintCallable, Category = "UI")
 	void ToggleInventory();
 	void ToggleCrafting();
 	void PlaceObstacle();
@@ -171,6 +173,12 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void TogglePause();
+	
+	UFUNCTION(BlueprintImplementableEvent, Category = "UI")
+	void OnCraftingUIToggle(bool bIsOpen);
+	
+	UFUNCTION(BlueprintImplementableEvent, Category = "UI")
+	void OnInventoryToggle(bool bIsOpen);
 	
 	UFUNCTION(BlueprintImplementableEvent, Category = "UI")
 	void OnPauseToggle(bool bIsOpen);

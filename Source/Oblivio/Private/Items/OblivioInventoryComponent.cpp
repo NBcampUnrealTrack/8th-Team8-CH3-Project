@@ -59,6 +59,7 @@ bool UOblivioInventoryComponent::AddItem(AOblivioItemBase* Item)
 			Slot.ItemType = Item->ItemType;
 			Slot.ItemClass = Item->GetClass();
 			Slot.Quantity = Item->CurrentQuantity;
+			Slot.ItemDescription = Item->ItemDescription;
 		}
 		else
 		{
