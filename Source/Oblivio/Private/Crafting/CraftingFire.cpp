@@ -7,6 +7,10 @@
 #include "OblivioComponents/CombatInterface.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "NiagaraSystem.h"
+#include "NiagaraComponent.h"
+#include "NiagaraFunctionLibrary.h"
+
 
 ACraftingFire::ACraftingFire()
 {
@@ -15,6 +19,10 @@ ACraftingFire::ACraftingFire()
     FireLight = CreateDefaultSubobject<UPointLightComponent>(TEXT("FireLight"));
     FireLight->SetupAttachment(RootComponent);
     FireLight->SetIntensity(0.0f); // 설치 전엔 꺼둠
+
+    FireParticleComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("FireParticleComponent"));
+    FireParticleComponent->SetupAttachment(RootComponent);
+    FireParticleComponent->bAutoActivate = false;
 
     EffectRange = CreateDefaultSubobject<USphereComponent>(TEXT("EffectRange"));
     EffectRange->SetupAttachment(RootComponent);
@@ -38,6 +46,13 @@ void ACraftingFire::OnPlaced()
     bIsActive = true;
     RemainingTime = BurnDuration;
     FireLight->SetIntensity(LightIntensity);
+    BaseLightIntensity = LightIntensity;
+
+    if (FireEffectAsset)
+    {
+        FireParticleComponent->SetAsset(FireEffectAsset);
+        FireParticleComponent->Activate();
+    }
 }
 
 void ACraftingFire::Tick(float DeltaTime)
@@ -49,10 +64,14 @@ void ACraftingFire::Tick(float DeltaTime)
         RemainingTime -= DeltaTime;
         ApplyFireEffect();
 
+        float FlickerIntensity = BaseLightIntensity + FMath::RandRange(-500.0f, 500.0f);
+        FireLight->SetIntensity(FlickerIntensity);
+
         if (RemainingTime <= 0.0f)
         {
             bIsActive = false;
             FireLight->SetIntensity(0.0f); // 불이 꺼짐
+            FireParticleComponent->Deactivate();
             Destroy();
         }
     }

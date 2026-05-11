@@ -29,4 +29,12 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
 	FName RequiredKeyID;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Level Transition")
+	float FadeDuration = 1.5f;
+
+	FTimerHandle TransitionTimerHandle;
+
+	UFUNCTION()
+	void ExecuteLevelTransition();
 };
