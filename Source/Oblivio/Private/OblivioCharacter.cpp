@@ -59,6 +59,15 @@ AOblivioCharacter::AOblivioCharacter()
 void AOblivioCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		if (PC->PlayerCameraManager)
+		{
+			PC->PlayerCameraManager->StartCameraFade(1.0f, 0.0f, 1.5f, FLinearColor::Black, false, true);
+		}
+	}
+
 	UpdateFlashlightVisuals();
 
 	//8층부터는 현재 스탯을 인스턴스에 저장된 것으로 대체

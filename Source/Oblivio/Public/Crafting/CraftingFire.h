@@ -24,6 +24,17 @@ protected:
     UPROPERTY(VisibleAnywhere, Category = "Components")
     class USphereComponent* EffectRange;
 
+    /** 불꽃 파티클 컴포넌트 */
+    UPROPERTY(VisibleAnywhere, Category = "Components")
+    class UNiagaraComponent* FireParticleComponent;
+
+    /** 에디터에서 선택할 불 이펙트 에셋 (나이아가라) */
+    UPROPERTY(EditDefaultsOnly, Category = "Fire | Visuals")
+    class UNiagaraSystem* FireEffectAsset;
+
+    /** 불빛 일렁임 효과를 위한 기본 강도 */
+    float BaseLightIntensity;
+
     /** 모닥불 속성 */
     UPROPERTY(EditDefaultsOnly, Category = "Fire | Stats")
     float LightIntensity = 5000.0f;
