@@ -13,6 +13,9 @@ class UStaticMeshComponent;
 class USceneComponent;
 class UArrowComponent;
 class USpotLightComponent;
+class USoundBase;
+class USoundAttenuation;
+class UAudioComponent;
 
 UCLASS(Blueprintable)
 class OBLIVIO_API AWallTrackingEyeActor : public AActor
@@ -45,6 +48,10 @@ protected:
 	/** 애로우(+X) 축 방향으로 붉은 광원을 쏜다. 위치는 애로우 루트(필요 시 Eye Glow Forward Offset으로 조정). */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<USpotLightComponent> EyeGlowSpot;
+
+	/** 회전 사운드 단일 재생용(중첩 방지). */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<UAudioComponent> EyeRotateAudio;
 
 	/** 끄면 붉은 스팟 비활성(기본 꺼짐 — 필요한 블루프린트에서만 켜기). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Eye Glow")
@@ -99,6 +106,45 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tracking|Debug", meta = (EditCondition = "bDebugLog", ClampMin = "0.05", UIMin = "0.05"))
 	float DebugLogInterval = 0.25f;
 
+	/** LookPivot 회전이 이번 틱에 적용된 뒤 호출된다. 블루프린트에서 오버라이드해 사운드 등 처리. DeltaDegrees는 직전 쿼터니언 대비 각 변화량(도). */
+	UFUNCTION(BlueprintNativeEvent, Category = "WallEye|Audio")
+	void OnEyeRotationApplied(float DeltaDegreesThisFrame, float DeltaSeconds);
+	virtual void OnEyeRotationApplied_Implementation(float DeltaDegreesThisFrame, float DeltaSeconds);
+
+	/** 켜져 있을 때만 C++ 기본 회전 사운드를 재생한다. 맵에 둔 인스턴스 중 소리 낼 액터만 체크할 것(블루프린트 클래스 디폴트는 끔). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "WallEye|Audio")
+	bool bPlayEyeRotateSound = false;
+
+	/** 기본 재생용(비어 있으면 C++는 조용히 둠). 오버라이드만 쓸 때는 비워두면 된다. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "WallEye|Audio", meta = (EditCondition = "bPlayEyeRotateSound"))
+	TObjectPtr<USoundBase> EyeRotateSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "WallEye|Audio", meta = (ClampMin = "0"))
+	float EyeRotateSoundMinDeltaDegrees = 0.12f;
+
+	/** 한 번 재생 후 다시 허용할 최소 간격(초). 0이면 쿨다운 없음. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "WallEye|Audio", meta = (ClampMin = "0"))
+	float EyeRotateSoundCooldown = 0.25f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "WallEye|Audio", meta = (ClampMin = "0", ClampMax = "4"))
+	float EyeRotateSoundVolumeMultiplier = 1.f;
+
+	/** 0이면 거리 제한 없음. 플레이와의 거리(cm)가 이 값보다 크면 C++ 기본 재생 생략 — 눈이 많을 때 필수. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "WallEye|Audio", meta = (ClampMin = "0"))
+	float EyeRotateSoundMaxDistanceFromPlayer = 1000.f;
+
+	/** 1이면 매번 시도, 낮출수록 무작위로 건너뛰어 동시 재생 밀도 완화 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "WallEye|Audio", meta = (ClampMin = "0", ClampMax = "1", UIMin = "0", UIMax = "1"))
+	float EyeRotateSoundPlayProbability = 0.35f;
+
+	/** 피치 배율 ±지터(예: 0.05 → 0.95~1.05). 0이면 고정. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "WallEye|Audio", meta = (ClampMin = "0", ClampMax = "0.4"))
+	float EyeRotateSoundPitchJitter = 0.06f;
+
+	/** 비어 있어도 동작. 에셋으로 감쇠 거리·곡선 지정 시 밀집 구간에 유리 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "WallEye|Audio")
+	TObjectPtr<USoundAttenuation> EyeRotateSoundAttenuation;
+
 private:
 	void UpdateLookAt(float DeltaSeconds);
 	bool ShouldEmitDebugLog();
@@ -106,4 +152,9 @@ private:
 	void ApplyEyeGlowSettings();
 
 	float LastDebugLogTime = -1000.f;
+
+	/** OnEyeRotationApplied용 직전 LookPivot 회전 */
+	FQuat LastLookPivotQuatForAudio = FQuat::Identity;
+	float LastEyeRotateSoundWorldTime = -1000.f;
+	bool bEyeAudioBaselineSet = false;
 };

@@ -1,6 +1,7 @@
 #include "AIEnemy/WallTrackingEyeActor.h"
 
 #include "Components/ArrowComponent.h"
+#include "Components/AudioComponent.h"
 #include "Components/SceneComponent.h"
 #include "Components/SpotLightComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -8,6 +9,8 @@
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/Pawn.h"
 #include "Kismet/GameplayStatics.h"
+#include "Sound/SoundAttenuation.h"
+#include "Sound/SoundBase.h"
 #include "UObject/ConstructorHelpers.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogWallTrackingEye, Log, All);
@@ -41,6 +44,11 @@ AWallTrackingEyeActor::AWallTrackingEyeActor()
 	EyeGlowSpot->SetMobility(EComponentMobility::Movable);
 	EyeGlowSpot->SetCastShadows(false);
 	EyeGlowSpot->bUseInverseSquaredFalloff = false;
+
+	EyeRotateAudio = CreateDefaultSubobject<UAudioComponent>(TEXT("EyeRotateAudio"));
+	EyeRotateAudio->SetupAttachment(LookPivot);
+	EyeRotateAudio->bAutoActivate = false;
+	EyeRotateAudio->bAutoDestroy = false;
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> EyeAsset(
 		TEXT("/Game/Fab/low_poly_eye/low_poly_eye.low_poly_eye"));
@@ -89,6 +97,12 @@ void AWallTrackingEyeActor::BeginPlay()
 {
 	Super::BeginPlay();
 	SetActorTickEnabled(true);
+
+	if (IsValid(LookPivot))
+	{
+		LastLookPivotQuatForAudio = LookPivot->GetComponentQuat();
+		bEyeAudioBaselineSet = true;
+	}
 }
 
 bool AWallTrackingEyeActor::ShouldEmitDebugLog()
@@ -242,4 +256,79 @@ void AWallTrackingEyeActor::UpdateLookAt(const float DeltaSeconds)
 	{
 		LookPivot->SetWorldRotation(QTarget);
 	}
+
+	const FQuat QAfter = LookPivot->GetComponentQuat();
+	if (bEyeAudioBaselineSet)
+	{
+		const float DeltaDeg = FMath::RadiansToDegrees(LastLookPivotQuatForAudio.AngularDistance(QAfter));
+		OnEyeRotationApplied(DeltaDeg, DeltaSeconds);
+	}
+	LastLookPivotQuatForAudio = QAfter;
+	bEyeAudioBaselineSet = true;
+}
+
+void AWallTrackingEyeActor::OnEyeRotationApplied_Implementation(float DeltaDegreesThisFrame, float DeltaSeconds)
+{
+	if (!bPlayEyeRotateSound)
+	{
+		return;
+	}
+	if (!IsValid(EyeRotateSound))
+	{
+		return;
+	}
+	if (DeltaDegreesThisFrame < EyeRotateSoundMinDeltaDegrees)
+	{
+		return;
+	}
+	UWorld* World = GetWorld();
+	if (!IsValid(World) || !IsValid(LookPivot))
+	{
+		return;
+	}
+	if (EyeRotateSoundCooldown > KINDA_SMALL_NUMBER
+	    && World->GetTimeSeconds() - LastEyeRotateSoundWorldTime < EyeRotateSoundCooldown)
+	{
+		return;
+	}
+
+	if (EyeRotateSoundMaxDistanceFromPlayer > KINDA_SMALL_NUMBER && IsValid(LookPivot))
+	{
+		if (APawn* ListenerPawn = ResolvePlayerPawn(World, PlayerIndex))
+		{
+			const float D = FVector::Dist(LookPivot->GetComponentLocation(),
+			                              ListenerPawn->GetActorLocation());
+			if (D > EyeRotateSoundMaxDistanceFromPlayer)
+			{
+				return;
+			}
+		}
+	}
+
+	const float Prob = FMath::Clamp(EyeRotateSoundPlayProbability, 0.f, 1.f);
+	if (Prob < 1.f - KINDA_SMALL_NUMBER && FMath::FRand() > Prob)
+	{
+		return;
+	}
+
+	float PitchMul = 1.f;
+	if (EyeRotateSoundPitchJitter > KINDA_SMALL_NUMBER)
+	{
+		PitchMul = FMath::RandRange(1.f - EyeRotateSoundPitchJitter, 1.f + EyeRotateSoundPitchJitter);
+	}
+
+	LastEyeRotateSoundWorldTime = World->GetTimeSeconds();
+
+	if (!IsValid(EyeRotateAudio))
+	{
+		return;
+	}
+
+	EyeRotateAudio->Stop();
+	EyeRotateAudio->SetSound(EyeRotateSound);
+	EyeRotateAudio->SetVolumeMultiplier(EyeRotateSoundVolumeMultiplier);
+	EyeRotateAudio->SetPitchMultiplier(PitchMul);
+	EyeRotateAudio->SetAttenuationSettings(IsValid(EyeRotateSoundAttenuation) ? EyeRotateSoundAttenuation.Get()
+	                                                                           : nullptr);
+	EyeRotateAudio->Play();
 }
