@@ -19,6 +19,10 @@ public:
 	virtual void UseWeapon() override;
 	virtual void StopWeapon() override;
 	virtual void ChangeWeaponAngle(float DeltaAngle) override;
+
+	UFUNCTION(BlueprintPure, Category = Attack)
+	float GetAttackInterval() const { return AttackInterval; }
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Attack)
 	float AttackInterval;

@@ -1,9 +1,10 @@
 ﻿#include "Crafting/CraftingReinforcedBarricade.h"
+#include "AIEnemy/EnemyBase.h"
 #include "Components/StaticMeshComponent.h"
 
 ACraftingReinforcedBarricade::ACraftingReinforcedBarricade()
 {
-	MaxHealth = 500.0f;
+	MaxHealth = 10.0f;
 	CurrentHealth = MaxHealth;
 
 	WoodCost = 4;
@@ -34,10 +35,15 @@ void ACraftingReinforcedBarricade::OnPlaced()
 	}
 }
 
-float ACraftingReinforcedBarricade::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser)
+float ACraftingReinforcedBarricade::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
+	class AController* EventInstigator, AActor* DamageCauser)
 {
-	// 실제 들어오는 데미지에서 감소율만큼 차감
-	float FinalDamage = DamageAmount * (1.0f - DamageReductionRate);
+	float FinalDamage = DamageAmount;
+	// 근접 부수기는 MaxHealth가 '타격 횟수'이므로 데미지 감소를 적용하지 않는다.
+	if (!Cast<AEnemyBase>(DamageCauser))
+	{
+		FinalDamage = DamageAmount * (1.0f - DamageReductionRate);
+	}
 
 	return Super::TakeDamage(FinalDamage, DamageEvent, EventInstigator, DamageCauser);
 }

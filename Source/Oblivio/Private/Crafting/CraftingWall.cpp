@@ -3,8 +3,8 @@
 
 ACraftingWall::ACraftingWall()
 {
-    MaxHealth = 200.0f;
-    CurrentHealth = MaxHealth;
+	MaxHealth = 7.0f;
+	CurrentHealth = MaxHealth;
 
     // 설치 비용 설정
     WoodCost = 4;

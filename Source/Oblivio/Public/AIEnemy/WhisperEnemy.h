@@ -26,6 +26,7 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void UpdateChase() override;
 	virtual void UpdateAttack() override;
+	virtual bool IsObstacleAttackEnabled() const override { return false; }
 
 	/** 손전등 OFF 및 공격 판단을 수행하는 수평 거리(cm). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Whisper", meta = (ClampMin = "50.0"))
