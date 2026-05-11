@@ -189,6 +189,8 @@ void AOblivioCharacter::StopRunning() { bIsRunning = false; }
 void AOblivioCharacter::ToggleInventory()
 {
 	bIsInventoryOpen = !bIsInventoryOpen;
+	
+	OnInventoryToggle(bIsInventoryOpen);
 }
 
 void AOblivioCharacter::ToggleCrafting()
@@ -197,6 +199,8 @@ void AOblivioCharacter::ToggleCrafting()
 	{
 		CraftingComponent->ToggleCraftingMode();
 		bIsCraftingOpen = CraftingComponent->bIsCraftingModeActive;
+		
+		OnCraftingUIToggle(bIsCraftingOpen);
 	}
 }
 

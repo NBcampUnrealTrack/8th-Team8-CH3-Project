@@ -28,6 +28,9 @@ struct FInventorySlot
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	EItemType ItemType;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FText ItemDescription;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TSubclassOf<class AOblivioItemBase> ItemClass;
