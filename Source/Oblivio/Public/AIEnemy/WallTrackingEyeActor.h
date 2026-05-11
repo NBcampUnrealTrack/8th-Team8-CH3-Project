@@ -46,8 +46,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<USpotLightComponent> EyeGlowSpot;
 
+	/** 끄면 붉은 스팟 비활성(기본 꺼짐 — 필요한 블루프린트에서만 켜기). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Eye Glow")
-	bool bEnableEyeGlow = true;
+	bool bEnableEyeGlow = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Eye Glow")
 	FLinearColor EyeGlowColor = FLinearColor(1.f, 0.12f, 0.08f, 1.f);
@@ -90,7 +91,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tracking", meta = (ClampMin = "0", UIMin = "0"))
 	int32 PlayerIndex = 0;
 
-	/** 켜면 Output Log에 추적 상태를 남김(간격은 Debug Log Interval). */
+	/** 켜면 추적 실패 시에만 Output Log에 이유 출력(정상 추적일 때는 찍지 않음). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tracking|Debug")
 	bool bDebugLog = false;
 

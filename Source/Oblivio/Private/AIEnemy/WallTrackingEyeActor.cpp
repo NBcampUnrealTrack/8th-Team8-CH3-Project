@@ -89,15 +89,6 @@ void AWallTrackingEyeActor::BeginPlay()
 {
 	Super::BeginPlay();
 	SetActorTickEnabled(true);
-
-	if (bDebugLog)
-	{
-		UE_LOG(LogWallTrackingEye, Log,
-		       TEXT("[%s] BeginPlay: TickEnabled=%s PlayerIndex=%d"),
-		       *GetName(),
-		       IsActorTickEnabled() ? TEXT("true") : TEXT("false"),
-		       PlayerIndex);
-	}
 }
 
 bool AWallTrackingEyeActor::ShouldEmitDebugLog()
@@ -250,34 +241,5 @@ void AWallTrackingEyeActor::UpdateLookAt(const float DeltaSeconds)
 	else
 	{
 		LookPivot->SetWorldRotation(QTarget);
-	}
-
-	if (bDebugLog && ShouldEmitDebugLog())
-	{
-		const float Dist = FVector::Distance(PivotLocation, TargetLocation);
-		const float DotAlign = FVector::DotProduct(QPivot.RotateVector(ArrowAxisNorm), DirToPlayer);
-		const float AngleToGoalDeg = FMath::RadiansToDegrees(QPivot.AngularDistance(QTarget));
-		const float MeshFwdDot =
-			IsValid(EyeMesh)
-				? FVector::DotProduct(EyeMesh->GetForwardVector().GetSafeNormal(), DirToPlayer)
-				: 0.f;
-
-		UE_LOG(LogWallTrackingEye, Log,
-		       TEXT("[%s] OK pawn=%s dist=%.1f maxDist=%.1f arrowFwdDot=%.3f meshFwdDot=%.3f angleToGoal=%.2f° "
-		            "bZeroRoll=%d smooth=%d interpSpd=%.1f tick=%d pivot(Y,P,R)=(%.1f,%.1f,%.1f)"),
-		       *GetName(),
-		       *PlayerPawn->GetName(),
-		       Dist,
-		       MaxTrackingDistance,
-		       DotAlign,
-		       MeshFwdDot,
-		       AngleToGoalDeg,
-		       bZeroRoll ? 1 : 0,
-		       bSmoothRotation ? 1 : 0,
-		       RotationInterpSpeed,
-		       IsActorTickEnabled() ? 1 : 0,
-		       LookPivot->GetComponentRotation().Pitch,
-		       LookPivot->GetComponentRotation().Yaw,
-		       LookPivot->GetComponentRotation().Roll);
 	}
 }
