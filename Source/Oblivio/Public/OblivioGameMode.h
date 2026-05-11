@@ -33,14 +33,6 @@ public:
 	int32 RequiredKeys = 3;
 	// ----
 
-	//획득/소모한 아이템을 인스턴스로 넘겨주는 함수
-	UFUNCTION(BlueprintCallable, Category = "Resource")
-	void AddResource(FString Type, int32 Amount);
-
-	UFUNCTION(BlueprintCallable, Category = "Resource")
-	bool ConsumeResource(int32 WoodCost, int32 IronCost);
-	//---
-
 	UFUNCTION(BlueprintCallable, Category = "Level")
 	void NextFloor();
 

@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/SaveGame.h"
+#include "Items/OblivioInventoryComponent.h"
 #include "OblivioSaveGame.generated.h"
 
 UCLASS()
@@ -11,12 +12,6 @@ class OBLIVIO_API UOblivioSaveGame : public USaveGame
 
 public:
 	//저장할 데이터들
-	UPROPERTY()
-	int32 SavedWoodCount;
-	UPROPERTY()
-	int32 SavedIronCount;
-	UPROPERTY()
-	int32 SavedBatteryItemCount;
 	UPROPERTY()
 	float SavedCurrentHealth;
 	UPROPERTY()
@@ -31,6 +26,8 @@ public:
 	int32 SavedKills;
 	UPROPERTY()
 	int32 SavedMementos;
+	UPROPERTY()
+	TArray<FInventorySlot> SavedInventorySlots;
 
 	//세이브 슬롯 이름 및 인덱스
 	UPROPERTY()
