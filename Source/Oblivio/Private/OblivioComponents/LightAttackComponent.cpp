@@ -46,6 +46,12 @@ void ULightAttackComponent::OnRegister()
         SpotLightComp->bCastVolumetricShadow = true;
         SpotLightComp->RegisterComponent();
         SpotLightComp->LightColor = BasicLightColor;
+
+        //빛 벽 통과 해결
+        SpotLightComp->CastShadows = true;
+        SpotLightComp->ShadowBias = 0.1f;
+        SpotLightComp->ShadowSlopeBias = 0.1f;
+        SpotLightComp->ShadowSharpen = 1.0f;
     }
     if (!IsValid(PointLightComp))
     {
@@ -55,6 +61,12 @@ void ULightAttackComponent::OnRegister()
         PointLightComp->bCastVolumetricShadow = true;
         PointLightComp->RegisterComponent();
         PointLightComp->LightColor = BasicLightColor;
+
+        //빛 벽 통과 해결
+        PointLightComp->CastShadows = true;
+        PointLightComp->ShadowBias = 0.1f;
+        PointLightComp->ShadowSlopeBias = 0.1f;
+        PointLightComp->ShadowSharpen = 1.0f;
     }
 }
 
