@@ -421,6 +421,10 @@ void ALuxeaterEnemy::UpdateHealthPhase()
 	const int32 OldPhase = BossPhase;
 	BossPhase = NewPhase;
 	OnPhaseChanged.Broadcast(this, OldPhase, BossPhase);
+	if (OldPhase == 1 && BossPhase == 2)
+	{
+		OnEnteredPhaseTwo.Broadcast(this);
+	}
 }
 
 void ALuxeaterEnemy::TryScheduleLightAbsorbFromHit()

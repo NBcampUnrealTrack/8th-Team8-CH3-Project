@@ -11,6 +11,8 @@ class UNiagaraSystem;
 class USoundBase;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FLuxeaterPhaseChangedSignature, class ALuxeaterEnemy*, Enemy, int32, OldPhase, int32, NewPhase);
+/** 1페이즈에서 2페이즈로 바뀔 때만 호출(OnPhaseChanged와 함께 브로드캐스트). */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FLuxeaterEnteredPhaseTwoSignature, class ALuxeaterEnemy*, Enemy);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FLuxeaterLightAbsorbedSignature, class ALuxeaterEnemy*, Enemy, float, AbsorbedAmount, float, TotalAbsorbed);
 
 /**
@@ -61,6 +63,10 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Enemy|Luxeater|Events")
 	FLuxeaterPhaseChangedSignature OnPhaseChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "Enemy|Luxeater|Events",
+		meta = (ToolTip = "체력 비율이 PhaseTwoHealthPercentThreshold 이하가 되어 2페이즈로 들어갈 때 한 번 호출됩니다."))
+	FLuxeaterEnteredPhaseTwoSignature OnEnteredPhaseTwo;
 
 	UPROPERTY(BlueprintAssignable, Category = "Enemy|Luxeater|Events")
 	FLuxeaterLightAbsorbedSignature OnLightAbsorbed;
