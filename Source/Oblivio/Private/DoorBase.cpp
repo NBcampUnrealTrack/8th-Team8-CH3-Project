@@ -14,6 +14,22 @@ void ADoorBase::InteractDoor_Implementation()
 {
 	if (bIsExitDoor)
 	{
+		AOblivioCharacter* Player = Cast<AOblivioCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+
+		if (bRequiresKey && Player)
+		{
+			bool bHasKey = Player->InventoryComponent->HasItem(RequiredKeyID);
+
+			if (!bHasKey)
+			{
+				if (GEngine)
+				{
+					GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, TEXT("잠겨 있습니다. 열쇠가 필요합니다."));
+				}
+				return;
+			}
+		}
+
 		APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
 		if (PC && PC->PlayerCameraManager)
 		{
