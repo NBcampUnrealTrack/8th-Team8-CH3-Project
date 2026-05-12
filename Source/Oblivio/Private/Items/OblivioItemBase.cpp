@@ -39,6 +39,8 @@ void AOblivioItemBase::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent,
         {
             //나중에 pickup UI랑 연동
             Player->SetNearbyItem(this);
+            ItemMesh->SetRenderCustomDepth(true);
+            ItemMesh->SetCustomDepthStencilValue(255);
             // 나중에 만들 InventoryComponent의 AddItem 함수를 여기서 호출
             // if (Player->InventoryComponent->AddItem(this)) 
             // {
@@ -56,6 +58,7 @@ void AOblivioItemBase::OnSphereEndOverlap(UPrimitiveComponent* OverlappedCompone
     {
         // 캐릭터에게서 아이템 정보 제거 (UI 끄기 신호)
         Player->SetNearbyItem(nullptr);
+        ItemMesh->SetRenderCustomDepth(false);
         UE_LOG(LogTemp, Warning, TEXT("Overlap Ended with Player! Item: %s"), *ItemName.ToString());
     }
 }
