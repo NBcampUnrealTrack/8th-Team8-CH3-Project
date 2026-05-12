@@ -59,6 +59,8 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|SwarmScatter")
 	bool bDisableLightTrackingWhileScattering = true;
 
+	virtual bool IsObstacleAttackEnabled() const override { return false; }
+
 private:
 	UFUNCTION()
 	void HandleWaveSpawnQueueEmptied(int32 WaveIndex, AEnemySpawner* Spawner);

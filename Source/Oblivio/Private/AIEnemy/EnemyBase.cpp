@@ -17,6 +17,7 @@
 #include "Components/SpotLightComponent.h"
 #include "Engine/World.h"
 #include "Crafting/ObstacleBase.h"
+#include "Components/CapsuleComponent.h"
 
 // =============================================================================
 // AEnemyBase 구현 요약
@@ -122,6 +123,12 @@ void AEnemyBase::Tick(float DeltaSeconds)
 
 	if (bCCStunned)
 	{
+		return;
+	}
+
+	if (ShouldSuppressAILocomotion())
+	{
+		StopEnemyMovement();
 		return;
 	}
 
@@ -898,87 +905,138 @@ void AEnemyBase::TryRecoverFromStuck()
 
 // =============================================================================
 // HandleBlockingObstacle
-// Chase 상태에서 매 틱 호출.
-// 1) BlockingObstacle 이 유효하면: 접근·공격·파괴 처리
-// 2) 아니면 ObstacleScanInterval 마다 라인트레이스로 장애물 감지
+// 플레이어 추격 중 시야가 크래프팅 장애물에 의해 막히면 CraftingLosBlockedEvalCount 를 누적하고,
+// Threshold(기본 10)회 스캔마다 장애물 파괴 모드로 전환한다. 그 전에는 추격(UpdateChase)만 수행.
+// 장애물 파괴는 근접 한 대당 고정 1 HP(박스 Max 5 / 벽 7 / 바리케이트 10).
 // =============================================================================
+
+bool AEnemyBase::LineTraceLosBlockedByCraftingObstacle(AActor* const Target, FHitResult& OutHit) const
+{
+	OutHit = FHitResult();
+	if (!IsValid(Target) || !GetWorld())
+	{
+		return false;
+	}
+
+	const FVector TraceStart = GetActorLocation() + FVector(0.f, 0.f, 50.f);
+	FVector TraceEnd = Target->GetActorLocation();
+	if (APawn const* P = Cast<APawn>(Target))
+	{
+		if (UCapsuleComponent const* Caps = P->FindComponentByClass<UCapsuleComponent>())
+		{
+			TraceEnd = Caps->GetComponentLocation();
+		}
+	}
+
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(EnemyCraftingLosScan), false, this);
+	Params.AddIgnoredActor(Target);
+
+	if (!GetWorld()->LineTraceSingleByChannel(OutHit, TraceStart, TraceEnd, ECC_Visibility, Params))
+	{
+		return false;
+	}
+
+	return Cast<AObstacleBase>(OutHit.GetActor()) != nullptr;
+}
+
 void AEnemyBase::HandleBlockingObstacle(float DeltaSeconds)
 {
-	if (!IsObstacleAttackEnabled()) return;
+	if (!IsObstacleAttackEnabled())
+	{
+		return;
+	}
 
-	// ── 플레이어 우선: 공격 범위 내면 장애물 타겟 해제 후 즉시 반환
-	// (FSM이 Chase→Attack으로 전환해 플레이어를 공격한다)
-	if (IsValid(TargetActor) &&
-		FVector::DistSquared(GetActorLocation(), TargetActor->GetActorLocation()) <= FMath::Square(AttackRange))
+	if (!IsValid(TargetActor))
+	{
+		BlockingObstacle = nullptr;
+		CraftingLosBlockedEvalCount = 0;
+		bPrioritizeBreakingCraftingObstacle = false;
+		return;
+	}
+
+	constexpr float CraftingMeleeSwingDamage = 1.f;
+
+	ObstacleScanTimer += DeltaSeconds;
+	const bool bDoLosEval = ObstacleScanTimer >= ObstacleScanInterval;
+	if (bDoLosEval)
+	{
+		ObstacleScanTimer = 0.f;
+	}
+
+	FHitResult LosHit;
+	const bool bLosBlockedByCrafting = LineTraceLosBlockedByCraftingObstacle(TargetActor, LosHit);
+	AObstacleBase* const LosObs = bLosBlockedByCrafting ? Cast<AObstacleBase>(LosHit.GetActor()) : nullptr;
+
+	if (bDoLosEval)
+	{
+		if (LosObs)
+		{
+			++CraftingLosBlockedEvalCount;
+			if (CraftingLosBlockedEvalCount >= CraftingLosBlockedEvaluationThreshold)
+			{
+				bPrioritizeBreakingCraftingObstacle = true;
+			}
+		}
+		else
+		{
+			CraftingLosBlockedEvalCount = 0;
+			bPrioritizeBreakingCraftingObstacle = false;
+		}
+	}
+
+	const float DistSqPlayer = FVector::DistSquared(GetActorLocation(), TargetActor->GetActorLocation());
+	const bool bPlayerInMeleeRange = DistSqPlayer <= FMath::Square(AttackRange);
+
+	if (bPlayerInMeleeRange && !bPrioritizeBreakingCraftingObstacle)
 	{
 		BlockingObstacle = nullptr;
 		return;
 	}
 
-	// ── 기존 타겟 유효성 확인 ──────────────────────────────────────────
-	if (IsValid(BlockingObstacle))
+	if (!bPrioritizeBreakingCraftingObstacle)
 	{
-		AObstacleBase* Obs = Cast<AObstacleBase>(BlockingObstacle);
-		if (!Obs)
-		{
-			BlockingObstacle = nullptr;
-			return;
-		}
-
-		const float DistToObs = FVector::Dist(GetActorLocation(), Obs->GetActorLocation());
-
-		if (DistToObs <= AttackRange)
-		{
-			// 사거리 내 → 쿨타임 맞으면 피해 적용
-			ObstacleAttackTimer += DeltaSeconds;
-			if (ObstacleAttackTimer >= AttackCooldown)
-			{
-				ObstacleAttackTimer = 0.0f;
-				UGameplayStatics::ApplyDamage(
-					Obs,
-					AttackDamage,
-					GetController(),
-					this,
-					UDamageType::StaticClass());
-				UE_LOG(LogTemp, Log, TEXT("%s attacking obstacle %s (%.0f hp remaining)"),
-					*GetNameSafe(this), *GetNameSafe(Obs), Obs->GetCurrentHealth());
-			}
-			StopEnemyMovement();
-		}
-		else
-		{
-			// 아직 멀다 → 장애물로 이동
-			if (AAIController* AC = Cast<AAIController>(GetController()))
-			{
-				AC->MoveToActor(Obs, FMath::Min(AttackRange * 0.8f, 80.0f));
-			}
-		}
+		BlockingObstacle = nullptr;
 		return;
 	}
 
-	// ── 주기적 스캔 ────────────────────────────────────────────────────
-	ObstacleScanTimer += DeltaSeconds;
-	if (ObstacleScanTimer < ObstacleScanInterval) return;
-	ObstacleScanTimer = 0.0f;
-
-	if (!IsValid(TargetActor)) return;
-
-	// 에너미 눈높이(+50 cm) → 플레이어 사이 라인트레이스
-	const FVector TraceStart = GetActorLocation() + FVector(0.f, 0.f, 50.f);
-	const FVector TraceEnd   = TargetActor->GetActorLocation();
-
-	FHitResult Hit;
-	FCollisionQueryParams Params(TEXT("ObstacleScan"), false, this);
-	Params.AddIgnoredActor(TargetActor);
-
-	if (GetWorld()->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, ECC_Visibility, Params))
+	AObstacleBase* Obs = LosObs;
+	if (!IsValid(Obs))
 	{
-		if (AObstacleBase* HitObs = Cast<AObstacleBase>(Hit.GetActor()))
+		Obs = Cast<AObstacleBase>(BlockingObstacle);
+	}
+	else
+	{
+		BlockingObstacle = LosObs;
+	}
+
+	if (!IsValid(Obs))
+	{
+		BlockingObstacle = nullptr;
+		return;
+	}
+
+	BlockingObstacle = Obs;
+
+	const float DistToObs = FVector::Dist(GetActorLocation(), Obs->GetActorLocation());
+
+	if (DistToObs <= AttackRange)
+	{
+		ObstacleAttackTimer += DeltaSeconds;
+		if (ObstacleAttackTimer >= AttackCooldown)
 		{
-			BlockingObstacle    = HitObs;
-			ObstacleAttackTimer = AttackCooldown; // 첫 틱에 바로 공격
-			UE_LOG(LogTemp, Log, TEXT("%s detected blocking obstacle: %s"),
-				*GetNameSafe(this), *GetNameSafe(HitObs));
+			ObstacleAttackTimer = 0.f;
+			UGameplayStatics::ApplyDamage(Obs, CraftingMeleeSwingDamage, GetController(), this,
+				UDamageType::StaticClass());
+			UE_LOG(LogTemp, Log, TEXT("%s attacking crafting obstacle %s (%.1f hp left)"),
+				*GetNameSafe(this), *GetNameSafe(Obs), Obs->GetCurrentHealth());
+		}
+		StopEnemyMovement();
+	}
+	else
+	{
+		if (AAIController* AC = Cast<AAIController>(GetController()))
+		{
+			AC->MoveToActor(Obs, FMath::Min(AttackRange * 0.8f, 80.f));
 		}
 	}
 }
@@ -1251,6 +1309,8 @@ void AEnemyBase::SetEnemyState(EEnemyAIState NewState)
 		BlockingObstacle = nullptr;
 		ObstacleScanTimer = 0.0f;
 		ObstacleAttackTimer = 0.0f;
+		CraftingLosBlockedEvalCount = 0;
+		bPrioritizeBreakingCraftingObstacle = false;
 	}
 	NotifyEnemyStateChanged(OldState, NewState);
 	OnEnemyFSMStateChanged.Broadcast(this, OldState, NewState);

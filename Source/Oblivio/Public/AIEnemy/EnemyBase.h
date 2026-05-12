@@ -282,6 +282,13 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Navigation", meta = (ClampMin = "0.1"))
 	float ObstacleScanInterval = 0.5f;
 
+	/**
+	 * 추격 중 시야 상 플레이어가 크래프팅 장애물에 의해 차단된다고 판정된 평가 횟수(스캔 주기당 +1).
+	 * 이 값에 도달하면 플레이어가 근접 거리 안에 있어도 해당 장애물을 근접으로 부순다.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Navigation", meta = (ClampMin = "1"))
+	int32 CraftingLosBlockedEvaluationThreshold = 10;
+
 	/** Chase 중 이 간격(초)마다 '막힘' 여부를 검사한다. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Navigation", meta = (ClampMin = "0.2"))
 	float StuckCheckInterval = 1.2f;
@@ -440,6 +447,10 @@ protected:
 	 * 장애물이 있으면 직접 접근·공격·파괴 처리를 수행한다.
 	 */
 	void HandleBlockingObstacle(float DeltaSeconds);
+
+	/** 에너미 눈 높이에서 타겟까지 시야 라인이 AObstacleBase에 막히면 true, OutHit은 그 충돌. */
+	bool LineTraceLosBlockedByCraftingObstacle(AActor* Target, FHitResult& OutHit) const;
+
 	virtual void UpdatePatrol(float DeltaSeconds);
 	virtual void UpdateInvestigate(float DeltaSeconds);
 	virtual void UpdateSearch(float DeltaSeconds);
@@ -461,9 +472,16 @@ protected:
 	virtual bool HasValidAggroTarget() const;
 	void StopEnemyMovement();
 
-	void RefreshWalkSpeedFromSources();
+	virtual void RefreshWalkSpeedFromSources();
 	/** Chase·Attack vs 그 외 이동 기준 이속. 파생 클래스에서 절름발이 추격자 등 이단 속도용 오버라이드. */
 	virtual float GetLocomotionBaseSpeed() const;
+
+	/**
+	 * true면 Tick 에서 상태별 이동/공격(Chase 패스 등) 스킵. 보스 채널링 등에 사용.
+	 * bCCStunned 와 무관 — 스턴 무시 클래스는 별도로 정지 처리할 때 활용한다.
+	 */
+	virtual bool ShouldSuppressAILocomotion() const { return false; }
+
 	void OnCCSlowExpired();
 	void OnCCStunExpired();
 	void DrawAggroDebug();
@@ -518,6 +536,10 @@ private:
 	float ObstacleScanTimer = 0.0f;
 	/** 장애물 공격 쿨타임 누적(초). */
 	float ObstacleAttackTimer = 0.0f;
+	/** 시야 차단이 연속으로 관측된 스캔 횟수. */
+	int32 CraftingLosBlockedEvalCount = 0;
+	/** true면 플레이어 근거리여도 크래프팅 장애물을 근접으로 부순다. */
+	bool bPrioritizeBreakingCraftingObstacle = false;
 
 	bool bLightTrackGoalValid = false;
 	bool bLightTrackSealed = false;

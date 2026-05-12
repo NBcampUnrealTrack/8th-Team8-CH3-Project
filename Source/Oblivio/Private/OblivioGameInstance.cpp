@@ -8,9 +8,8 @@ void UOblivioGameInstance::SaveGameData()
 	UOblivioSaveGame* SaveInstance = Cast<UOblivioSaveGame>(UGameplayStatics::CreateSaveGameObject(UOblivioSaveGame::StaticClass()));
 
 	//현재 GameInstance의 데이터를 세이브 객체로 복사
-	SaveInstance->SavedWoodCount = WoodCount;
-	SaveInstance->SavedIronCount = IronCount;
-	SaveInstance->SavedBatteryItemCount = BatteryItemCount;
+	SaveInstance->SavedInventorySlots = SavedInventorySlots;
+	UGameplayStatics::SaveGameToSlot(SaveInstance, SaveInstance->SaveSlotName, SaveInstance->UserIndex);
 	SaveInstance->SavedCurrentHealth = CurrentHealth;
 	SaveInstance->SavedBattery = CurrentBattery;
 	SaveInstance->SavedCurrentHunger = CurrentHunger;
@@ -34,9 +33,7 @@ void UOblivioGameInstance::LoadGameData()
 		UOblivioSaveGame* LoadInstance = Cast<UOblivioSaveGame>(UGameplayStatics::LoadGameFromSlot(SlotName, 0));
 
 		// 파일 데이터를 다시 GameInstance 변수로 복구
-		WoodCount = LoadInstance->SavedWoodCount;
-		IronCount = LoadInstance->SavedIronCount;
-		BatteryItemCount = LoadInstance->SavedBatteryItemCount;
+		SavedInventorySlots = LoadInstance->SavedInventorySlots;
 		CurrentHealth = LoadInstance->SavedCurrentHealth;
 		CurrentBattery = LoadInstance->SavedBattery;
 		CurrentHunger = LoadInstance->SavedCurrentHunger;

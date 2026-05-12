@@ -26,9 +26,9 @@ void AOblivioGameMode::NextFloor()
 	{
 		//캐릭터의 현재 스탯을 인스턴스에 백업
 		GI->CurrentHealth = Player->CurrentHealth;
-		GI->CurrentBattery = Player->CurrentHealth;
-		GI->CurrentHunger = Player->CurrentHealth;
-		GI->CurrentThirst = Player->CurrentHealth;
+		GI->CurrentBattery = Player->Battery;
+		GI->CurrentHunger = Player->Hunger;
+		GI->CurrentThirst = Player->Thirst;
 
 		GI->CurrentFloor--;
 
@@ -39,10 +39,15 @@ void AOblivioGameMode::NextFloor()
 		{
 			DetermineEnding();
 		}
+		else if(GI->FloorMapNames.Contains(GI->CurrentFloor))
+		{
+			FName NextLevelName = GI->FloorMapNames[GI->CurrentFloor];
+			UGameplayStatics::OpenLevel(this, NextLevelName);
+		}
 		else
 		{
-			UGameplayStatics::OpenLevel(GetWorld(), FName("이름 미정"));
-			UE_LOG(LogTemp, Warning, TEXT("Floor changed to: %d"), GI->CurrentFloor);
+			// 에러 처리: 등록된 맵이 없을 경우
+			UE_LOG(LogTemp, Warning, TEXT("Floor is not exist: %d"), GI->CurrentFloor);
 		}
 	}
 	else
@@ -71,33 +76,6 @@ void AOblivioGameMode::ManualSaveFromMenu()
 	}
 }
 */
-
-void AOblivioGameMode::AddResource(FString Type, int32 Amount)
-{
-	if (UOblivioGameInstance* GI = Cast<UOblivioGameInstance>(GetGameInstance()))
-	{
-		if (Type == "Wood") GI->WoodCount += Amount;
-		else if (Type == "Iron") GI->IronCount += Amount;
-
-		//UE_LOG(LogTemp, Log, TEXT("get resource: %s +%d (total: %d)"), *Type, Amount, (Type == "Wood" ? GI->WoodCount : GI->IronCount));
-	}
-}
-
-bool AOblivioGameMode::ConsumeResource(int32 WoodCost, int32 IronCost)
-{
-	UOblivioGameInstance* GI = Cast<UOblivioGameInstance>(GetGameInstance());
-	if (GI && GI->WoodCount >= WoodCost && GI->IronCount >= IronCost)
-	{
-		GI->WoodCount -= WoodCost;
-		GI->IronCount -= IronCost;
-		return true;
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Not enough resources!"));
-	}
-	return false;
-}
 
 void AOblivioGameMode::AddMonsterKill()
 {
