@@ -1,10 +1,12 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "Engine/EngineTypes.h"
 #include "Weapon/WeaponBase.h"
 #include "Weapon/ThrowableWeapon.h"
 #include "GameFramework/Character.h"
 #include "InputActionValue.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "OblivioComponents/CombatInterface.h"
 #include "OblivioCharacter.generated.h"
 
@@ -19,6 +21,8 @@ class AWeaponBase;
 class AThrowableWeapon;
 class USoundPropagationComponent;
 class UPlayerCombatComponent;
+class UPrimitiveComponent;
+class UMaterialInterface;
 
 UCLASS()
 class OBLIVIO_API AOblivioCharacter : public ACharacter, public ICombatInterface
@@ -30,7 +34,20 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void Tick(float DeltaTime) override;
+
+	void ApplyWallOcclusionVisualToOccluder(UPrimitiveComponent* Prim);
+	void RemoveWallOcclusionVisualFromOccluder(UPrimitiveComponent* Prim);
+	void RefreshWallOcclusionFadeMaterialInstances();
+	FVector GetWallOcclusionFocusWorldLocation() const;
+	void UpdateWallOcclusionDither();
+	void ClearWallOcclusionOverlays();
+	bool ShouldTreatHitAsOccluderWall(const class UPrimitiveComponent* Component, FVector const& ImpactNormalWorld) const;
+	/** 가림 디더 레이 시작 월드 위치(bWallOcclusionTraceStartUsesTopDownCameraWorldLocation에 따라 카메라 고정 또는 스프링암 논리점). */
+	FVector GetWallOcclusionTraceStartWorld() const;
+	/** Occluder 레이 끝점·로컬 MID 초점을 논리 카메라 쪽으로 살짝 당겨, 정면 벽을 볼 때 세그먼트가 벽을 스킵하지 않게 함. */
+	FVector BiasWallOcclusionTraceEndTowardsTraceStartWorld(FVector SampleWorldHint) const;
 
 public:
 	//===========================
@@ -41,6 +58,121 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components|Camera")
 	class UCameraComponent* TopDownCamera;
+
+	/** true면 스프링암이 벽에 안 밀림(기본). 가리는 벽은 WallOcclusionOverlayMaterial 디더 오버레이로 처리. 바닥까지 걸리면 임계값·ExtraTraceLocals 조정. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components|Camera|Occlusion",
+		meta = (ToolTip = "CameraBoom 프로브 충돌 비활성화. 카메라와 캐릭터 사이 레이에 걸린 스태틱 메시에 오버레이 재질 적용."))
+	bool bWallOcclusionDisableSpringArmProbe = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components|Camera|Occlusion",
+		meta = (ToolTip = "로컬 전용 뷰 타깃에게만 디더 레이 업데이트."))
+	bool bWallOcclusionDitherEnabled = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Camera|Occlusion",
+		meta = (ToolTip =
+			"Overlay: SetOverlayMaterial용. 불투명 베이스 위에서는 ‘뚫린 듯’ 반투명이 잘 안 보일 수 있음. Swap 모드: 슬럿 교체용 Translucent/Masked+디더 MI."))
+	TObjectPtr<UMaterialInterface> WallOcclusionOverlayMaterial;
+
+	/** 진짜로 얇게 비치려면 켠 뒤 WallOcclusionOverlayMaterial 에 벽 디폴트 재질을 본뜬 Transparent/Masked 페이드 MI 지정 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components|Camera|Occlusion")
+	bool bWallOcclusionSwapMaterialInsteadOfOverlay = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components|Camera|Occlusion", meta = (ClampMin = "0"))
+	int32 WallOcclusionMaterialSlotToSwap = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Camera|Occlusion", meta = (ClampMin = "0.0"))
+	float WallOcclusionUpdateIntervalSec = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Camera|Occlusion", meta = (ClampMin = "0.01"))
+	float WallOcclusionIgnoreBeyondBodyMarginUU = 30.f;
+
+	/** 충돌 대상 채널(기본 가시 레이와 동일 계열로 벽 포함). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Camera|Occlusion")
+	TEnumAsByte<ECollisionChannel> WallOcclusionTraceChannel = ECC_Visibility;
+
+	/**
+	 * true면 디더 레이 시작점을 논리 스프링암 후보 선택 대신 TopDown 카메라의 실제 월드 좌표로 고정(+ ExtraOffset 합산).
+	 * 줌만 바뀌고 시축 각도 고정 게임에서는 화면·디버그 선과 일치해 탐색이 안정적.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components|Camera|Occlusion")
+	bool bWallOcclusionTraceStartUsesTopDownCameraWorldLocation = true;
+
+	/** Occluder 레이 시작점에 더할 월드 오프셋(카모드 또는 블프 보정만 필요할 때). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Camera|Occlusion")
+	FVector WallOcclusionTraceStartWorldExtraOffset = FVector::ZeroVector;
+
+	/** 바닥·천장으로 간주하여 오버레이 제외(abs(Z·Normal) 높음). 벽 중심 임계. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Camera|Occlusion",
+		meta = (ClampMin = "0.0", ClampMax = "1.0", ToolTip = "ImpactNormal 과 Up 과의 내적 상한. 그 위는 수평면으로 보고 무시."))
+	float WallOcclusionFloorCeilingCosThreshold = 0.92f;
+
+	/**
+	 * 탑다운에서 카메라 레이가 난간·블록 등의 수평 윗면에 먼저 맞으면 법선이 거의 위를 향해 기본 필터에 걸려 오버레이가 안 붙을 수 있음.
+	 * true면 바닥/천장 법선 제외를 하지 않음(타일 바닥 전체에 디더가 붙을 수 있으니 필요할 때만).
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components|Camera|Occlusion",
+		meta = (ToolTip = "true일 때 수평면(바닥/천장) 법선 필터를 끔. 탑다운 윗면 가림에 디더가 필요할 때 사용."))
+	bool bWallOcclusionIgnoreFloorCeilingNormalFilter = false;
+
+	/** 메시 로컬: 없으면 캡슐 샘플만 사용. 스켈 메시 있으면 해당 오프셋도 트레이스 끝으로 사용. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Camera|Occlusion")
+	FVector WallOcclusionSpineLocalOffsetFromMesh = FVector(0.f, 0.f, 70.f);
+
+	/** 액터 변환 로컬 기준 추가 샘플(낮은 허벅지 등). 빈 목록 허용. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Camera|Occlusion")
+	TArray<FVector> WallOcclusionExtraTraceLocals;
+
+	/**
+	 * CapsuleRadius × 이 값 만큼 각 트레이스 끝 샘플을 GetWallOcclusionTraceStartWorld() 쪽으로 이동.
+	 * 스켈/캡슐 샘플이 등 뒤쪽에만 있으면 카메라–등 구간이 벽을 안 끼고 빠져 디더가 안 걸릴 수 있음.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Camera|Occlusion",
+		meta = (ClampMin = "0.0", ClampMax = "2.0"))
+	float WallOcclusionTracePullTowardsTraceStartFracOfRadius = 0.45f;
+
+	/** PIE/Development에서 논리 카메라에서 몸통 샘플로 쏘는 디더 레이 표시(Shipping 빌드에서는 실행하지 않음). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components|Camera|Occlusion|Debug")
+	bool bWallOcclusionDebugDrawTraces = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components|Camera|Occlusion|Debug",
+		meta = (ClampMin = "0.0", ToolTip = "0이면 엔진 기본(프레임마다 갱신용). 0 초과 시 해당 초만 라인 유지." ))
+	float WallOcclusionDebugTraceLifeSec = 0.f;
+
+	/** 실제 TopDownCamera와 논리 트레이스 시작점 보정 차이 헬퍼 선(Shipping에서는 실행하지 않음). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components|Camera|Occlusion|Debug")
+	bool bWallOcclusionDebugDrawActualCameraGap = false;
+
+	/**
+	 * true면 피판정 메시마다 MID를 만들어 아래 FVector/Scalar 이름으로 중심·반경(·선 두께)을 매 틱 넣음.
+	 * 재질에서 Absolute World Position ↔ 파라미터로 마스크해 “플레이어 근처만” 디더·반투명 처리(전면 벗기지 않음).
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components|Camera|Occlusion|Localized")
+	bool bWallOcclusionDriveLocalizedFadeWithMID = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Camera|Occlusion|Localized")
+	FName WallOcclusionMIDParam_FocusWorld = FName(TEXT("Occlusion_FocusWorld"));
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Camera|Occlusion|Localized")
+	FName WallOcclusionMIDParam_FocusRadiusUU = FName(TEXT("Occlusion_FocusRadiusUU"));
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Camera|Occlusion|Localized")
+	float WallOcclusionFocusRadiusUU = 140.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Camera|Occlusion|Localized",
+		meta = (ToolTip = "카메라~플레이어 선 근처 띠까지도 페이드(재질이 선 파라미터를 쓸 때)." ))
+	bool bWallOcclusionMIDPassCameraToFocusLineParams = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Camera|Occlusion|Localized")
+	FName WallOcclusionMIDParam_LineStartWorld = FName(TEXT("Occlusion_LineStartWorld"));
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Camera|Occlusion|Localized")
+	FName WallOcclusionMIDParam_LineEndWorld = FName(TEXT("Occlusion_LineEndWorld"));
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Camera|Occlusion|Localized")
+	FName WallOcclusionMIDParam_LineHalfThicknessUU = FName(TEXT("Occlusion_LineHalfThicknessUU"));
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Camera|Occlusion|Localized")
+	float WallOcclusionFocusLineHalfThicknessUU = 40.f;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components|Light")
 	class USpotLightComponent* FlashlightComponent;
@@ -221,7 +353,16 @@ public:
 	void GenerateFootstep();
 	FPlayerAnimationEvent OnPlayerFootstep;
 	FTimerHandle FootstepTimerHandle;
+
 private:
+	TSet<TWeakObjectPtr<UPrimitiveComponent>> WallOcclusionAppliedPrimitives;
+	/** Swap 모드에서만 사용: 교체 전 슬롯 재질 */
+	TMap<TWeakObjectPtr<UPrimitiveComponent>, TObjectPtr<UMaterialInterface>> WallOcclusionSavedSwapMaterials;
+
+	TMap<TWeakObjectPtr<UPrimitiveComponent>, TObjectPtr<UMaterialInstanceDynamic>> WallOcclusionFadeMIDByOccluder;
+
+	double WallOcclusionNextUpdateWorldTimeSeconds = 0.;
+
 	UPROPERTY()
 	class AOblivioItemBase* CurrentNearbyItem = nullptr;
 
