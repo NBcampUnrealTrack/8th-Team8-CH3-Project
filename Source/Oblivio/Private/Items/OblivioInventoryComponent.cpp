@@ -125,7 +125,8 @@ void UOblivioInventoryComponent::DropItem(int32 SlotIndex)
 		FVector DropLoc = GetOwner()->GetActorLocation() + GetOwner()->GetActorForwardVector() * 100.0f;
 		GetWorld()->SpawnActor<AOblivioItemBase>(Slot.ItemClass, DropLoc, FRotator::ZeroRotator);
 
-		Slot = FInventorySlot(); // 슬롯 초기화
+		Slot.Quantity--;
+		if (Slot.Quantity <= 0) Slot = FInventorySlot(); // 슬롯 초기화
 		OnInventoryUpdated.Broadcast();
 		SyncInventoryToGameInstance(); //인스턴스와 동기화
 	}
