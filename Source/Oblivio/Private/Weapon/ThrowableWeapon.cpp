@@ -47,17 +47,17 @@ void AThrowableWeapon::Tick(float DeltaTime)
     FVector CurrentPos;
     CurrentPos.X = FMath::Lerp(StartLocation.X, TargetLocation.X, Alpha);
     CurrentPos.Y = FMath::Lerp(StartLocation.Y, TargetLocation.Y, Alpha);
+    SetActorLocation(CurrentPos, true);
 
     // 수직 이동
     float BaseZ = FMath::Lerp(StartLocation.Z, TargetLocation.Z, Alpha);
-    CurrentPos.Z = BaseZ + FMath::Sin(Alpha * PI) * ThrowHeight;
-    SetActorLocation(CurrentPos);
+    float CurrentZ = BaseZ + FMath::Sin(Alpha * PI) * ThrowHeight;
+    //AddActorWorldOffset(FVector(0,0, CurrentZ));
 
     //포물선 운동 끝
     if (Alpha >= 1.f)
     {
         bIsFlying = false;
-        SetActorLocation(TargetLocation);
         OnLanded();
     }
 }
