@@ -704,7 +704,10 @@ void AOblivioCharacter::UpdateStatus(float DeltaTime)
 	if (bIsFlashlightOn && Battery > 0.0f)
 	{
 		float FocusPenalty = FMath::Lerp(1.0f, 1.5f, CurrentFocusAlpha);
-		Battery = FMath::Max(0.0f, Battery - (DeltaTime * BatteryDepletionRate * FocusPenalty));
+		if (!bCheatInfiniteBattery)
+		{
+			Battery = FMath::Max(0.0f, Battery - (DeltaTime * BatteryDepletionRate * FocusPenalty));
+		}
 
 		if (Battery <= 0.0f)
 		{
@@ -1007,7 +1010,7 @@ void AOblivioCharacter::FadeOutFlashbang()
 
 void AOblivioCharacter::ApplyHealth(float Damage)
 {
-	if (bIsDead) return;
+	if (bIsDead || bCheatGodMode) return;
 
 	// 체력을 차감하고 최소값을 0으로 유지
 	CurrentHealth = FMath::Clamp(CurrentHealth - Damage, 0.0f, MaxHealth);
@@ -1137,4 +1140,23 @@ void AOblivioCharacter::ApplyMovementInversion(float Duration)
 			bMovementInverted = false;
 		},
 		Duration, /*bLoop=*/false);
+}
+
+//cheat
+void AOblivioCharacter::CheatFreeCraft()
+{
+	bCheatFreeCraft = !bCheatFreeCraft;
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green, FString::Printf(TEXT("Free Crafting (No Cost): %s"), bCheatFreeCraft ? TEXT("ON") : TEXT("OFF")));
+}
+
+void AOblivioCharacter::CheatInfiniteBattery()
+{
+	bCheatInfiniteBattery = !bCheatInfiniteBattery;
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green, FString::Printf(TEXT("Infinite Battery: %s"), bCheatInfiniteBattery ? TEXT("ON") : TEXT("OFF")));
+}
+
+void AOblivioCharacter::CheatGodMode()
+{
+	bCheatGodMode = !bCheatGodMode;
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green, FString::Printf(TEXT("God Mode (Invincible): %s"), bCheatGodMode ? TEXT("ON") : TEXT("OFF")));
 }

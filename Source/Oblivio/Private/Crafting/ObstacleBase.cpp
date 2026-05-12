@@ -1,5 +1,6 @@
 ﻿#include "Crafting/ObstacleBase.h"
 #include "Components/StaticMeshComponent.h"
+#include "Materials/MaterialInstanceDynamic.h"
 
 AObstacleBase::AObstacleBase()
 {
@@ -23,20 +24,38 @@ void AObstacleBase::BeginPlay()
 
 void AObstacleBase::SetGhostMode(bool bIsGhost, bool bCanPlace)
 {
+    // 현재 상태를 업데이트
+    CurrentState = bIsGhost ? EObstacleState::Ghost : EObstacleState::Placed;
+
     if (bIsGhost)
     {
-        CurrentState = EObstacleState::Ghost;
-        MeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-
-        // 다이나믹 메테리얼 인스턴스 생성
-        UMaterialInstanceDynamic* DynamicMat = MeshComponent->CreateDynamicMaterialInstance(0, GhostMaterial);
-
-        if (DynamicMat)
+        if (GhostMaterial && MeshComponent)
         {
-            // 설치 가능 여부에 따라 색상 파라미터 조절
-            FLinearColor GhostColor = bCanPlace ? FLinearColor::Green : FLinearColor::Red;
-            DynamicMat->SetVectorParameterValue(TEXT("Color"), GhostColor);
-            DynamicMat->SetScalarParameterValue(TEXT("Opacity"), 0.5f);
+            UMaterialInstanceDynamic* DynamicGhostMat = MeshComponent->CreateDynamicMaterialInstance(0, GhostMaterial);
+
+            if (DynamicGhostMat)
+            {
+                // FLinearColor(R, G, B, A)
+                FLinearColor TargetColor = bCanPlace ?
+                    FLinearColor(0.0f, 1.0f, 0.0f, 0.5f) : // 설치 가능/치트 켜짐: 초록색
+                    FLinearColor(1.0f, 0.0f, 0.0f, 0.5f);  // 자원 부족/거리 초과: 빨간색
+
+                DynamicGhostMat->SetVectorParameterValue(FName("TintColor"), TargetColor);
+            }
+        }
+
+        if (MeshComponent)
+        {
+            MeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        }
+    }
+    else
+    {
+        // 실제 설치 완료 상태
+        if (OriginalMaterial && MeshComponent)
+        {
+            MeshComponent->SetMaterial(0, OriginalMaterial);
+            MeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
         }
     }
 }
