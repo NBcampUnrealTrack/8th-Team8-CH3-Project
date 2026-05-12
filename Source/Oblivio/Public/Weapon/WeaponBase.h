@@ -6,6 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "WeaponBase.generated.h"
 
+class USphereComponent;
 class ULightAttackComponent;
 UCLASS()
 class OBLIVIO_API AWeaponBase : public AActor
@@ -20,7 +21,7 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapon)
-	TObjectPtr<USceneComponent> SceneComp;
+	TObjectPtr<USphereComponent> SphereComp;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapon)
 	TObjectPtr<UStaticMeshComponent> MeshComp;

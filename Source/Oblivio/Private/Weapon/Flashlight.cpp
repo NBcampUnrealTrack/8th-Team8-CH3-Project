@@ -4,8 +4,12 @@
 #include "Weapon/Flashlight.h"
 #include "OblivioComponents/LightAttackComponent.h"
 
+#include "Components/SphereComponent.h"
+
 AFlashlight::AFlashlight()
 {
+	SphereComp->SetCollisionProfileName("NoCollision");
+
 	AttackInterval = 0.2f;
 	LightAttackComp->bIsConcentrated = true;
 	LightAttackComp->LightIntensityScale = 10000.f;
