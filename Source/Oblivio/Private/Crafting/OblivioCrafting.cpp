@@ -170,34 +170,21 @@ void UOblivioCrafting::PlaceObstacle()
 {
     if (bIsCraftingModeActive && PreviewActor)
     {
-        // 최종 자원 소모 로직 적용 후 설치 확정
+        // 설치 가능한지 확인
         if (CanAfford(PreviewActor))
         {
-            PreviewActor->OnPlaced();
-            PreviewActor = nullptr; // 소유권 해제
-            bIsCraftingModeActive = false; // 설치 후 모드 종료
-        }
-    }
-}
-/*
-void UOblivioCrafting::PlaceObstacle()
-{
-    if (bIsCraftingModeActive && PreviewActor)
-    {
-        // 최종 자원 소모 로직 적용 후 설치 확정
-        if (CanAfford(PreviewActor))
-        {
-            // 인벤토리에서 자원을 차감
             AOblivioCharacter* Player = Cast<AOblivioCharacter>(GetOwner());
-            if (Player && Player->InventoryComponent)
+
+            // 인벤토리에서 자원 차감
+            if (Player && Player->InventoryComponent && !Player->bCheatFreeCraft)
             {
-                // 인벤토리 컴포넌트의 자원 소모 함수 호출
-                Player->InventoryComponent->ConsumeItem(EItemType::Wood, PreviewActor->WoodCost);
-                Player->InventoryComponent->ConsumeItem(EItemType::Iron, PreviewActor->IronCost);
+                Player->InventoryComponent->ConsumeItem(EItemType::Wood, PreviewActor->GetWoodCost());
+                Player->InventoryComponent->ConsumeItem(EItemType::Iron, PreviewActor->GetIronCost());
 
                 if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Orange, TEXT("Resources Consumed!"));
             }
 
+            // 아이템 설치 확정
             PreviewActor->OnPlaced();
             PreviewActor = nullptr; // 소유권 해제
             bIsCraftingModeActive = false; // 설치 후 모드 종료
@@ -208,24 +195,20 @@ void UOblivioCrafting::PlaceObstacle()
         }
     }
 }
-*/
-bool UOblivioCrafting::CanAfford(AObstacleBase* TargetObstacle)
-{
-    // Character 클래스나 Inventory 시스템에서 자원값을 가져와 비교
-    return true;
-}
-/*
+
 bool UOblivioCrafting::CanAfford(AObstacleBase* TargetObstacle)
 {
     if (!TargetObstacle) return false;
 
-    //인벤토리 가져오기
     AOblivioCharacter* Player = Cast<AOblivioCharacter>(GetOwner());
     if (!Player || !Player->InventoryComponent) return false;
 
+    // 치트 적용
+    if (Player->bCheatFreeCraft) return true;
+
     // 장애물 필요 자원 가져오기
-    int32 RequiredWood = TargetObstacle->WoodCost;
-    int32 RequiredIron = TargetObstacle->IronCost;
+    int32 RequiredWood = TargetObstacle->GetWoodCost();
+    int32 RequiredIron = TargetObstacle->GetIronCost();
 
     // 현재 보유 중인 개수 확인 
     int32 CurrentWood = Player->InventoryComponent->GetItemCount(EItemType::Wood);
@@ -233,4 +216,3 @@ bool UOblivioCrafting::CanAfford(AObstacleBase* TargetObstacle)
 
     return (CurrentWood >= RequiredWood) && (CurrentIron >= RequiredIron);
 }
-*/

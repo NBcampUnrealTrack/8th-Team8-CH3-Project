@@ -353,6 +353,25 @@ public:
 	void GenerateFootstep();
 	FPlayerAnimationEvent OnPlayerFootstep;
 	FTimerHandle FootstepTimerHandle;
+	
+	//===============================
+	//Cheat
+	//=================================
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Cheats")
+	bool bCheatFreeCraft = false;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Cheats")
+	bool bCheatInfiniteBattery = false;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Cheats")
+	bool bCheatGodMode = false;
+
+	UFUNCTION(Exec, Category = "Cheats")
+	void CheatFreeCraft();
+
+	UFUNCTION(Exec, Category = "Cheats")
+	void CheatInfiniteBattery();
+
+	UFUNCTION(Exec, Category = "Cheats")
+	void CheatGodMode();
 
 private:
 	TSet<TWeakObjectPtr<UPrimitiveComponent>> WallOcclusionAppliedPrimitives;
