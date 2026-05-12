@@ -18,6 +18,37 @@
 #include "Kismet/GameplayStatics.h"
 #include "Camera/CameraComponent.h"
 #include "Engine/DamageEvents.h"
+#include "Components/CapsuleComponent.h"
+#include "Components/MeshComponent.h"
+#include "Components/PrimitiveComponent.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "CollisionQueryParams.h"
+#include "Engine/HitResult.h"
+#include "Materials/MaterialInterface.h"
+#include "Materials/MaterialInstanceDynamic.h"
+#include "DrawDebugHelpers.h"
+
+namespace
+{
+	static void Obliv_SetMeshOverlayOptional(UPrimitiveComponent* Prim, UMaterialInterface* MatOrNull)
+	{
+		if (UMeshComponent* MeshComp = Cast<UMeshComponent>(Prim))
+		{
+			MeshComp->SetOverlayMaterial(MatOrNull);
+		}
+	}
+
+	static UMaterialInstanceDynamic* Obliv_FindOrAddWallOcclusionFadeMID(
+		UPrimitiveComponent* Prim,
+		TMap<TWeakObjectPtr<UPrimitiveComponent>, TObjectPtr<UMaterialInstanceDynamic>>& MIDMap)
+	{
+		if (TObjectPtr<UMaterialInstanceDynamic>* Existing = MIDMap.Find(Prim))
+		{
+			return Existing->Get();
+		}
+		return nullptr;
+	}
+}
 
 AOblivioCharacter::AOblivioCharacter()
 {
@@ -56,9 +87,526 @@ AOblivioCharacter::AOblivioCharacter()
 	WheelControlMultiplier = 3.f;
 }
 
+void AOblivioCharacter::RemoveWallOcclusionVisualFromOccluder(UPrimitiveComponent* Prim)
+{
+	if (!Prim)
+	{
+		return;
+	}
+
+	WallOcclusionFadeMIDByOccluder.Remove(Prim);
+	Obliv_SetMeshOverlayOptional(Prim, nullptr);
+
+	if (UMeshComponent* OccMesh = Cast<UMeshComponent>(Prim))
+	{
+		if (const TObjectPtr<UMaterialInterface>* SavedEntry = WallOcclusionSavedSwapMaterials.Find(Prim))
+		{
+			const int32 NumSlots = OccMesh->GetNumMaterials();
+			if ((*SavedEntry) != nullptr && NumSlots > 0)
+			{
+				const int32 SlotIdx = FMath::Clamp(WallOcclusionMaterialSlotToSwap, 0, NumSlots - 1);
+				OccMesh->SetMaterial(SlotIdx, SavedEntry->Get());
+			}
+			WallOcclusionSavedSwapMaterials.Remove(Prim);
+		}
+	}
+}
+
+void AOblivioCharacter::ApplyWallOcclusionVisualToOccluder(UPrimitiveComponent* Prim)
+{
+	if (!Prim || !IsValid(WallOcclusionOverlayMaterial))
+	{
+		return;
+	}
+
+	if (bWallOcclusionSwapMaterialInsteadOfOverlay)
+	{
+		if (UMeshComponent* OccMesh = Cast<UMeshComponent>(Prim))
+		{
+			const int32 NumSlots = OccMesh->GetNumMaterials();
+			if (NumSlots > 0)
+			{
+				const int32 SlotIdx = FMath::Clamp(WallOcclusionMaterialSlotToSwap, 0, NumSlots - 1);
+				if (!WallOcclusionSavedSwapMaterials.Contains(Prim))
+				{
+					WallOcclusionSavedSwapMaterials.Add(Prim, OccMesh->GetMaterial(SlotIdx));
+				}
+
+				if (bWallOcclusionDriveLocalizedFadeWithMID)
+				{
+					UMaterialInstanceDynamic* Mid = Obliv_FindOrAddWallOcclusionFadeMID(Prim, WallOcclusionFadeMIDByOccluder);
+					if (!Mid)
+					{
+						Mid = OccMesh->CreateDynamicMaterialInstance(SlotIdx, WallOcclusionOverlayMaterial);
+						if (Mid)
+						{
+							WallOcclusionFadeMIDByOccluder.Add(Prim, Mid);
+						}
+					}
+					else
+					{
+						OccMesh->SetMaterial(SlotIdx, Mid);
+					}
+				}
+				else
+				{
+					WallOcclusionFadeMIDByOccluder.Remove(Prim);
+					OccMesh->SetMaterial(SlotIdx, WallOcclusionOverlayMaterial);
+				}
+
+				Obliv_SetMeshOverlayOptional(Prim, nullptr);
+				return;
+			}
+		}
+
+		WallOcclusionSavedSwapMaterials.Remove(Prim);
+	}
+	else
+	{
+		WallOcclusionSavedSwapMaterials.Remove(Prim);
+	}
+
+	if (bWallOcclusionDriveLocalizedFadeWithMID)
+	{
+		UMaterialInstanceDynamic* Mid = Obliv_FindOrAddWallOcclusionFadeMID(Prim, WallOcclusionFadeMIDByOccluder);
+		if (!Mid)
+		{
+			Mid = UMaterialInstanceDynamic::Create(WallOcclusionOverlayMaterial, this);
+			if (Mid)
+			{
+				WallOcclusionFadeMIDByOccluder.Add(Prim, Mid);
+			}
+		}
+
+		Obliv_SetMeshOverlayOptional(Prim, Mid ? Mid : WallOcclusionOverlayMaterial);
+	}
+	else
+	{
+		WallOcclusionFadeMIDByOccluder.Remove(Prim);
+		Obliv_SetMeshOverlayOptional(Prim, WallOcclusionOverlayMaterial);
+	}
+}
+
+void AOblivioCharacter::ClearWallOcclusionOverlays()
+{
+	for (const TWeakObjectPtr<UPrimitiveComponent>& Ptr : WallOcclusionAppliedPrimitives)
+	{
+		if (UPrimitiveComponent* Prev = Ptr.Get())
+		{
+			RemoveWallOcclusionVisualFromOccluder(Prev);
+		}
+	}
+	WallOcclusionAppliedPrimitives.Empty();
+	WallOcclusionSavedSwapMaterials.Reset();
+	WallOcclusionFadeMIDByOccluder.Reset();
+}
+
+bool AOblivioCharacter::ShouldTreatHitAsOccluderWall(UPrimitiveComponent const* Primitive,
+													 FVector const& ImpactNormalWorld) const
+{
+	if (!Primitive)
+	{
+		return false;
+	}
+
+	const FVector N =
+		ImpactNormalWorld.IsNearlyZero() ? FVector::UpVector : ImpactNormalWorld.GetSafeNormal();
+	if (!bWallOcclusionIgnoreFloorCeilingNormalFilter
+		&& FMath::Abs(N.Z) >= WallOcclusionFloorCeilingCosThreshold)
+	{
+		return false;
+	}
+
+	if (Primitive->GetClass()->GetName().Contains(TEXT("Landscape")))
+	{
+		return false;
+	}
+
+	return Primitive->GetCollisionEnabled() != ECollisionEnabled::NoCollision;
+}
+
+FVector AOblivioCharacter::GetWallOcclusionTraceStartWorld() const
+{
+	auto WithExtra = [this](const FVector Loc) -> FVector { return Loc + WallOcclusionTraceStartWorldExtraOffset; };
+
+	if (bWallOcclusionTraceStartUsesTopDownCameraWorldLocation)
+	{
+		if (TopDownCamera)
+		{
+			return WithExtra(TopDownCamera->GetComponentLocation());
+		}
+		return WithExtra(GetActorLocation());
+	}
+
+	if (!CameraBoom)
+	{
+		return TopDownCamera ? WithExtra(TopDownCamera->GetComponentLocation()) : WithExtra(GetActorLocation());
+	}
+
+	const FTransform BoomWorldTM = CameraBoom->GetComponentTransform();
+	const float ArmLen = FMath::Max(1.f, CameraBoom->TargetArmLength);
+	const FVector Sock = CameraBoom->SocketOffset;
+	// +X / −X 양쪽 후보 중 실제 TopDown 카메라에 더 가까운 논리 위치 선택(블루프린트 트랜스폼 차이 등으로 카메라가 로컬 −X쪽에 매달린 경우 트레이스가 플레이어 반대쪽으로 새서 벽 미적중).
+	const FVector CandPosLocal = FVector(ArmLen, 0.f, 0.f) + Sock;
+	const FVector CandNegLocal = FVector(-ArmLen, 0.f, 0.f) + Sock;
+	const FVector WorldPos = BoomWorldTM.TransformPosition(CandPosLocal);
+	const FVector WorldNeg = BoomWorldTM.TransformPosition(CandNegLocal);
+
+	FVector Candidate;
+	if (TopDownCamera)
+	{
+		const FVector Actual = TopDownCamera->GetComponentLocation();
+		const float DPos = FVector::DistSquared(WorldPos, Actual);
+		const float DNeg = FVector::DistSquared(WorldNeg, Actual);
+		Candidate = DNeg < DPos ? WorldNeg : WorldPos;
+	}
+	else
+	{
+		Candidate = WorldPos;
+	}
+
+	return WithExtra(Candidate);
+}
+
+FVector AOblivioCharacter::BiasWallOcclusionTraceEndTowardsTraceStartWorld(FVector SampleWorldHint) const
+{
+	if (WallOcclusionTracePullTowardsTraceStartFracOfRadius <= 0.f)
+	{
+		return SampleWorldHint;
+	}
+
+	const FVector Start = GetWallOcclusionTraceStartWorld();
+	FVector Dir = Start - SampleWorldHint;
+	const float Dist = Dir.Size();
+	if (Dist <= KINDA_SMALL_NUMBER)
+	{
+		return SampleWorldHint;
+	}
+	Dir /= Dist;
+
+	float CapsRad = 45.f;
+	if (UCapsuleComponent const* Capsule = GetCapsuleComponent())
+	{
+		CapsRad = Capsule->GetScaledCapsuleRadius();
+	}
+
+	return SampleWorldHint + Dir * CapsRad * WallOcclusionTracePullTowardsTraceStartFracOfRadius;
+}
+
+FVector AOblivioCharacter::GetWallOcclusionFocusWorldLocation() const
+{
+	FVector Raw;
+	if (USkeletalMeshComponent* MeshComp = GetMesh())
+	{
+		Raw = MeshComp->GetComponentTransform().TransformPosition(WallOcclusionSpineLocalOffsetFromMesh);
+	}
+	else
+	{
+		Raw = GetCapsuleComponent() ? GetCapsuleComponent()->GetComponentLocation() : GetActorLocation();
+	}
+
+	return BiasWallOcclusionTraceEndTowardsTraceStartWorld(Raw);
+}
+
+void AOblivioCharacter::RefreshWallOcclusionFadeMaterialInstances()
+{
+	if (!bWallOcclusionDriveLocalizedFadeWithMID || !IsLocallyControlled())
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World || World->bIsTearingDown)
+	{
+		return;
+	}
+
+	const FVector FocusWorld = GetWallOcclusionFocusWorldLocation();
+	const FVector LineStartWorld = GetWallOcclusionTraceStartWorld();
+	const float RadiusUU = WallOcclusionFocusRadiusUU;
+	const float HalfThickUU = WallOcclusionFocusLineHalfThicknessUU;
+
+	const FLinearColor FocusLinear(FocusWorld.X, FocusWorld.Y, FocusWorld.Z, 1.f);
+
+	for (auto It = WallOcclusionFadeMIDByOccluder.CreateIterator(); It; ++It)
+	{
+		UPrimitiveComponent* KeyPrim = It.Key().Get();
+		UMaterialInstanceDynamic* MID = It.Value().Get();
+
+		const bool bKeyOk = KeyPrim && IsValid(KeyPrim) && KeyPrim->IsRegistered();
+		const bool bMidOk = MID && IsValid(MID) && MID->IsValidLowLevelFast()
+			&& !MID->HasAnyFlags(RF_BeginDestroyed | RF_FinishDestroyed);
+		if (!bKeyOk || !bMidOk)
+		{
+			It.RemoveCurrent();
+			continue;
+		}
+	}
+
+	const TMap<TWeakObjectPtr<UPrimitiveComponent>, TObjectPtr<UMaterialInstanceDynamic>> CopyMIDMap =
+		WallOcclusionFadeMIDByOccluder;
+	for (const TPair<TWeakObjectPtr<UPrimitiveComponent>, TObjectPtr<UMaterialInstanceDynamic>>& Elem : CopyMIDMap)
+	{
+		UPrimitiveComponent* KeyPrim = Elem.Key.Get();
+		UMaterialInstanceDynamic* MID = Elem.Value.Get();
+		const bool bKeyOk = KeyPrim && IsValid(KeyPrim) && KeyPrim->IsRegistered();
+		const bool bMidOk = MID && IsValid(MID) && MID->IsValidLowLevelFast()
+			&& !MID->HasAnyFlags(RF_BeginDestroyed | RF_FinishDestroyed);
+		if (!bKeyOk || !bMidOk)
+		{
+			WallOcclusionFadeMIDByOccluder.Remove(Elem.Key);
+			continue;
+		}
+
+		// FVector 오버로드 대신 LinearColor 경로 사용(파라미터 바인딩 시 내부 null 피하기 위해).
+		if (!WallOcclusionMIDParam_FocusWorld.IsNone())
+		{
+			MID->SetVectorParameterValue(WallOcclusionMIDParam_FocusWorld, FocusLinear);
+		}
+		if (!WallOcclusionMIDParam_FocusRadiusUU.IsNone())
+		{
+			MID->SetScalarParameterValue(WallOcclusionMIDParam_FocusRadiusUU, RadiusUU);
+		}
+
+		if (bWallOcclusionMIDPassCameraToFocusLineParams)
+		{
+			const FLinearColor LineStartLinear(LineStartWorld.X, LineStartWorld.Y, LineStartWorld.Z, 1.f);
+
+			if (!WallOcclusionMIDParam_LineStartWorld.IsNone())
+			{
+				MID->SetVectorParameterValue(WallOcclusionMIDParam_LineStartWorld, LineStartLinear);
+			}
+			if (!WallOcclusionMIDParam_LineEndWorld.IsNone())
+			{
+				MID->SetVectorParameterValue(WallOcclusionMIDParam_LineEndWorld, FocusLinear);
+			}
+			if (!WallOcclusionMIDParam_LineHalfThicknessUU.IsNone())
+			{
+				MID->SetScalarParameterValue(WallOcclusionMIDParam_LineHalfThicknessUU, HalfThickUU);
+			}
+		}
+	}
+}
+
+void AOblivioCharacter::UpdateWallOcclusionDither()
+{
+	UWorld* World = GetWorld();
+	if (!World || !TopDownCamera)
+	{
+		return;
+	}
+
+	if (!IsLocallyControlled())
+	{
+		if (WallOcclusionAppliedPrimitives.Num() > 0)
+		{
+			ClearWallOcclusionOverlays();
+		}
+		return;
+	}
+
+#if UE_BUILD_SHIPPING
+	static constexpr bool bDbgTraces = false;
+	static constexpr bool bDbgGap = false;
+#else
+	const bool bDbgTraces = bWallOcclusionDebugDrawTraces;
+	const bool bDbgGap = bWallOcclusionDebugDrawActualCameraGap;
+#endif
+
+	const bool bWantsOcclusionOverlay = bWallOcclusionDitherEnabled && IsValid(WallOcclusionOverlayMaterial);
+
+	if (!bWantsOcclusionOverlay && WallOcclusionAppliedPrimitives.Num() > 0)
+	{
+		ClearWallOcclusionOverlays();
+	}
+
+	if (!bWantsOcclusionOverlay && !bDbgTraces && !bDbgGap)
+	{
+		return;
+	}
+
+	const bool bBypassIntervalForDebug = bDbgTraces || bDbgGap;
+	const double Now = World->GetTimeSeconds();
+	if (!bBypassIntervalForDebug && WallOcclusionUpdateIntervalSec > 0.f && Now < WallOcclusionNextUpdateWorldTimeSeconds)
+	{
+		return;
+	}
+	if (!bBypassIntervalForDebug && WallOcclusionUpdateIntervalSec > 0.f)
+	{
+		WallOcclusionNextUpdateWorldTimeSeconds = Now + static_cast<double>(WallOcclusionUpdateIntervalSec);
+	}
+
+	const FVector TraceStartWorld = GetWallOcclusionTraceStartWorld();
+
+	TArray<FVector, TInlineAllocator<8>> TraceEndWorldSamples;
+	if (UCapsuleComponent const* Caps = GetCapsuleComponent())
+	{
+		const FVector Feet = GetActorLocation();
+		const float HH = Caps->GetUnscaledCapsuleHalfHeight();
+		const float Radius = Caps->GetScaledCapsuleRadius();
+
+		auto XYBiasTowardCamera = [&](const FVector WorldPointSameZFoot)
+		{
+			FVector ToCam(TraceStartWorld.X - WorldPointSameZFoot.X, TraceStartWorld.Y - WorldPointSameZFoot.Y, 0.f);
+			float LenXY = ToCam.Size();
+			if (LenXY <= KINDA_SMALL_NUMBER)
+			{
+				return FVector(WorldPointSameZFoot.X, WorldPointSameZFoot.Y, WorldPointSameZFoot.Z);
+			}
+			ToCam /= LenXY;
+			return FVector(
+				WorldPointSameZFoot.X + ToCam.X * Radius * 0.4f,
+				WorldPointSameZFoot.Y + ToCam.Y * Radius * 0.4f,
+				WorldPointSameZFoot.Z);
+		};
+
+		const FVector Low = Feet + FVector(0.f, 0.f, HH * 0.25f);
+		const FVector HighAnch = Feet + FVector(0.f, 0.f, HH * 0.85f);
+		TraceEndWorldSamples.Add(BiasWallOcclusionTraceEndTowardsTraceStartWorld(Low));
+		TraceEndWorldSamples.Add(BiasWallOcclusionTraceEndTowardsTraceStartWorld(XYBiasTowardCamera(HighAnch)));
+	}
+	else
+	{
+		TraceEndWorldSamples.Add(GetActorLocation());
+	}
+
+	if (USkeletalMeshComponent* SkMesh = GetMesh())
+	{
+		TraceEndWorldSamples.Add(BiasWallOcclusionTraceEndTowardsTraceStartWorld(
+			SkMesh->GetComponentTransform().TransformPosition(WallOcclusionSpineLocalOffsetFromMesh)));
+	}
+	for (const FVector& RelLocal : WallOcclusionExtraTraceLocals)
+	{
+		TraceEndWorldSamples.Add(BiasWallOcclusionTraceEndTowardsTraceStartWorld(GetActorTransform().TransformPosition(RelLocal)));
+	}
+
+#if !UE_BUILD_SHIPPING
+	static constexpr float WODbgLineThick = 2.f;
+	const float DbgLifeDraw = WallOcclusionDebugTraceLifeSec > KINDA_SMALL_NUMBER ? WallOcclusionDebugTraceLifeSec : 0.f;
+
+	if (bDbgGap)
+	{
+		const FVector ActualCamLoc = TopDownCamera->GetComponentLocation();
+		DrawDebugLine(World, ActualCamLoc, TraceStartWorld, FColor::Silver, false, DbgLifeDraw, 0, WODbgLineThick);
+		DrawDebugSphere(World, ActualCamLoc, 12.f, 8, FColor::Orange, false, DbgLifeDraw);
+		DrawDebugSphere(World, TraceStartWorld, 14.f, 8, FColor::Yellow, false, DbgLifeDraw);
+	}
+
+	if (bDbgTraces)
+	{
+		if (!bDbgGap)
+		{
+			DrawDebugSphere(World, TraceStartWorld, 18.f, 10, FColor::Yellow, false, DbgLifeDraw);
+		}
+		static const FColor LineColors[] = {
+			FColor::Cyan,
+			FColor::Magenta,
+			FColor(46, 204, 113), // emerald-ish
+			FColor::Orange,
+			FColor(180, 80, 255),
+			FColor(80, 200, 255),
+			FColor(255, 200, 50),
+			FColor(100, 255, 180),
+		};
+		const int NumColors = UE_ARRAY_COUNT(LineColors);
+		int SampleIdx = 0;
+		for (const FVector& TraceEndWorld : TraceEndWorldSamples)
+		{
+			const FColor HC = LineColors[SampleIdx % NumColors];
+			DrawDebugLine(World, TraceStartWorld, TraceEndWorld, HC, false, DbgLifeDraw, 0, WODbgLineThick);
+			DrawDebugSphere(World, TraceEndWorld, 10.f, 8, HC, false, DbgLifeDraw);
+			++SampleIdx;
+		}
+	}
+#endif
+
+	if (!bWantsOcclusionOverlay)
+	{
+		return;
+	}
+
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(WallOcclusionDitherTrace), false, this);
+	Params.AddIgnoredActor(this);
+	if (IsValid(CurrentWeapon))
+	{
+		Params.AddIgnoredActor(CurrentWeapon);
+	}
+
+	TSet<UPrimitiveComponent*> HitOccludersPrimitives;
+	for (const FVector& TraceEndWorld : TraceEndWorldSamples)
+	{
+		TArray<FHitResult> Hits;
+		World->LineTraceMultiByChannel(
+			Hits, TraceStartWorld, TraceEndWorld, WallOcclusionTraceChannel.GetValue(), Params);
+
+		const float SegmentLen = FVector::Dist(TraceStartWorld, TraceEndWorld);
+		const float MaxHitDistance = SegmentLen + WallOcclusionIgnoreBeyondBodyMarginUU;
+#if !UE_BUILD_SHIPPING
+		const float DbgHitLife = WallOcclusionDebugTraceLifeSec > KINDA_SMALL_NUMBER ? WallOcclusionDebugTraceLifeSec : 0.f;
+#endif
+		for (const FHitResult& Hit : Hits)
+		{
+			if (!Hit.HasValidHitObjectHandle())
+			{
+				continue;
+			}
+			if (Hit.Distance > MaxHitDistance)
+			{
+				break;
+			}
+			UPrimitiveComponent* Comp = Hit.GetComponent();
+			const bool bAcceptOcc = ShouldTreatHitAsOccluderWall(Comp, Hit.ImpactNormal);
+#if !UE_BUILD_SHIPPING
+			if (bDbgTraces && bAcceptOcc)
+			{
+				DrawDebugPoint(World, Hit.ImpactPoint, 14.f, FColor::Purple, false, DbgHitLife);
+			}
+#endif
+			if (!bAcceptOcc)
+			{
+				continue;
+			}
+			HitOccludersPrimitives.Add(Comp);
+		}
+	}
+
+	for (auto It = WallOcclusionAppliedPrimitives.CreateIterator(); It; ++It)
+	{
+		TWeakObjectPtr<UPrimitiveComponent> PrevWeak = *It;
+		UPrimitiveComponent* Prev = PrevWeak.Get();
+		if (!Prev || !HitOccludersPrimitives.Contains(Prev))
+		{
+			if (Prev)
+			{
+				RemoveWallOcclusionVisualFromOccluder(Prev);
+			}
+			It.RemoveCurrent();
+		}
+	}
+
+	for (UPrimitiveComponent* HitPrim : HitOccludersPrimitives)
+	{
+		if (!HitPrim)
+		{
+			continue;
+		}
+		const TWeakObjectPtr<UPrimitiveComponent> HitWeak(HitPrim);
+		if (!WallOcclusionAppliedPrimitives.Contains(HitWeak))
+		{
+			ApplyWallOcclusionVisualToOccluder(HitPrim);
+			WallOcclusionAppliedPrimitives.Add(HitWeak);
+		}
+	}
+}
+
 void AOblivioCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (CameraBoom)
+	{
+		CameraBoom->bDoCollisionTest = !bWallOcclusionDisableSpringArmProbe;
+	}
 
 	if (APlayerController* PC = Cast<APlayerController>(GetController()))
 	{
@@ -103,6 +651,12 @@ void AOblivioCharacter::BeginPlay()
 	bIsThrowing = false;
 }
 
+void AOblivioCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	ClearWallOcclusionOverlays();
+	Super::EndPlay(EndPlayReason);
+}
+
 //==========================
 // Tick and Status
 //==========================
@@ -111,6 +665,8 @@ void AOblivioCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	UpdateStatus(DeltaTime);
+	UpdateWallOcclusionDither();
+	RefreshWallOcclusionFadeMaterialInstances();
 	//Debug 확인용
 	if (GEngine)
 	{
