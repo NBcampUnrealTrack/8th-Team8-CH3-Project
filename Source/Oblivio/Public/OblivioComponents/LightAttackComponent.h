@@ -24,6 +24,9 @@ public:
 
 	virtual void CreateLightAttack(FVector SourceLocation, FVector LightDirection, float ExposureDt = 0.f) override;
 
+	UFUNCTION(BlueprintPure, Category = "Light Attack")
+	USpotLightComponent* GetSpotLightComp() const { return SpotLightComp; }
+
 	//실제 광원
 	UPROPERTY(VisibleAnywhere, Category = "Light Attack")
 	TObjectPtr<USpotLightComponent> SpotLightComp;   // bIsConcentrated
