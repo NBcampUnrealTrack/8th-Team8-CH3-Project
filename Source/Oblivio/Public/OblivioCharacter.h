@@ -23,6 +23,7 @@ class USoundPropagationComponent;
 class UPlayerCombatComponent;
 class UPrimitiveComponent;
 class UMaterialInterface;
+class USpotLightComponent;
 
 UCLASS()
 class OBLIVIO_API AOblivioCharacter : public ACharacter, public ICombatInterface
@@ -216,6 +217,42 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status|Flashlight")
 	bool bIsFlashlightOn = true;
 
+	/** 벽에 밀착 시 SpotLight 원점이 벽 안쪽으로 박혀 빛이 ‘뚫고’ 나오는 느낌을 줄이기 위해 라인 트레이스로 필요한 만큼 램프 위치를 발사축 역방향으로 당김. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status|Flashlight|WallEmbed")
+	bool bFlashlightPullbackFromWallsEnabled = true;
+
+	/** 라인 시작: 캡슐 중심(액터 위치 기준)에서 위(+Z) 오프셋(cm). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status|Flashlight|WallEmbed", meta = (ClampMin = "-120.0", ClampMax = "200.0"))
+	float FlashlightWallTraceHeightFromCenter = 10.0f;
+
+	/** 플레이어 전방으로 라인 최대 길이(cm). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status|Flashlight|WallEmbed", meta = (ClampMin = "40.0", ClampMax = "600.0"))
+	float FlashlightWallTraceDistance = 200.0f;
+
+	/** 히트 시 벽면에서 빛 시작을 더 띄우는 마진(cm). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status|Flashlight|WallEmbed", meta = (ClampMin = "0.0", ClampMax = "120.0"))
+	float FlashlightWallEmbedSafetyMargin = 14.0f;
+
+	/** 역방향으로 최대 당김(cm). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status|Flashlight|WallEmbed", meta = (ClampMin = "0.0", ClampMax = "120.0"))
+	float FlashlightWallEmbedMaxPullback = 42.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status|Flashlight|WallEmbed", meta = (ClampMin = "1.0", ClampMax = "120.0"))
+	float FlashlightWallPullbackInterpSpeed = 22.0f;
+
+	/** 벽 히트 시 SpotLight 감쇠 반경을 램프~벽 거리 근처로 제한해 멀리까지 콘이 퍼지는 것을 줄임(디더 구멍 누설과는 별개). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status|Flashlight|WallEmbed")
+	bool bFlashlightWallAttenuationClampEnabled = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status|Flashlight|WallEmbed", meta = (ClampMin = "0.0", ClampMax = "300.0"))
+	float FlashlightWallAttenuationMarginUU = 20.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status|Flashlight|WallEmbed", meta = (ClampMin = "10.0", ClampMax = "400.0"))
+	float FlashlightWallAttenuationMinUU = 80.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status|Flashlight|WallEmbed", meta = (ClampMin = "1.0", ClampMax = "80.0"))
+	float FlashlightWallAttenuationInterpSpeed = 18.0f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status|Upgrade")
 	bool bCanAdjustFocus = true;
 
@@ -231,6 +268,7 @@ public:
 
 	void UpdateStatus(float DeltaTime);
 	void UpdateFlashlightVisuals();
+	void UpdateFlashlightEmbedPullback(float DeltaSeconds);
 	void ReloadBattery();
 
 	UFUNCTION(BlueprintCallable, Category = "Status|Health")
@@ -389,4 +427,13 @@ private:
 	bool bMovementInverted    = false;
 	FTimerHandle FlashlightBlackoutTimer;
 	FTimerHandle MovementInversionTimer;
+
+	/** Flashlight 무기 SpotLight 후퇴 보간 상태 */
+	float FlashlightWallPullbackSmoothed = 0.f;
+	FVector FlashlightSpotBaselineRelative = FVector::ZeroVector;
+	TWeakObjectPtr<USpotLightComponent> FlashlightSpotPullbackWeakKey;
+	bool bHasFlashlightSpotPullbackBaseline = false;
+
+	float FlashlightWallAttenuationSmoothedUU = 0.f;
+	bool bFlashlightAttenuationClampWasApplied = false;
 };
