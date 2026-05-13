@@ -1,9 +1,13 @@
 #include "AIEnemy/WhisperEnemy.h"
 
 #include "AIController.h"
+#include "Components/AudioComponent.h"
 #include "Components/SpotLightComponent.h"
 #include "DrawDebugHelpers.h"
 #include "Engine/Engine.h"
+#include "GameFramework/DamageType.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundBase.h"
 #include "OblivioCharacter.h"
 #include "OblivioComponents/LightAttackComponent.h"
 #include "Weapon/WeaponBase.h"
@@ -76,7 +80,7 @@ AWhisperEnemy::AWhisperEnemy()
 	MoveSpeed = 200.0f;
 	ChaseMoveSpeed = 200.0f;
 	AttackDamage = 0.0f;
-	AttackRange = 150.0f;
+	AttackRange = 550.0f;
 	AttackCooldown = 0.2f;
 	ChaseAcceptanceRadius = 10.0f;
 	ChaseProximityBuffer = 40.0f;
@@ -86,6 +90,14 @@ AWhisperEnemy::AWhisperEnemy()
 	bAggroUseHorizontalDistance = true;
 	bEnableIdleWander = false;
 	bEnableLightTracking = false;
+
+	WhisperAttackAudioComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("WhisperAttackAudio"));
+	if (WhisperAttackAudioComponent)
+	{
+		WhisperAttackAudioComponent->SetupAttachment(RootComponent);
+		WhisperAttackAudioComponent->bAutoActivate = false;
+		WhisperAttackAudioComponent->bStopWhenOwnerDestroyed = true;
+	}
 }
 
 void AWhisperEnemy::BeginPlay()
@@ -94,15 +106,90 @@ void AWhisperEnemy::BeginPlay()
 	AggroRadius = 0.0f;
 	bEnableIdleWander = false;
 	bEnableLightTracking = false;
-	WhisperRange = FMath::Max(WhisperRange, 150.0f);
+	WhisperFightMinDistance = FMath::Max(WhisperFightMinDistance, 200.0f);
+	WhisperRange = FMath::Max(WhisperRange, WhisperFightMinDistance + 100.0f);
 	AttackRange = FMath::Max(AttackRange, WhisperRange);
 
+	if (WhisperAttackAudioComponent && WhisperAttackSound)
+	{
+		WhisperAttackAudioComponent->SetSound(WhisperAttackSound);
+	}
+
 	Super::BeginPlay();
+
+	ApplyEnemySoundVolumes();
+}
+
+void AWhisperEnemy::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (WhisperAttackAudioComponent)
+	{
+		const EAudioComponentPlayState PS = WhisperAttackAudioComponent->GetPlayState();
+		if (PS == EAudioComponentPlayState::Playing || PS == EAudioComponentPlayState::FadingIn)
+		{
+			WhisperAttackAudioComponent->FadeOut(FMath::Max(0.05f, WhisperAttackSoundFadeOutDuration), 0.f,
+				EAudioFaderCurve::Linear);
+		}
+	}
+
+	Super::EndPlay(EndPlayReason);
 }
 
 void AWhisperEnemy::ApplyCCStun(float /*Duration*/)
 {
 	// 빛/전투에서 오는 경직 무시 — 둔화(슬로우)만 허용. 회피는 UpdateChase/UpdateAttack.
+}
+
+void AWhisperEnemy::Tick(float DeltaSeconds)
+{
+	RefreshWalkSpeedFromSources();
+	Super::Tick(DeltaSeconds);
+	TickWhisperDotDamage(DeltaSeconds);
+	TickWhisperAttackLoopAudio();
+}
+
+float AWhisperEnemy::GetLocomotionBaseSpeed() const
+{
+	if (IsSelfInsideFlashlightDanger() && WhisperFlashlightAvoidMoveSpeed > KINDA_SMALL_NUMBER)
+	{
+		return WhisperFlashlightAvoidMoveSpeed;
+	}
+	return Super::GetLocomotionBaseSpeed();
+}
+
+bool AWhisperEnemy::IsTargetInAttackRange() const
+{
+	// EnemyBase 기본은 3D AttackRange; 위스퍼 DoT·도넛과 동일한 수평 도넛으로 FSM 갱신.
+	return IsWithinWhisperRange();
+}
+
+void AWhisperEnemy::PerformAttack_Implementation(AActor* /*Target*/)
+{
+	// 근접 피해는 TickWhisperDotDamage에서 초당 WhisperDotDamagePerSecond 로만 처리.
+}
+
+void AWhisperEnemy::NotifyWhisperAttackSound_Implementation()
+{
+	// 속삭임 기본 재생은 TickWhisperAttackLoopAudio 의 AudioComponent 처리. 블루프린트에서 레이어망 추가 가능.
+}
+
+void AWhisperEnemy::ApplyEnemySoundVolumes()
+{
+	Super::ApplyEnemySoundVolumes();
+
+	if (!WhisperAttackAudioComponent)
+	{
+		return;
+	}
+
+	const EAudioComponentPlayState PS = WhisperAttackAudioComponent->GetPlayState();
+	if (PS == EAudioComponentPlayState::Playing || PS == EAudioComponentPlayState::FadingIn)
+	{
+		const float CombinedVol =
+			FMath::Max(0.0f, GetEnemySoundVolumeMultiplier()) *
+			FMath::Max(0.0f, WhisperAttackSoundVolumeScale);
+		WhisperAttackAudioComponent->SetVolumeMultiplier(CombinedVol);
+	}
 }
 
 void AWhisperEnemy::UpdateChase()
@@ -119,12 +206,7 @@ void AWhisperEnemy::UpdateChase()
 		return;
 	}
 
-	if (IsWithinWhisperRange())
-	{
-		TryCommitWhisperAttack();
-	}
-
-	ApproachTarget(AI);
+	MaintainEngagementDistance(AI);
 }
 
 void AWhisperEnemy::UpdateAttack()
@@ -141,20 +223,47 @@ void AWhisperEnemy::UpdateAttack()
 		return;
 	}
 
-	if (IsWithinWhisperRange())
-	{
-		TryCommitWhisperAttack();
-	}
-
 	// 베이스 Attack은 StopEnemyMovement를 호출하므로 쓰지 않는다.
-	// Whisper는 붙은 뒤에도 계속 압박해야 한다.
-	ApproachTarget(AI);
+	// 원거리 유지 호흡으로 계속 교전한다.
+	MaintainEngagementDistance(AI);
 }
 
 bool AWhisperEnemy::IsWithinWhisperRange() const
 {
-	return IsValid(TargetActor) &&
-		FVector::DistSquared2D(GetActorLocation(), TargetActor->GetActorLocation()) <= FMath::Square(WhisperRange);
+	if (!IsValid(TargetActor))
+	{
+		return false;
+	}
+
+	const float DistSq2D = FVector::DistSquared2D(GetActorLocation(), TargetActor->GetActorLocation());
+	const float InnerSq = FMath::Square(WhisperFightMinDistance);
+	const float OuterSq = FMath::Square(WhisperRange);
+	return DistSq2D <= OuterSq && DistSq2D >= InnerSq;
+}
+
+bool AWhisperEnemy::PassesWhisperCombatEngagementBaseline() const
+{
+	if (!IsAlive() || IsCCStunned() || ShouldSuppressAILocomotion())
+	{
+		return false;
+	}
+
+	if (EnemyState != EEnemyAIState::Chase && EnemyState != EEnemyAIState::Attack)
+	{
+		return false;
+	}
+
+	if (!IsValid(TargetActor))
+	{
+		return false;
+	}
+
+	if (IsSelfInsideFlashlightDanger() || !IsWithinWhisperRange())
+	{
+		return false;
+	}
+
+	return true;
 }
 
 bool AWhisperEnemy::IsPointInsideFlashlightDanger(const FVector& Point) const
@@ -225,15 +334,44 @@ bool AWhisperEnemy::IsSelfInsideFlashlightDanger() const
 	return IsPointInsideFlashlightDanger(GetActorLocation());
 }
 
-void AWhisperEnemy::ApproachTarget(AAIController* AI)
+void AWhisperEnemy::MaintainEngagementDistance(AAIController* AI)
 {
 	if (!AI || !IsValid(TargetActor))
 	{
 		return;
 	}
 
-	// 캡슐 겹침으로 일찍 멈추지 않게 StopOnOverlap을 끈다.
-	AI->MoveToActor(TargetActor, 5.0f, false);
+	const FVector EnemyLoc = GetActorLocation();
+	const FVector TargetLoc = TargetActor->GetActorLocation();
+	FVector FromPlayerToEnemy = EnemyLoc - TargetLoc;
+	FromPlayerToEnemy.Z = 0.0f;
+
+	const float Dist = FromPlayerToEnemy.Size();
+	FVector DirOut = Dist > KINDA_SMALL_NUMBER ? FromPlayerToEnemy / Dist : FVector::ForwardVector;
+
+	const float Span = WhisperRange - WhisperFightMinDistance;
+	const float DesiredRadius = WhisperFightMinDistance + FMath::Max(20.0f, Span * 0.5f);
+
+	// 너무 안쪽이면 밖으로, 도트 최대(WhisperRange)보다 멀면 안으로.
+	// 예전에는 바깥 판정에 +35 slack 을 두어 (WhisperRange, WhisperRange+35] 에서 멈추며
+	// 도넛에 못 들어가는 상태가 발생할 수 있었음 → 바깥은 Dist > WhisperRange 만 사용.
+	if (Dist < WhisperFightMinDistance)
+	{
+		FVector Goal = TargetLoc + DirOut * DesiredRadius;
+		Goal.Z = EnemyLoc.Z;
+		AI->MoveToLocation(Goal, 48.0f, false);
+		return;
+	}
+
+	if (Dist > WhisperRange)
+	{
+		FVector Goal = TargetLoc + DirOut * DesiredRadius;
+		Goal.Z = EnemyLoc.Z;
+		AI->MoveToLocation(Goal, 48.0f, false);
+		return;
+	}
+
+	AI->StopMovement();
 }
 
 void AWhisperEnemy::AvoidFlashlightCone(AAIController* AI)
@@ -263,24 +401,88 @@ void AWhisperEnemy::AvoidFlashlightCone(AAIController* AI)
 	AI->MoveToLocation(EscapeGoal, 10.0f);
 }
 
-void AWhisperEnemy::TryCommitWhisperAttack()
+void AWhisperEnemy::TickWhisperDotDamage(float DeltaSeconds)
 {
-	if (!IsValid(TargetActor))
+	if (!PassesWhisperCombatEngagementBaseline() || DeltaSeconds <= KINDA_SMALL_NUMBER)
 	{
 		return;
 	}
 
-	const float CurrentTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
-	if (CurrentTime < NextAttackDecisionTime)
+	if (WhisperDotDamagePerSecond <= 0.f)
 	{
 		return;
 	}
 
-	NextAttackDecisionTime = CurrentTime + AttackCooldown;
+	const float Amount = WhisperDotDamagePerSecond * DeltaSeconds;
+	if (Amount > 0.f)
+	{
+		UGameplayStatics::ApplyDamage(TargetActor, Amount, nullptr, this, UDamageType::StaticClass());
+		NotifyWhisperAttackSound();
+	}
+}
 
-	// Whisper는 공격 타이밍/근접 판단만 발행한다.
-	// 실제 데미지·연출·손전등 OFF 등 결과는 OnEnemyAttackCommitted/OnAnyEnemyAttackCommitted를 받는
-	// 전투 시스템에서 처리한다(캐릭터 변수를 적이 직접 만지지 않음).
-	PerformAttack(TargetActor);
-	UE_LOG(LogTemp, Verbose, TEXT("Whisper %s committed attack decision"), *GetNameSafe(this));
+void AWhisperEnemy::TickWhisperAttackLoopAudio()
+{
+	if (!WhisperAttackAudioComponent)
+	{
+		return;
+	}
+
+	const bool bWantLoop =
+		PassesWhisperCombatEngagementBaseline() &&
+		WhisperDotDamagePerSecond > KINDA_SMALL_NUMBER &&
+		WhisperAttackSound != nullptr;
+
+	const float CombinedVol = FMath::Max(0.0f, GetEnemySoundVolumeMultiplier()) *
+		FMath::Max(0.0f, WhisperAttackSoundVolumeScale);
+
+	if (bWantLoop != bWhisperAttackAudioTrackedOn)
+	{
+		if (bWantLoop)
+		{
+			WhisperAttackAudioComponent->Stop();
+			WhisperAttackAudioComponent->SetSound(WhisperAttackSound);
+			WhisperAttackAudioComponent->SetVolumeMultiplier(CombinedVol);
+			WhisperAttackAudioComponent->FadeIn(
+				FMath::Max(0.02f, WhisperAttackSoundFadeInDuration),
+				1.f,
+				0.f,
+				EAudioFaderCurve::Linear);
+		}
+		else
+		{
+			const EAudioComponentPlayState PS = WhisperAttackAudioComponent->GetPlayState();
+			if (PS == EAudioComponentPlayState::Playing || PS == EAudioComponentPlayState::FadingIn)
+			{
+				WhisperAttackAudioComponent->FadeOut(
+					FMath::Max(0.05f, WhisperAttackSoundFadeOutDuration),
+					0.f,
+					EAudioFaderCurve::Linear);
+			}
+			else if (PS != EAudioComponentPlayState::FadingOut)
+			{
+				WhisperAttackAudioComponent->Stop();
+			}
+		}
+
+		bWhisperAttackAudioTrackedOn = bWantLoop;
+	}
+	else if (bWantLoop)
+	{
+		if (WhisperAttackAudioComponent->GetSound() != WhisperAttackSound)
+		{
+			WhisperAttackAudioComponent->Stop();
+			WhisperAttackAudioComponent->SetSound(WhisperAttackSound);
+			WhisperAttackAudioComponent->SetVolumeMultiplier(CombinedVol);
+			WhisperAttackAudioComponent->FadeIn(
+				FMath::Max(0.02f, WhisperAttackSoundFadeInDuration),
+				1.f,
+				0.f,
+				EAudioFaderCurve::Linear);
+		}
+		else
+		{
+			WhisperAttackAudioComponent->SetVolumeMultiplier(CombinedVol);
+		}
+	}
 }
