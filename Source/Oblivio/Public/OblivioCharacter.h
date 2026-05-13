@@ -373,6 +373,9 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Events")
 	FPlayerDamagedSignature OnPlayerDamaged;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Feedback")
+	TSubclassOf<class UCameraShakeBase> HitCameraShakeClass;
+
 	//===============================
 	// Fear Effects (공포 효과)
 	//===============================

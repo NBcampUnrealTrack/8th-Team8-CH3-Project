@@ -20,6 +20,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Camera/CameraComponent.h"
 #include "Engine/DamageEvents.h"
+#include "EnhancedInputSubsystems.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/MeshComponent.h"
 #include "Components/PrimitiveComponent.h"
@@ -1207,6 +1208,17 @@ void AOblivioCharacter::ApplyHealth(float Damage)
 	// 체력을 차감하고 최소값을 0으로 유지
 	CurrentHealth = FMath::Clamp(CurrentHealth - Damage, 0.0f, MaxHealth);
 
+	if (Damage > 0.0f)
+	{
+
+		if (IsValid(HitCameraShakeClass))
+		{
+			if (APlayerController* PC = Cast<APlayerController>(GetController()))
+			{
+				PC->ClientStartCameraShake(HitCameraShakeClass);
+			}
+		}
+	}
 	//TakeDamage에서 호출하던 델리게이트 이동
 	// 블루프린트나 UI 갱신을 위해 델리게이트 방송
 	OnPlayerDamaged.Broadcast(Damage, CurrentHealth, MaxHealth);
@@ -1247,9 +1259,34 @@ void AOblivioCharacter::GenerateFootstep()
 void AOblivioCharacter::HandleDeath()
 {
 	if (bIsDead) return;
-
 	bIsDead = true;
-	DisableInput(Cast<APlayerController>(GetController()));
+
+	if (bIsFlashlightOn)
+	{
+		bIsFlashlightOn = false;
+		UpdateFlashlightVisuals();
+	}
+
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		if (ULocalPlayer* LocalPlayer = PC->GetLocalPlayer())
+		{
+			if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(LocalPlayer))
+			{
+				Subsystem->ClearAllMappings(); // 점프, 이동 등 모든 입력 끊기
+			}
+		}
+	}
+
+	if (UCapsuleComponent* Capsule = GetCapsuleComponent())
+	{
+		Capsule->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}
+	if (USkeletalMeshComponent* MeshComp = GetMesh())
+	{
+		MeshComp->SetCollisionProfileName(TEXT("Ragdoll"));
+		MeshComp->SetSimulatePhysics(true);
+	}
 
 	if (AOblivioGameMode* GM = Cast<AOblivioGameMode>(UGameplayStatics::GetGameMode(GetWorld())))
 	{
