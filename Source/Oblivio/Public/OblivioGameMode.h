@@ -30,7 +30,7 @@ public:
 	int32 CollectedKeys = 0;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Level")
-	int32 RequiredKeys = 3;
+	int32 RequiredKeys = 1;
 	// ----
 
 	UFUNCTION(BlueprintCallable, Category = "Level")
@@ -50,4 +50,17 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Game State")
 	void GameOver();
+
+	/** 홍수 이벤트를 트리거하는 함수 (메멘토 상호작용 시 호출) */
+	UFUNCTION(BlueprintCallable, Category = "Level|Flood")
+	void TriggerFloodEvent();
+	UFUNCTION(BlueprintCallable, Category = "Level|Flood")
+	void HandleFloodTimeout();
+
+private:
+	FTimerHandle FloodTimerHandle;
+
+	/** 월드에 배치된 홍수 제어 액터 참조 */
+	UPROPERTY()
+	class AFloodLevelActor* ActiveFloodActor;
 };
