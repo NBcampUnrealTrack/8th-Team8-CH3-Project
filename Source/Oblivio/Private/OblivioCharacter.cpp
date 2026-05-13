@@ -228,6 +228,41 @@ bool AOblivioCharacter::ShouldTreatHitAsOccluderWall(UPrimitiveComponent const* 
 	return Primitive->GetCollisionEnabled() != ECollisionEnabled::NoCollision;
 }
 
+bool AOblivioCharacter::ShouldApplyWallOcclusionToPrimitive(UPrimitiveComponent const* Prim) const
+{
+	if (!bWallOcclusionRestrictToBaseMaterial)
+	{
+		return true;
+	}
+	if (!IsValid(WallOcclusionAllowedBaseMaterial))
+	{
+		return false;
+	}
+
+	const UMeshComponent* const OcclMesh = Cast<const UMeshComponent>(Prim);
+	if (!OcclMesh)
+	{
+		return false;
+	}
+
+	const int32 NumSlots = OcclMesh->GetNumMaterials();
+	if (NumSlots <= 0)
+	{
+		return false;
+	}
+
+	const int32 Slot = FMath::Clamp(WallOcclusionMaterialMatchSlotIndex, 0, NumSlots - 1);
+	UMaterialInterface* const SlotMat = OcclMesh->GetMaterial(Slot);
+	if (!IsValid(SlotMat))
+	{
+		return false;
+	}
+
+	UMaterial* const SlotBase = SlotMat->GetBaseMaterial();
+	UMaterial* const AllowedBase = WallOcclusionAllowedBaseMaterial->GetBaseMaterial();
+	return SlotBase != nullptr && SlotBase == AllowedBase;
+}
+
 FVector AOblivioCharacter::GetWallOcclusionTraceStartWorld() const
 {
 	auto WithExtra = [this](const FVector Loc) -> FVector { return Loc + WallOcclusionTraceStartWorldExtraOffset; };
@@ -566,6 +601,10 @@ void AOblivioCharacter::UpdateWallOcclusionDither()
 			}
 #endif
 			if (!bAcceptOcc)
+			{
+				continue;
+			}
+			if (!ShouldApplyWallOcclusionToPrimitive(Comp))
 			{
 				continue;
 			}
