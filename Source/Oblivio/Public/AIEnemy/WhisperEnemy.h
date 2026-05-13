@@ -5,12 +5,14 @@
 #include "WhisperEnemy.generated.h"
 
 class AAIController;
+class UAudioComponent;
+class USoundBase;
 
 /**
  * AWhisperEnemy - "속삭이는 자"
- * - 배회/도주 없이 플레이어에게 계속 접근
- * - 근접하면 공격 판단만 PerformAttack으로 위임
- * - 손전등 콘 안에서는 회피 이동(AvoidFlashlightCone). 빛(저데미지) CC는 슬로우만 적용되고 경직(Stun)은 무시.
+ * - 원거리 DoT 추적: WhisperFightMinDistance ~ WhisperRange 도넛에서 초당 WhisperDotDamagePerSecond
+ * - Chase·Attack 동안 WhisperFightMinDistance 안으로 붙지 않음(외곽 호흡 거리 조절).
+ * - 손전등 콘 안에서는 회피 이동(AvoidFlashlightCone). 빛 CC는 슬로우만, 경직은 무시.
  */
 UCLASS(Blueprintable)
 class OBLIVIO_API AWhisperEnemy : public AEnemyBase
@@ -24,13 +26,31 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void Tick(float DeltaSeconds) override;
 	virtual void UpdateChase() override;
 	virtual void UpdateAttack() override;
 	virtual bool IsObstacleAttackEnabled() const override { return false; }
+	virtual void PerformAttack_Implementation(AActor* Target) override;
+	virtual float GetLocomotionBaseSpeed() const override;
+	virtual bool IsTargetInAttackRange() const override;
+	virtual void ApplyEnemySoundVolumes() override;
 
-	/** 손전등 OFF 및 공격 판단을 수행하는 수평 거리(cm). */
+	/** 원거리 DoT 초당 피해(직접 타격 없음). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Whisper|Damage", meta = (ClampMin = "0.0"))
+	float WhisperDotDamagePerSecond = 3.0f;
+
+	/** 이 거리 안으로 접근하지 않음(cm, 수평). DoT는 이 바깥~WhisperRange 안에서만. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Whisper", meta = (ClampMin = "0.0"))
+	float WhisperFightMinDistance = 200.0f;
+
+	/** Whisper DoT 적용 거리(cm, 수평). 최대 간격 한계. WhisperFightMinDistance 보다 반드시 큼. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Whisper", meta = (ClampMin = "50.0"))
-	float WhisperRange = 150.0f;
+	float WhisperRange = 550.0f;
+
+	/** 손전등 위험 콘 회피 시 이동 기준 속도(cm/s). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Whisper|Avoid", meta = (ClampMin = "0.0"))
+	float WhisperFlashlightAvoidMoveSpeed = 300.0f;
 
 	/** 손전등 콘 거리에 더하는 안전 여유(cm). 시각 빛과 거의 일치시키려면 0~50 권장. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Whisper|Avoid", meta = (ClampMin = "0.0"))
@@ -44,13 +64,48 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Whisper|Debug")
 	bool bDebugDrawFlashlightDanger = false;
 
-private:
-	float NextAttackDecisionTime = 0.0f;
+	/**
+	 * 속삭임 DoT가 유효한 동안 WhisperAttackAudioComponent 로 재생(루프 Cue 권장).
+	 * 종료 시 FadeOut 처리됩니다.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Whisper|Audio")
+	TObjectPtr<USoundBase> WhisperAttackSound;
 
+	/** 속삭임 루프가 켜질 때 FadeIn 시간(초). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Whisper|Audio", meta = (ClampMin = "0.01"))
+	float WhisperAttackSoundFadeInDuration = 0.25f;
+
+	/** 속삭임 세그먼트가 끝날 때 FadeOut 시간(초). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Whisper|Audio", meta = (ClampMin = "0.05"))
+	float WhisperAttackSoundFadeOutDuration = 0.35f;
+
+	/** 속삭임 루프용(루트에 붙임). */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy|Whisper|Audio")
+	TObjectPtr<UAudioComponent> WhisperAttackAudioComponent;
+
+	/**
+	 * EnemySoundVolumeMultiplier와 곱해져 속삭임 볼륨만 따로 줄입니다.
+	 * (예: 속삭임만 작게 들리게 할 때 유용합니다.)
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Whisper|Audio", meta = (ClampMin = "0.0"))
+	float WhisperAttackSoundVolumeScale = 1.0f;
+
+	/** 속삭임 DoT가 적용되는 틱마다 호출(추가 레이어만 BP/C++ 에서 처리). 속삭임 루프는 WhisperAttackAudioComponent 가 담당합니다. */
+	UFUNCTION(BlueprintNativeEvent, Category = "Enemy|Whisper|Audio")
+	void NotifyWhisperAttackSound();
+
+private:
 	bool IsWithinWhisperRange() const;
+	bool PassesWhisperCombatEngagementBaseline() const;
+
 	bool IsPointInsideFlashlightDanger(const FVector& Point) const;
 	bool IsSelfInsideFlashlightDanger() const;
-	void ApproachTarget(AAIController* AI);
+	void MaintainEngagementDistance(AAIController* AI);
 	void AvoidFlashlightCone(AAIController* AI);
-	void TryCommitWhisperAttack();
+	void TickWhisperDotDamage(float DeltaSeconds);
+
+	void TickWhisperAttackLoopAudio();
+
+	/** 속삭임 사운드를 실제로 켜거나 끄는 상태(페이드 트랜지션 1회용). */
+	bool bWhisperAttackAudioTrackedOn = false;
 };
