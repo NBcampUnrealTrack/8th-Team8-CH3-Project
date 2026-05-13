@@ -45,6 +45,8 @@ protected:
 	void UpdateWallOcclusionDither();
 	void ClearWallOcclusionOverlays();
 	bool ShouldTreatHitAsOccluderWall(const class UPrimitiveComponent* Component, FVector const& ImpactNormalWorld) const;
+	/** Restrict 켰을 때 슬롯 베이스 머티리얼이 허용 목록과 같은지. */
+	bool ShouldApplyWallOcclusionToPrimitive(UPrimitiveComponent const* Prim) const;
 	/** 가림 디더 레이 시작 월드 위치(bWallOcclusionTraceStartUsesTopDownCameraWorldLocation에 따라 카메라 고정 또는 스프링암 논리점). */
 	FVector GetWallOcclusionTraceStartWorld() const;
 	/** Occluder 레이 끝점·로컬 MID 초점을 논리 카메라 쪽으로 살짝 당겨, 정면 벽을 볼 때 세그먼트가 벽을 스킵하지 않게 함. */
@@ -174,6 +176,21 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Camera|Occlusion|Localized")
 	float WallOcclusionFocusLineHalfThicknessUU = 40.f;
+
+	/** true면 지정 슬롯 재질의 베이스가 WallOcclusionAllowedBaseMaterial 과 같을 때만 오클루전(오버레이·스왑) 적용. 예: Walls_1 전용 디더. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components|Camera|Occlusion|MaterialFilter",
+		meta = (ToolTip = "벽 전부가 아니라 특정 머티리얼을 쓰는 메시에만 카메라 가림 디더를 씌울 때 사용."))
+	bool bWallOcclusionRestrictToBaseMaterial = false;
+
+	/** 비교 기준(보통 마스터 M Walls_1 또는 그 인스턴스). Restrict 켰을 때 필수. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Camera|Occlusion|MaterialFilter",
+		meta = (EditCondition = "bWallOcclusionRestrictToBaseMaterial"))
+	TObjectPtr<UMaterialInterface> WallOcclusionAllowedBaseMaterial;
+
+	/** 위 재질과 일치 여부를 볼 메시 슬롯(기본 0 = Element 0). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Camera|Occlusion|MaterialFilter",
+		meta = (EditCondition = "bWallOcclusionRestrictToBaseMaterial", ClampMin = "0"))
+	int32 WallOcclusionMaterialMatchSlotIndex = 0;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components|Light")
 	class USpotLightComponent* FlashlightComponent;
