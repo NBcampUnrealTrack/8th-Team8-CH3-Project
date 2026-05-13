@@ -50,8 +50,4 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = BossEffect)
 	float ChangeDuration = 2.f;
 
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
-
 };
