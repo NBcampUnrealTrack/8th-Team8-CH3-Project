@@ -305,7 +305,7 @@ void ULightAttackComponent::ChangeLightAngle(float Angle)
             //빛 세기 조절
             LightDistance -= Angle * DistancePerAngle;
             Damage -= Angle * DamagePerAngle;
-            SpotLightComp->SetAttenuationRadius(LightDistance);
+            SpotLightComp->SetAttenuationRadius(LightDistance * 10.f);
             SpotLightComp->SetIntensity(Damage * LightIntensityScale);
         }
     }

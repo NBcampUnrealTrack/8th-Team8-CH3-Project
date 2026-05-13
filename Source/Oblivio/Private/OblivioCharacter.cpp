@@ -5,6 +5,8 @@
 #include "Notify/PlayerThrow.h"
 #include "OblivioComponents/SoundPropagationComponent.h"
 #include "OblivioComponents/PlayerCombatComponent.h"
+#include "OblivioComponents/LightAttackComponent.h"
+#include "Weapon/Flashlight.h"
 #include "Items/OblivioItemBase.h"
 #include "Items/OblivioInventoryComponent.h"
 #include "Crafting/OblivioCrafting.h"
@@ -22,6 +24,7 @@
 #include "Components/MeshComponent.h"
 #include "Components/PrimitiveComponent.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Components/SceneComponent.h"
 #include "CollisionQueryParams.h"
 #include "Engine/HitResult.h"
 #include "Materials/MaterialInterface.h"
@@ -690,6 +693,7 @@ void AOblivioCharacter::Tick(float DeltaTime)
 	if (IsValid(CurrentWeapon)) {
 		CurrentWeapon->SetActorRotation(GetActorRotation());
 	}
+	UpdateFlashlightEmbedPullback(DeltaTime);
 }
 
 void AOblivioCharacter::UpdateStatus(float DeltaTime)
@@ -907,6 +911,194 @@ void AOblivioCharacter::UpdateFlashlightVisuals()
 	}
 	else {	//Off
 		CurrentWeapon->StopWeapon();
+	}
+}
+
+
+void AOblivioCharacter::UpdateFlashlightEmbedPullback(float DeltaSeconds)
+{
+	UWorld* const World = GetWorld();
+	if (!World || DeltaSeconds <= 0.f)
+	{
+		return;
+	}
+
+	ULightAttackComponent* Lac =
+		IsValid(CurrentWeapon) ? CurrentWeapon->FindComponentByClass<ULightAttackComponent>() : nullptr;
+
+	const bool bWeaponOk =
+		IsValid(CurrentWeapon) && CurrentWeapon->IsA(AFlashlight::StaticClass()) && Lac != nullptr
+		&& Lac->bIsConcentrated && IsValid(Lac->GetSpotLightComp());
+
+	const bool bFlashOn = bIsFlashlightOn && Battery > 0.0f && !bFlashlightForcedOff;
+
+	const bool bWantPull =
+		bFlashlightPullbackFromWallsEnabled && bWeaponOk && bFlashOn;
+
+	const bool bWantAttenClamp = bFlashlightWallAttenuationClampEnabled && bWeaponOk && bFlashOn;
+
+	if (!bWantPull && !bWantAttenClamp)
+	{
+		FlashlightWallPullbackSmoothed = FMath::FInterpTo(FlashlightWallPullbackSmoothed, 0.f, DeltaSeconds,
+			FlashlightWallPullbackInterpSpeed);
+
+		if (FlashlightSpotPullbackWeakKey.IsValid() && bHasFlashlightSpotPullbackBaseline)
+		{
+			if (USpotLightComponent* const Spot = FlashlightSpotPullbackWeakKey.Get())
+			{
+				if (USceneComponent* const Parent = Spot->GetAttachParent())
+				{
+					const FVector MoveWorld = -Spot->GetForwardVector().GetSafeNormal() * FlashlightWallPullbackSmoothed;
+					const FVector PullDeltaLocal = Parent->GetComponentTransform().InverseTransformVectorNoScale(MoveWorld);
+					Spot->SetRelativeLocation(FlashlightSpotBaselineRelative + PullDeltaLocal);
+				}
+				else
+				{
+					Spot->SetRelativeLocation(FlashlightSpotBaselineRelative);
+				}
+			}
+		}
+
+		if (FMath::IsNearlyZero(FlashlightWallPullbackSmoothed, 0.02f))
+		{
+			FlashlightSpotPullbackWeakKey.Reset();
+			bHasFlashlightSpotPullbackBaseline = false;
+			FlashlightSpotBaselineRelative = FVector::ZeroVector;
+		}
+
+		if (bFlashlightAttenuationClampWasApplied && Lac != nullptr && IsValid(Lac->GetSpotLightComp()))
+		{
+			const float RefUU = Lac->LightDistance * 10.f;
+			FlashlightWallAttenuationSmoothedUU = FMath::FInterpTo(
+				FlashlightWallAttenuationSmoothedUU, RefUU, DeltaSeconds, FlashlightWallAttenuationInterpSpeed);
+			Lac->GetSpotLightComp()->SetAttenuationRadius(FlashlightWallAttenuationSmoothedUU);
+			if (FMath::IsNearlyEqual(FlashlightWallAttenuationSmoothedUU, RefUU, 1.f))
+			{
+				bFlashlightAttenuationClampWasApplied = false;
+			}
+		}
+		return;
+	}
+
+	USpotLightComponent* const ActiveSpot = Lac->GetSpotLightComp();
+
+	const FVector TraceStart = GetActorLocation() + FVector(0.f, 0.f, FlashlightWallTraceHeightFromCenter);
+	const FVector AimForward = GetActorForwardVector().GetSafeNormal();
+	const FVector TraceEnd = TraceStart + AimForward * FlashlightWallTraceDistance;
+
+	FHitResult Hit;
+	FCollisionQueryParams QP(FName(TEXT("Flash_wall_embed")), /*bTraceComplex=*/false);
+	QP.AddIgnoredActor(this);
+	if (IsValid(CurrentWeapon))
+	{
+		QP.AddIgnoredActor(CurrentWeapon.Get());
+	}
+
+	const bool bHitWall =
+		World->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, ECC_Visibility, QP) && Hit.bBlockingHit;
+
+	const float ClearAlongFwd =
+		bHitWall ? FMath::Max(Hit.Distance - FlashlightWallEmbedSafetyMargin, KINDA_SMALL_NUMBER)
+				 : FlashlightWallTraceDistance;
+
+	float PullTargetCm = 0.f;
+	if (bWantPull)
+	{
+		if (!FlashlightSpotPullbackWeakKey.IsValid() || FlashlightSpotPullbackWeakKey.Get() != ActiveSpot)
+		{
+			FlashlightWallPullbackSmoothed = 0.f;
+			FlashlightSpotPullbackWeakKey = ActiveSpot;
+			FlashlightSpotBaselineRelative = ActiveSpot->GetRelativeLocation();
+			bHasFlashlightSpotPullbackBaseline = true;
+		}
+
+		const FVector LampWorld = ActiveSpot->GetComponentLocation();
+		const float StickAlongView = FVector::DotProduct(LampWorld - TraceStart, AimForward);
+		PullTargetCm = FMath::Clamp(StickAlongView - ClearAlongFwd, 0.f, FlashlightWallEmbedMaxPullback);
+	}
+
+	if (bWantPull && bHasFlashlightSpotPullbackBaseline)
+	{
+		FlashlightWallPullbackSmoothed = FMath::FInterpTo(
+			FlashlightWallPullbackSmoothed, PullTargetCm, DeltaSeconds, FlashlightWallPullbackInterpSpeed);
+
+		const FVector MoveWorld = -ActiveSpot->GetForwardVector().GetSafeNormal() * FlashlightWallPullbackSmoothed;
+		if (USceneComponent* const Parent = ActiveSpot->GetAttachParent())
+		{
+			const FVector PullDeltaLocal = Parent->GetComponentTransform().InverseTransformVectorNoScale(MoveWorld);
+			ActiveSpot->SetRelativeLocation(FlashlightSpotBaselineRelative + PullDeltaLocal);
+		}
+		else
+		{
+			ActiveSpot->SetRelativeLocation(FlashlightSpotBaselineRelative);
+		}
+	}
+
+	if (!bWantPull)
+	{
+		FlashlightWallPullbackSmoothed = FMath::FInterpTo(
+			FlashlightWallPullbackSmoothed, 0.f, DeltaSeconds, FlashlightWallPullbackInterpSpeed);
+		if (FlashlightSpotPullbackWeakKey.IsValid() && bHasFlashlightSpotPullbackBaseline)
+		{
+			if (USpotLightComponent* const Spot = FlashlightSpotPullbackWeakKey.Get())
+			{
+				if (USceneComponent* const Parent = Spot->GetAttachParent())
+				{
+					const FVector MoveWorld = -Spot->GetForwardVector().GetSafeNormal() * FlashlightWallPullbackSmoothed;
+					const FVector PullDeltaLocal = Parent->GetComponentTransform().InverseTransformVectorNoScale(MoveWorld);
+					Spot->SetRelativeLocation(FlashlightSpotBaselineRelative + PullDeltaLocal);
+				}
+				else
+				{
+					Spot->SetRelativeLocation(FlashlightSpotBaselineRelative);
+				}
+			}
+		}
+		if (FMath::IsNearlyZero(FlashlightWallPullbackSmoothed, 0.02f))
+		{
+			FlashlightSpotPullbackWeakKey.Reset();
+			bHasFlashlightSpotPullbackBaseline = false;
+			FlashlightSpotBaselineRelative = FVector::ZeroVector;
+		}
+	}
+
+	if (bWantAttenClamp)
+	{
+		const float RefCapUU = Lac->LightDistance * 10.f;
+		float TargetAttenuationUU = RefCapUU;
+		if (bHitWall)
+		{
+			const float DistLampToImpact = FVector::Distance(ActiveSpot->GetComponentLocation(), Hit.ImpactPoint);
+			TargetAttenuationUU = FMath::Clamp(
+				DistLampToImpact - FlashlightWallAttenuationMarginUU,
+				FlashlightWallAttenuationMinUU,
+				RefCapUU);
+		}
+
+		if (!bFlashlightAttenuationClampWasApplied)
+		{
+			FlashlightWallAttenuationSmoothedUU = ActiveSpot->AttenuationRadius;
+		}
+		bFlashlightAttenuationClampWasApplied = true;
+
+		FlashlightWallAttenuationSmoothedUU = FMath::FInterpTo(
+			FlashlightWallAttenuationSmoothedUU,
+			TargetAttenuationUU,
+			DeltaSeconds,
+			FlashlightWallAttenuationInterpSpeed);
+
+		ActiveSpot->SetAttenuationRadius(FlashlightWallAttenuationSmoothedUU);
+	}
+	else if (bFlashlightAttenuationClampWasApplied && Lac != nullptr && IsValid(Lac->GetSpotLightComp()))
+	{
+		const float RefUU = Lac->LightDistance * 10.f;
+		FlashlightWallAttenuationSmoothedUU = FMath::FInterpTo(
+			FlashlightWallAttenuationSmoothedUU, RefUU, DeltaSeconds, FlashlightWallAttenuationInterpSpeed);
+		Lac->GetSpotLightComp()->SetAttenuationRadius(FlashlightWallAttenuationSmoothedUU);
+		if (FMath::IsNearlyEqual(FlashlightWallAttenuationSmoothedUU, RefUU, 1.f))
+		{
+			bFlashlightAttenuationClampWasApplied = false;
+		}
 	}
 }
 
