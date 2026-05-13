@@ -414,6 +414,14 @@ public:
 	UFUNCTION(Exec, Category = "Cheats")
 	void CheatGodMode();
 
+	/** 2층 홍수 기믹: 현재 월드의 수위 (FloodLevelActor가 매 틱 업데이트함) */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Flood")
+	float CurrentWaterLevel = -1000.0f; // 초기값은 매우 낮게 설정
+
+	/** 물속에 있는지 여부를 반환하는 함수 */
+	UFUNCTION(BlueprintPure, Category = "Status|Flood")
+	bool IsInWater() const { return GetActorLocation().Z < CurrentWaterLevel; }
+
 private:
 	TSet<TWeakObjectPtr<UPrimitiveComponent>> WallOcclusionAppliedPrimitives;
 	/** Swap 모드에서만 사용: 교체 전 슬롯 재질 */

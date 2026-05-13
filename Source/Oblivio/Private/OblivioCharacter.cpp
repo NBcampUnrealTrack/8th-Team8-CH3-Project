@@ -11,6 +11,7 @@
 #include "Items/OblivioInventoryComponent.h"
 #include "Crafting/OblivioCrafting.h"
 #include "DoorBase.h"
+#include "Memento/FloodLevelActor.h"
 
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -739,6 +740,35 @@ void AOblivioCharacter::UpdateStatus(float DeltaTime)
 		float BaseSpeed = bIsRunning ? RunSpeed : WalkSpeed;
 		GetCharacterMovement()->MaxWalkSpeed = bIsSlowed ? (BaseSpeed * CurrentSlowMultiplier) : BaseSpeed;
 	}
+
+	// [2층 기믹 추가] 수중 상태 확인
+	bool bIsInWater = IsInWater();
+	float WaterSpeedMultiplier = bIsInWater ? 0.5f : 1.0f; // 수중에서는 50% 감속
+
+	if (bIsStunned)
+	{
+		GetCharacterMovement()->MaxWalkSpeed = 0.0f;
+	}
+	else
+	{
+		float BaseSpeed = bIsRunning ? RunSpeed : WalkSpeed;
+
+		//수중Multiplier와 기존 슬로우Multiplier를 모두 적용
+		float FinalSpeed = BaseSpeed * WaterSpeedMultiplier;
+		if (bIsSlowed) FinalSpeed *= CurrentSlowMultiplier;
+
+		GetCharacterMovement()->MaxWalkSpeed = FinalSpeed;
+	}
+
+	// 수중 이동 시 첨벙거리는 소리로 적에게 위치 노출
+	if (bIsInWater && GetVelocity().Size() > 10.f)
+	{
+		if (IsValid(SoundPropagationComp))
+		{
+			// 물결 소리 전파
+			SoundPropagationComp->PropagateSound();
+		}
+	}
 }
 
 //==========================
@@ -779,71 +809,88 @@ void AOblivioCharacter::ToggleCrafting()
 
 void AOblivioCharacter::Interact()
 {
-	FHitResult HitResult;
-	FVector Start = GetActorLocation();
-	FVector End = Start + (GetActorForwardVector() * InteractionDistance);
-	FCollisionQueryParams Params;
-	Params.AddIgnoredActor(this);
+	// 상호작용할 대상(TargetActor) 하나만 확실하게 정하기
+	AActor* TargetActor = nullptr;
 
-	DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, 1.0f, 0, 2.0f);
-
+	// 우선순위 1: 발밑에 가까이 있는 아이템 (Overlap)
 	if (CurrentNearbyItem)
 	{
-		CurrentNearbyItem->OnInteract(this);
-		if (InventoryComponent && InventoryComponent->AddItem(CurrentNearbyItem))
+		TargetActor = CurrentNearbyItem;
+	}
+	else
+	{
+		// 우선순위 2: 크로스헤어로 쳐다보는 대상 (LineTrace)
+		FHitResult HitResult;
+		FVector Start = GetActorLocation();
+		FVector End = Start + (GetActorForwardVector() * InteractionDistance);
+		FCollisionQueryParams Params;
+		Params.AddIgnoredActor(this);
+
+		DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, 1.0f, 0, 2.0f);
+
+		if (GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility, Params))
 		{
-			CurrentNearbyItem->Destroy();
-			SetNearbyItem(nullptr);
-			return; // 습득 성공 시 종료
+			TargetActor = HitResult.GetActor();
+			UE_LOG(LogTemp, Warning, TEXT("1. Hit Something: %s"), *TargetActor->GetName());
 		}
 	}
 
-	if (GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility, Params))
+	// 상호작용할 대상이 아무것도 없으면 그대로 종료
+	if (!TargetActor) return;
+
+
+	// 문(Door) 상호작용
+	if (ADoorBase* HitDoor = Cast<ADoorBase>(TargetActor))
 	{
-		
-		//추가: 열쇠/유품 획득 시 정보 저장
-		AActor* HitActor = HitResult.GetActor();
-		UE_LOG(LogTemp, Warning, TEXT("1. Hit Something: %s"), *HitActor->GetName());
+		HitDoor->InteractDoor();
+		return;
+	}
 
-		if (ADoorBase* HitDoor = Cast<ADoorBase>(HitActor))
-		{
-			HitDoor->InteractDoor(); // 문 열기 애니메이션 실행!
-			return; // 문을 열었으니 함수 종료
-		}
 
-		if (AOblivioItemBase* PickedItem = Cast<AOblivioItemBase>(HitActor))
-		{
-			PickedItem->OnInteract(this);
-			if (InventoryComponent && InventoryComponent->AddItem(PickedItem))
-			{
-				PickedItem->Destroy();
-				UE_LOG(LogTemp, Warning, TEXT("3. Item Destroyed!"));
-				return;
-			}
-		}
-
-		AOblivioGameMode* GM = Cast<AOblivioGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
-		if (!GM) return;
-
-		if (HitActor->ActorHasTag("Key"))
-		{
-			GM->CollectedKeys++;
-			UE_LOG(LogTemp, Warning, TEXT("You Get a Key! Current: %d / %d"), GM->CollectedKeys, GM->RequiredKeys);
-			HitActor->Destroy();
-		}
-		else if (HitActor->ActorHasTag("Memento"))
+	// 태그 기반 상호작용 (유품, 열쇠, 체크포인트)
+	AOblivioGameMode* GM = Cast<AOblivioGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+	if (GM)
+	{
+		if (TargetActor->ActorHasTag("Memento"))
 		{
 			GM->AddMemento();
 			UE_LOG(LogTemp, Warning, TEXT("Get Memento!"));
-			HitActor->Destroy();
+
+			// 홍수 트리거 확인
+			if (TargetActor->ActorHasTag("FloodTrigger"))
+			{
+				GM->TriggerFloodEvent();
+			}
+
+			if (TargetActor == CurrentNearbyItem) SetNearbyItem(nullptr);
+			TargetActor->Destroy();
+			return;
 		}
-		//체크포인트 상호작용 시 저장
-		else if (HitActor->ActorHasTag("RestArea")) //체크포인트 태그 확인 후 태그명 수정 필요
+		else if (TargetActor->ActorHasTag("RestArea"))
 		{
 			GM->RestInteraction();
-				//아래에 체크포인트 시 회복 등 넣을 수 있음
+			return;
 		}
-		//----
+	}
+
+
+	// 4. 일반 아이템 (인벤토리 추가)
+	if (AOblivioItemBase* PickedItem = Cast<AOblivioItemBase>(TargetActor))
+	{
+		PickedItem->OnInteract(this);
+
+		if (InventoryComponent && InventoryComponent->AddItem(PickedItem))
+		{
+			if (PickedItem->ActorHasTag("Key") && GM)
+			{
+				GM->CollectedKeys++;
+				UE_LOG(LogTemp, Warning, TEXT("Key Added to Inventory! Current: %d / %d"), GM->CollectedKeys, GM->RequiredKeys);
+			}
+			if (TargetActor == CurrentNearbyItem) SetNearbyItem(nullptr);
+			PickedItem->Destroy();
+			UE_LOG(LogTemp, Warning, TEXT("3. Item Added to Inventory and Destroyed!"));
+			return;
+		}
 	}
 }
 
@@ -1291,7 +1338,11 @@ void AOblivioCharacter::HandleDeath()
 		MeshComp->SetCollisionProfileName(TEXT("Ragdoll"));
 		MeshComp->SetSimulatePhysics(true);
 	}
-
+	AActor* FloodActor = UGameplayStatics::GetActorOfClass(GetWorld(), AFloodLevelActor::StaticClass());
+	if (FloodActor)
+	{
+		Cast<AFloodLevelActor>(FloodActor)->StopFloodEffects();
+	}
 	if (AOblivioGameMode* GM = Cast<AOblivioGameMode>(UGameplayStatics::GetGameMode(GetWorld())))
 	{
 		GM->GameOver();
