@@ -80,7 +80,13 @@ void AOblivioCharacterController::SetupInputComponent()
 void AOblivioCharacterController::PlayerTick(float DeltaTime)
 {
 	Super::PlayerTick(DeltaTime);
-	UpdateMouseRotation();
+	if (AOblivioCharacter* ObjChar = Cast<AOblivioCharacter>(GetPawn()))
+	{
+		if (ObjChar->IsAlive()) // 캐릭터가 죽지 않았다면 회전 업데이트
+		{
+			UpdateMouseRotation();
+		}
+	}
 }
 
 void AOblivioCharacterController::UpdateMouseRotation()
