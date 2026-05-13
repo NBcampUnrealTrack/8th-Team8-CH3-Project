@@ -1284,6 +1284,10 @@ void AOblivioCharacter::HandleDeath()
 	}
 	if (USkeletalMeshComponent* MeshComp = GetMesh())
 	{
+		MeshComp->bPauseAnims = true;
+
+		MeshComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+
 		MeshComp->SetCollisionProfileName(TEXT("Ragdoll"));
 		MeshComp->SetSimulatePhysics(true);
 	}
