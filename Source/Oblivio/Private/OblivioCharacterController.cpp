@@ -84,22 +84,32 @@ void AOblivioCharacterController::PlayerTick(float DeltaTime)
 	{
 		if (ObjChar->IsAlive()) // 캐릭터가 죽지 않았다면 회전 업데이트
 		{
-			UpdateMouseRotation();
+			UpdateMouseRotation(DeltaTime);
 		}
 	}
 }
 
-void AOblivioCharacterController::UpdateMouseRotation()
+void AOblivioCharacterController::UpdateMouseRotation(float DeltaTime)
 {
 	if (APawn* MyPawn = GetPawn())
 	{
 		FHitResult Hit;
-		//나중에 변경, 기본이 Ignore이니 Floor만 block으로 교체
-		//if(GetHitResultUnderCursor(ECC_Floor, false, Hit))
 		if (GetHitResultUnderCursor(ECC_Visibility, false, Hit))
 		{
-			FRotator LookRot = UKismetMathLibrary::FindLookAtRotation(MyPawn->GetActorLocation(), Hit.ImpactPoint);
-			MyPawn->SetActorRotation(FRotator(0.f, LookRot.Yaw, 0.f));
+			// 목표 회전값
+			FRotator TargetRot = UKismetMathLibrary::FindLookAtRotation(MyPawn->GetActorLocation(), Hit.ImpactPoint);
+			TargetRot.Pitch = 0.f; // 위아래로 기울지 않도록 고정
+			TargetRot.Roll = 0.f;
+
+			// 현재 회전값
+			FRotator CurrentRot = MyPawn->GetActorRotation();
+
+			// 회전 속도
+			float RotationSpeed = 5.0f;
+
+			FRotator SmoothRot = FMath::RInterpTo(CurrentRot, TargetRot, DeltaTime, RotationSpeed);
+
+			MyPawn->SetActorRotation(SmoothRot);
 		}
 	}
 }
@@ -253,6 +263,7 @@ void AOblivioCharacterController::OnPlaceObstacle(const FInputActionValue& Value
 		if (auto* CraftingComp = ObjChar->FindComponentByClass<UOblivioCrafting>())
 		{
 			CraftingComp->PlaceObstacle();
+			ObjChar->PlaceObstacle();
 		}
 	}
 }

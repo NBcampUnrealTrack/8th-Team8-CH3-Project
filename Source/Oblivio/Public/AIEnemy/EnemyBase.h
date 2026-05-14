@@ -9,7 +9,7 @@
 //   · AggroRadius: UE 단위 cm (1000 ≈ 10m). 0이면 거리 무시 항상 추격. 타겟은 GetPlayerPawn(0)
 //
 // 전투(외부): TakeDamage 적용 → CurrentHealth 차감 → OnEnemyDamaged → 0이하면 Die().
-//   PerformAttack 근접 판단은 OnEnemyAttackCommitted 만 발행(실 데미지/연출은 전투 측).
+//   PerformAttack 는 기본 빈 구현; 근접 타격은 UEnemyMeleeCommitNotify → CommitAttackFromAnimNotify.
 //   · OnLightHit 도 이벤트만 발행(특수 AI용·Luxeater 흡수). 빛으로 슬로우/스턴/사망은 전투 측이 ApplyCC*/TakeDamage로 처리.
 //
 // CC(기술·아이템 등): EEnemyCCState — Slow(이속 배율), Stun(경직·행동 정지).
@@ -23,27 +23,36 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "Templates/SubclassOf.h"
 #include "EnemyBase.generated.h"
 
 class AEnemyBase;
+class UDamageType;
 class USpotLightComponent;
 class UEnemyCombatComponent;
+class UAudioComponent;
+class USoundBase;
+class UStaticMeshComponent;
+class UMaterialInterface;
 
 /** 적 행동 상태(FSM). Stunned는 bCCStunned 플래그를 ABP에서 읽기 위한 래핑 상태. */
 UENUM(BlueprintType)
 enum class EEnemyAIState : uint8
 {
-	Idle UMETA(DisplayName = "Idle"),
-	Chase UMETA(DisplayName = "Chase"),
-	Attack UMETA(DisplayName = "Attack"),
+	// 명시 값: Heartbeat 추가 이전(0~8)과 동일 — 기존 BP/에셋 직렬화와 호환
+	Idle = 0 UMETA(DisplayName = "Idle"),
+	Chase = 1 UMETA(DisplayName = "Chase"),
+	Attack = 2 UMETA(DisplayName = "Attack"),
 	/** 손전등 앞면 조명 추적: 목표는 월드 점, 손전등 끔/이탈 시 마지막 점까지만 이동(Chase와 분리). */
-	TrackLight UMETA(DisplayName = "TrackLight"),
-	Patrol UMETA(DisplayName = "Patrol"),
-	Investigate UMETA(DisplayName = "Investigate"),
-	Search UMETA(DisplayName = "Search"),
+	TrackLight = 3 UMETA(DisplayName = "TrackLight"),
+	Patrol = 4 UMETA(DisplayName = "Patrol"),
+	Investigate = 5 UMETA(DisplayName = "Investigate"),
+	Search = 6 UMETA(DisplayName = "Search"),
 	/** CC 경직 중. 내부 FSM 상태는 유지, ABP 전용 표현 상태. */
-	Stunned UMETA(DisplayName = "Stunned"),
-	Dead UMETA(DisplayName = "Dead")
+	Stunned = 7 UMETA(DisplayName = "Stunned"),
+	Dead = 8 UMETA(DisplayName = "Dead"),
+	/** 심작 박동 연출 전용 표시값. 내부 EnemyState는 보통 Attack 유지. */
+	Heartbeat = 9 UMETA(DisplayName = "Heartbeat")
 };
 
 /** 이동 저하·경직 등 CC(FSM과 별개). GetCrowdControlState는 빛 둔화/정지도 함께 반영. */
@@ -71,8 +80,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FEnemyDamagedSignature, float, Da
 
 /** FSM 전이 시(Dead 포함). BP에서 전투·연출 테스트용. */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FEnemyFSMStateChangedSignature, AEnemyBase*, Enemy, EEnemyAIState, OldState, EEnemyAIState, NewState);
-/** 근접 공격 가능 판단이 성립했을 때. 실제 피해/상태/연출 처리는 전투 시스템에서 담당. */
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FEnemyAttackCommittedSignature, AEnemyBase*, Enemy, AActor*, Target, float, DamageAmount);
+/** 근접 공격 커밋. 실제 피해 타입은 DamageTypeClass(UClass*). nullptr 이면 기본 근접. */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FEnemyAttackCommittedSignature, AEnemyBase*, Enemy, AActor*, Target, float, DamageAmount, UClass*, DamageTypeClass);
 /** ReportStimulus가 Investigate 큐에 반영됐을 때(어그로 있으면 호출 안 됨). */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FEnemyStimulusReportedSignature, AEnemyBase*, Enemy, FVector, StimulusLocation, EEnemyStimulusType, StimulusType);
 /** TrackLight 진입 true / 이탈 false. */
@@ -95,9 +104,9 @@ public:
 	// 엔진 damage 파이프라인. 부모 처리 후 현재 적 체력 반영 및 OnEnemyDamaged, 사망 시 Die().
 	virtual float TakeDamage(float DamageAmount, const FDamageEvent& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
-	/** 스턴 중이면 Stunned를 반환. ABP 스테이트 머신에서 경직 애니메이션 분기에 사용. */
+	/** 스턴 중이면 Stunned, 그 외에는 하위에서 가상 오버라이드 가능. */
 	UFUNCTION(BlueprintCallable, Category = "Enemy|State")
-	EEnemyAIState GetEnemyState() const { return bCCStunned ? EEnemyAIState::Stunned : EnemyState; }
+	virtual EEnemyAIState GetEnemyState() const;
 
 	UFUNCTION(BlueprintCallable, Category = "Enemy|State")
 	bool IsAlive() const override { return EnemyState != EEnemyAIState::Dead && CurrentHealth > 0.0f; } //인터페이스 오버라이드 키워드 추가
@@ -148,6 +157,14 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Enemy|Combat")
 	void SetAttackDamage(float NewDamage) { AttackDamage = FMath::Max(0.f, NewDamage); }
+
+	/**
+	 * 근공격 Anim Notify 재생 타이밍에서 호출. AttackRange 검사 없이 근공격 브로드캐스트를 내보냅니다.
+	 * PerformAttack 의 기본 구현은 비어 있으므로 타격은 노티(또는 이 함수의 파생 오버라이드)에서 처리합니다.
+	 * OptionalTargetOverride 가 유효하면 그 액터를 타겟으로, 아니면 TargetActor 사용.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Enemy|Combat")
+	virtual void CommitAttackFromAnimNotify(AActor* OptionalTargetOverride = nullptr);
 
 	/** 회복(양수). 0 이하 무시. UI/회복 스킬용. OnEnemyDamaged 로 음수 데미지 형태 브로드캐스트 가능하나 여기선 별도. */
 	UFUNCTION(BlueprintCallable, Category = "Enemy|Stats")
@@ -221,7 +238,10 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Crafting")
 	TObjectPtr<UEnemyCombatComponent> CombatComp;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy|Stats", meta = (ClampMin = "1.0"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy|Audio|Locomotion")
+	TObjectPtr<UAudioComponent> IdleChaseLocomotionAudioComponent;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Stats", meta = (ClampMin = "1.0"))
 	float MaxHealth = 100.0f;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy|Stats")
@@ -238,8 +258,37 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy|Combat", meta = (ClampMin = "0.0"))
 	float AttackDamage = 10.0f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy|Combat", meta = (ClampMin = "1.0"))
+	/** 근접 FSM Attack 전환·PerformAttack 판정 거리(cm). 레벨/BP 인스턴스에서 조정 가능. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Combat", meta = (ClampMin = "1.0", DisplayName = "Melee Attack Range (cm)"))
 	float AttackRange = 150.0f;
+
+	/**
+	 * true면 근접 판정 구를 메시+머티리얼로 표시(GetMeleeAttackRangeIndicatorRadiusCm 반경).
+	 * Translucent 머티리얼을 넣고 두께 느낌은 노멀/Fresnel 등으로 표현하는 것을 권장.
+	 * 탱커(ATankEnemy)는 심작 AoE 표시를 쓰므로 기본적으로 근접 표시를 끕니다(ShouldShowMeleeAttackRangeIndicator).
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Combat|Visual")
+	bool bShowMeleeAttackRangeIndicator = false;
+
+	/** 표시용 구 메시 슬롯 0에 적용. 비어 있으면 표시하지 않음. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Combat|Visual")
+	TObjectPtr<UMaterialInterface> MeleeAttackRangeIndicatorMaterial;
+
+	/**
+	 * 표시 스케일 보정: BasicShapes Cylinder 의 바닥 원 반경(UU)과 맞추면 반경(cm)=GetMeleeAttackRangeIndicatorRadiusCm().
+	 * (엔진 기본 실린더 반경은 보통 50.)
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Combat|Visual", meta = (ClampMin = "0.01"))
+	float MeleeAttackRangeIndicatorBuiltInSphereRadiusUU = 50.0f;
+
+	/**
+	 * 바닥 디스크 두께(높이 스케일). Cylinder 기본 높이 100UU 기준 비율 — 작을수록 팬케이크에 가깝고 z-fight 가 줄어듦.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Combat|Visual", meta = (ClampMin = "0.001", ClampMax = "2.0"))
+	float MeleeAttackRangeIndicatorDiskThicknessScale = 0.02f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy|Combat|Visual")
+	TObjectPtr<UStaticMeshComponent> MeleeAttackRangeIndicatorMesh;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy|Combat", meta = (ClampMin = "0.1"))
 	float AttackCooldown = 1.0f;
@@ -416,6 +465,23 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Audio", meta = (ClampMin = "0.0", ClampMax = "4.0"))
 	float EnemySoundVolumeMultiplier = 1.0f;
 
+	/**
+	 * FSM 이 Idle 일 때 / Chase·Attack·Heartbeat(전투 이동) 일 때 재생되는 배경 레이어.
+	 * 루프가 아닌 원샷은 종료 시 같은 FSM 구간이면 자동 재시작.
+	 * Idle⇄전투 구간 전환 시 페이드 아웃 후 새 레이어 페이드 인. Patrol·Search 등은 무음(페이드 아웃).
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Audio|Locomotion")
+	TObjectPtr<USoundBase> IdleLocomotionAmbientSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Audio|Locomotion")
+	TObjectPtr<USoundBase> ChaseLocomotionAmbientSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Audio|Locomotion", meta = (ClampMin = "0.0"))
+	float IdleChaseLocomotionAmbientFadeInDuration = 0.35f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Audio|Locomotion", meta = (ClampMin = "0.05"))
+	float IdleChaseLocomotionAmbientFadeOutDuration = 0.25f;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy|Death", meta = (ClampMin = "0.0"))
 	float CorpseLifeSpan = 3.0f;
 
@@ -434,6 +500,11 @@ protected:
 	virtual void FindDefaultTarget();
 	/** FSM 전이만 담당(어그로·자극·패트롤 여부). 실제 이동은 Tick 스위치에서 */
 	virtual void UpdateState();
+	/**
+	 * true면 UpdateState 가 여기서 끝남(어그로 단접·TrackLight 등으로 덮어쓰지 않음).
+	 * 탱커 심작 채널링 등: 어그로 한 프레임 끊겨도 Heartbeat 유지.
+	 */
+	virtual bool TryConsumeSpecialFSMUpdate();
 	virtual void UpdateChase();
 	virtual void UpdateAttack();
 
@@ -460,15 +531,23 @@ public:
 	virtual void Die();
 protected:
 
-	void SetEnemyState(EEnemyAIState NewState);
+	void SetEnemyState(EEnemyAIState NewState, bool bForce = false);
 
-	/** SetEnemyState에서 실제로 바뀐 직후 호출(Old→New). 기본 빈 구현. */
-	virtual void NotifyEnemyStateChanged(EEnemyAIState OldState, EEnemyAIState NewState) {}
+	/**
+	 * 어그로 전투로 FSM 전이할 때 공통: 손전등 추적·Search·Investigate 잔상 정리, bHadAggroLastTick 유지.
+	 * 타겟이 있으면 LastKnownTargetLocation 갱신.
+	 */
+	void ApplyAggroCombatTransientCleanup();
+
+	/** SetEnemyState에서 실제로 바뀐 직후 호출(Old→New). Idle/Chase 로코모션 앰비언트 처리 후 파생 클래스에서 Super 호출 권장. */
+	virtual void NotifyEnemyStateChanged(EEnemyAIState OldState, EEnemyAIState NewState);
 
 	/** TakeDamage로 CurrentHealth를 차감한 직후(사망 처리 전). 보스 페이즈 갱신 등에 사용. */
 	virtual void NotifyEnemyDamageApplied(float AppliedDamage);
 	/** 근접 판단. 기본은 3D AttackRange 안. Whisper 등은 수평/도넛 기준 오버라이드. */
 	virtual bool IsTargetInAttackRange() const;
+	/** 어그로가 있을 때 FSM 상태(기본: 근접이면 Attack 아니면 Chase). 탱커 심작 중엔 Heartbeat. */
+	virtual EEnemyAIState SelectStateWhileAggroed() const;
 	/** AggroRadius 내(또는 0이면 무한)일 때 true. 보스 등은 “한 번 들어오면 영구 추격”용으로 오버라이드 가능. */
 	virtual bool HasValidAggroTarget() const;
 	void StopEnemyMovement();
@@ -486,11 +565,50 @@ protected:
 	void OnCCSlowExpired();
 	void OnCCStunExpired();
 	void DrawAggroDebug();
+	/** PIE/에디터: Tank 등 전용 거리 디버그. Shipping 컴파일에서는 무시. */
+	virtual void DrawDebugCombatExtras();
+
+	/** 근접 범위 표시 구의 반경(cm). AttackRange와 동일; 도넛형 근접(위스퍼 등)은 오버라이드로 표시만 조정. */
+	virtual float GetMeleeAttackRangeIndicatorRadiusCm() const { return AttackRange; }
+
+	/** false면 Melee Attack Range Indicator 비활성(탱커는 심작 전용 표시 등). */
+	virtual bool ShouldShowMeleeAttackRangeIndicator() const { return bShowMeleeAttackRangeIndicator; }
+
+	void UpdateMeleeAttackRangeIndicatorVisual();
 
 	/** SetEnemySoundVolumeMultiplier 이후 호출 — 스토커 등 오디오 컴포넌트 동기화용. */
 	virtual void ApplyEnemySoundVolumes();
 
+	/** PerformAttack·Anim Notify 공통: OnEnemyAttackCommitted + 레지스트리 알림. DamageType 생략 시 기본 근접 타입. */
+	void DispatchEnemyAttackCommitted(AActor* Target);
+	void DispatchEnemyAttackCommitted(AActor* Target, float DamageAmount);
+	void DispatchEnemyAttackCommitted(AActor* Target, float DamageAmount, TSubclassOf<UDamageType> DamageTypeClass);
+
 private:
+	enum class ELocomotionAmbientLayer : uint8
+	{
+		None,
+		Idle,
+		Chase,
+	};
+
+	static ELocomotionAmbientLayer LocomotionAmbientLayerFromFsmState(EEnemyAIState State);
+	USoundBase* GetLocomotionAmbientSoundForLayer(ELocomotionAmbientLayer Layer) const;
+	void UpdateIdleChaseLocomotionAmbientForFsmState(EEnemyAIState NewState);
+	void StartIdleChaseLocomotionAmbientPlay(ELocomotionAmbientLayer Layer, USoundBase* Sound);
+	void StopIdleChaseLocomotionAmbientImmediate();
+	void ApplyIdleChaseLocomotionAmbientVolume();
+
+	UFUNCTION()
+	void OnIdleChaseLocomotionAmbientFadeFinished();
+
+	UFUNCTION()
+	void OnIdleChaseLocomotionAmbientPlaybackFinished();
+
+	ELocomotionAmbientLayer CurrentLocomotionAmbientLayer = ELocomotionAmbientLayer::None;
+	FTimerHandle IdleChaseLocomotionAmbientFadeTimerHandle;
+	bool bIdleChaseLocomotionAmbientSuppressFinished = false;
+
 	float LastAttackTime = -BIG_NUMBER;
 
 	bool bCCSlowActive = false;

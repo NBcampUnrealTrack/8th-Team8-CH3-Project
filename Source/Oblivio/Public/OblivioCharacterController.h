@@ -89,7 +89,7 @@ protected:
 	void OnInteract(const FInputActionValue& Value);
 	void OnPauseToggle(const FInputActionValue& Value);
 
-	void UpdateMouseRotation();
+	void UpdateMouseRotation(float DeltaTime);
 
 	//크래프팅 전용
 	UPROPERTY(EditAnywhere, Category = "Input")

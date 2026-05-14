@@ -39,6 +39,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Level")
 	void RestInteraction();
 
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "UI")
+	void OpenSaveMenuUI();
+
 	UFUNCTION(BlueprintCallable, Category = "Karma")
 	void AddMonsterKill();
 
@@ -57,6 +60,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Level|Flood")
 	void HandleFloodTimeout();
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Save")
+	bool bIsSaveMode = false;
 private:
 	FTimerHandle FloodTimerHandle;
 

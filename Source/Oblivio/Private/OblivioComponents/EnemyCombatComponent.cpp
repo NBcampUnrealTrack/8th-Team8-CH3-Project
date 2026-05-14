@@ -2,6 +2,7 @@
 #include "AIEnemy/EnemyBase.h"
 #include "Kismet/GameplayStatics.h"
 #include "OblivioComponents/CombatInterface.h"
+#include "GameFramework/DamageType.h"
 
 UEnemyCombatComponent::UEnemyCombatComponent()
 {
@@ -55,9 +56,17 @@ void UEnemyCombatComponent::HandleOwnerDamaged(float DamageAmount, float Current
 }
 
 //적 클래스 공격 로직
-void UEnemyCombatComponent::HandleOwnerAttack(AEnemyBase* Enemy, AActor* Target, float DamageAmount)
+void UEnemyCombatComponent::HandleOwnerAttack(AEnemyBase* Enemy, AActor* Target, float DamageAmount, UClass* DamageTypeClass)
 {
-	if (!Target) return;
+	if (!Target)
+	{
+		return;
+	}
 	UE_LOG(LogTemp, Log, TEXT("Enemy Component HandleOwnerAttack Called"));
-	UGameplayStatics::ApplyDamage(Target, DamageAmount, nullptr, Enemy, UDamageType::StaticClass());
+	TSubclassOf<UDamageType> UseType = UDamageType::StaticClass();
+	if (IsValid(DamageTypeClass) && DamageTypeClass->IsChildOf(UDamageType::StaticClass()))
+	{
+		UseType = DamageTypeClass;
+	}
+	UGameplayStatics::ApplyDamage(Target, DamageAmount, nullptr, Enemy, UseType);
 }

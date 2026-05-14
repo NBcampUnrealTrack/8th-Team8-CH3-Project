@@ -4,6 +4,8 @@
 #include "GameFramework/Actor.h"
 #include "DoorBase.generated.h"
 
+class USoundBase;
+
 UCLASS()
 class OBLIVIO_API ADoorBase : public AActor
 {
@@ -30,6 +32,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
 	FName RequiredKeyID;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
+	bool bIsOpen = false;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Level Transition")
 	float FadeDuration = 1.5f;
 
@@ -37,4 +42,9 @@ public:
 
 	UFUNCTION()
 	void ExecuteLevelTransition();
+
+	UPROPERTY(EditAnywhere, Category="Audio") 
+	USoundBase* DoorOpenSound;
+	UPROPERTY(EditAnywhere, Category="Audio") 
+	USoundBase* DoorCloseSound;
 };

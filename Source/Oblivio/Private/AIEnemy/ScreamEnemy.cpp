@@ -12,7 +12,7 @@
 // AScreamEnemy 구현 요약
 // Tick: 페이즈에 따라 분기 — Ready/Cooldown 은 베이스 FSM 작동, 능력 활성 페이즈
 //       (Charging/Transit/Root) 동안에는 베이스 이동을 우리 오버라이드로 봉인.
-// 능력 사이클: Ready → Charging → Transit → (PerformAttack) → Root → Cooldown → Ready
+// 능력 사이클: Ready → Charging → Transit → (CommitAttack 블링크 히트) → Root → Cooldown → Ready
 // =============================================================================
 
 AScreamEnemy::AScreamEnemy()
@@ -334,11 +334,35 @@ void AScreamEnemy::FinishTransitAndAttack()
 
 	if (IsValid(TargetActor))
 	{
-		// 전투 시스템에 공격 의도 위임 — 실 데미지/연출은 OnEnemyAttackCommitted 구독자 몫.
-		PerformAttack(TargetActor);
+		// 블링크 착지 히트: AnimNotify 플로우와 동일한 Commit 경로(거리 허용은 Commit 내부).
+		CommitAttackFromAnimNotify(nullptr);
 	}
 
 	StartRoot();
+}
+
+void AScreamEnemy::CommitAttackFromAnimNotify(AActor* OptionalTargetOverride)
+{
+	if (!IsAlive())
+	{
+		return;
+	}
+
+	AActor* const Target =
+		IsValid(OptionalTargetOverride) ? OptionalTargetOverride : TargetActor.Get();
+	if (!IsValid(Target))
+	{
+		return;
+	}
+
+	if (BlinkLandingDamageMaxTargetDistanceCm > KINDA_SMALL_NUMBER &&
+		FVector::DistSquared(GetActorLocation(), Target->GetActorLocation()) >
+			FMath::Square(BlinkLandingDamageMaxTargetDistanceCm))
+	{
+		return;
+	}
+
+	DispatchEnemyAttackCommitted(Target);
 }
 
 void AScreamEnemy::StartChainPause()

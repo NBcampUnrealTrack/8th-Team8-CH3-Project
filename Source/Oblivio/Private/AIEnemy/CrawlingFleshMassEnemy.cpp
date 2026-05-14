@@ -5,6 +5,7 @@
 #include "NavigationSystem.h"
 #include "AIController.h"
 #include "Engine/World.h"
+#include "Kismet/GameplayStatics.h"
 
 ACrawlingFleshMassEnemy::ACrawlingFleshMassEnemy()
 {
@@ -14,7 +15,7 @@ ACrawlingFleshMassEnemy::ACrawlingFleshMassEnemy()
 	CurrentHealth = MaxHealth;
 	MoveSpeed = 240.f;
 	ChaseMoveSpeed = 460.f;
-	AttackDamage = 6.f;
+	AttackDamage = 0.f;
 	AttackRange = 130.f;
 	AttackCooldown = 1.35f;
 	ChaseAcceptanceRadius = 50.f;
@@ -132,7 +133,17 @@ void ACrawlingFleshMassEnemy::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	if (!HasAuthority() || !IsAlive())
+	if (!IsAlive())
+	{
+		return;
+	}
+
+	if (HasAuthority())
+	{
+		TickProximityDotDamage(DeltaSeconds);
+	}
+
+	if (!HasAuthority())
 	{
 		return;
 	}
@@ -180,7 +191,7 @@ void ACrawlingFleshMassEnemy::UpdateIdle(float DeltaSeconds)
 }
 
 // 베이스 UpdateAttack은 매 틱 StopMovement 를 호출해 AttackRange 경계에서 끊김을 만듦.
-// swarm 크롤러는 멈추지 않고 들이박는 연출이 자연스러우므로 추격을 유지한 채 쿨다운만 본다.
+// 크롤러는 멈추지 않고 들이붙도록 MoveTo 만 유지. 피해는 TickProximityDotDamage 에서 초당 처리.
 void ACrawlingFleshMassEnemy::UpdateAttack()
 {
 	if (AAIController* AI = Cast<AAIController>(GetController()))
@@ -191,16 +202,40 @@ void ACrawlingFleshMassEnemy::UpdateAttack()
 			AI->MoveToActor(TargetActor, Acceptance, false);
 		}
 	}
+}
 
-	const UWorld* World = GetWorld();
-	const float CurrentTime = World ? World->GetTimeSeconds() : 0.f;
-	if (CurrentTime - LastSwarmAttackTime < AttackCooldown)
+void ACrawlingFleshMassEnemy::TickProximityDotDamage(float DeltaSeconds)
+{
+	if (!HasAuthority())
 	{
 		return;
 	}
-	LastSwarmAttackTime = CurrentTime;
+	if (DeltaSeconds <= KINDA_SMALL_NUMBER || ProximityDotDamagePerSecond <= 0.f || IsCCStunned())
+	{
+		return;
+	}
 
-	PerformAttack(TargetActor);
+	if (!IsValid(TargetActor) || TargetActor == this || !TargetActor->CanBeDamaged())
+	{
+		return;
+	}
+
+	if (GetEnemyState() == EEnemyAIState::Dead)
+	{
+		return;
+	}
+
+	if (FVector::DistSquared(GetActorLocation(), TargetActor->GetActorLocation()) >
+		FMath::Square(AttackRange))
+	{
+		return;
+	}
+
+	const float Amount = ProximityDotDamagePerSecond * DeltaSeconds;
+	if (Amount > KINDA_SMALL_NUMBER)
+	{
+		UGameplayStatics::ApplyDamage(TargetActor, Amount, nullptr, this, UDamageType::StaticClass());
+	}
 }
 
 bool ACrawlingFleshMassEnemy::TryPickRandomScatterPoint(FVector const& Origin, FVector& OutLocation) const

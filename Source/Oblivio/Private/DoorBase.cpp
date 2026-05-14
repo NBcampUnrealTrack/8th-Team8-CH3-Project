@@ -4,6 +4,7 @@
 #include "OblivioCharacter.h"
 #include "Camera/PlayerCameraManager.h" 
 #include "TimerManager.h"
+#include "Sound/SoundBase.h"
 
 ADoorBase::ADoorBase()
 {
@@ -44,7 +45,15 @@ void ADoorBase::InteractDoor_Implementation()
 	}
 	else
 	{
-		// 일반 문 처리
+		bIsOpen = !bIsOpen;
+
+		USoundBase* TargetSound = bIsOpen ? DoorOpenSound : DoorCloseSound;
+
+		// 에셋이 비어있지 않은지 검사 후, 문이 있는 3D 위치에서 재생
+		if (IsValid(TargetSound))
+		{
+			UGameplayStatics::PlaySoundAtLocation(this, TargetSound, GetActorLocation());
+		}
 	}
 }
 
@@ -55,13 +64,14 @@ void ADoorBase::ExecuteLevelTransition()
 
 	if (GI && Player)
 	{
+		FString SlotName = "Slot1";
 		GI->CurrentHealth = Player->CurrentHealth;
 		GI->CurrentBattery = Player->Battery;
 		GI->CurrentHunger = Player->Hunger;
 		GI->CurrentThirst = Player->Thirst;
 		GI->CurrentFloor += 1;
 
-		GI->SaveGameData(); // 자동 저장
+		GI->SaveGameData(SlotName); // 자동 저장
 
 		if (!NextLevelName.IsNone())
 		{

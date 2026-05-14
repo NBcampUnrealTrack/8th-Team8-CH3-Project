@@ -335,10 +335,10 @@ public:
 	// Movement & Interaction 이동 및 상호작용
 	// =====================================
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
-	float WalkSpeed = 300.0f;
+	float WalkSpeed = 200.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
-	float RunSpeed = 550.0f;
+	float RunSpeed = 400.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
 	float InteractionDistance = 200.0f;
@@ -443,6 +443,38 @@ public:
 	/** 물속에 있는지 여부를 반환하는 함수 */
 	UFUNCTION(BlueprintPure, Category = "Status|Flood")
 	bool IsInWater() const { return GetActorLocation().Z < CurrentWaterLevel; }
+
+	// ================= [사운드 에셋 변수] =================
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+	USoundBase* FlashlightClickSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+	USoundBase* InventoryOpenSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+	USoundBase* InventoryCloseSound;
+
+	// 과호흡/심박수 사운드 (Looping 사운드 권장)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio|Health")
+	USoundBase* LowHealthSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+	USoundBase* CraftingOpenSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+	USoundBase* CraftingCloseSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+	USoundBase* ObstaclePlaceSound;
+
+	// 체력이 이 수치 이하일 때 심장/과호흡 소리가 들림
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio|Health")
+	float LowHealthThreshold = 30.0f;
+
+protected:
+	// 사운드를 지속적으로 재생하고 피치(속도)를 조절하기 위한 컴포넌트
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Audio")
+	UAudioComponent* LowHealthAudioComponent;
 
 private:
 	TSet<TWeakObjectPtr<UPrimitiveComponent>> WallOcclusionAppliedPrimitives;

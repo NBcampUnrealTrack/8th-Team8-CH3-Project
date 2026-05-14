@@ -34,6 +34,7 @@ protected:
 	virtual void PerformAttack_Implementation(AActor* Target) override;
 	virtual float GetLocomotionBaseSpeed() const override;
 	virtual bool IsTargetInAttackRange() const override;
+	virtual float GetMeleeAttackRangeIndicatorRadiusCm() const override { return WhisperRange; }
 	virtual void ApplyEnemySoundVolumes() override;
 
 	/** 원거리 DoT 초당 피해(직접 타격 없음). */
