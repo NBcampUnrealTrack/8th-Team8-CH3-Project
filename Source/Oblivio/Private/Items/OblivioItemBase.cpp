@@ -2,6 +2,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Components/SphereComponent.h"
 #include "OblivioCharacter.h"
+#include "NiagaraComponent.h"
 
 AOblivioItemBase::AOblivioItemBase()
 {
@@ -17,6 +18,10 @@ AOblivioItemBase::AOblivioItemBase()
     InteractionSphere->SetupAttachment(RootComponent);
     InteractionSphere->SetSphereRadius(150.0f);
     InteractionSphere->SetCollisionProfileName(TEXT("Trigger"));
+
+    LootNiagaraComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("LootNiagaraComponent"));
+    LootNiagaraComponent->SetupAttachment(RootComponent);
+    LootNiagaraComponent->SetAutoActivate(false);
 }
 
 void AOblivioItemBase::BeginPlay()
@@ -37,16 +42,19 @@ void AOblivioItemBase::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent,
         AOblivioCharacter* Player = Cast<AOblivioCharacter>(OtherActor);
         if (Player)
         {
-            //나중에 pickup UI랑 연동
             Player->SetNearbyItem(this);
-            ItemMesh->SetRenderCustomDepth(true);
-            ItemMesh->SetCustomDepthStencilValue(255);
-            // 나중에 만들 InventoryComponent의 AddItem 함수를 여기서 호출
+            //ItemMesh->SetRenderCustomDepth(true);
+            //ItemMesh->SetCustomDepthStencilValue(255);
+
             // if (Player->InventoryComponent->AddItem(this)) 
             // {
             //     Destroy();
             // }
 
+            if (LootNiagaraComponent)
+            {
+                LootNiagaraComponent->Activate();
+            }
             // 현재는 로그로 확인
             UE_LOG(LogTemp, Warning, TEXT("Overlap with Player! Item: %s"), *ItemName.ToString());
         }
@@ -58,7 +66,11 @@ void AOblivioItemBase::OnSphereEndOverlap(UPrimitiveComponent* OverlappedCompone
     {
         // 캐릭터에게서 아이템 정보 제거 (UI 끄기 신호)
         Player->SetNearbyItem(nullptr);
-        ItemMesh->SetRenderCustomDepth(false);
+        //ItemMesh->SetRenderCustomDepth(false);
+        if (LootNiagaraComponent)
+        {
+            LootNiagaraComponent->Deactivate();
+        }
         UE_LOG(LogTemp, Warning, TEXT("Overlap Ended with Player! Item: %s"), *ItemName.ToString());
     }
 }

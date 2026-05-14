@@ -865,9 +865,19 @@ void AOblivioCharacter::Interact()
 		FCollisionQueryParams Params;
 		Params.AddIgnoredActor(this);
 
-		DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, 1.0f, 0, 2.0f);
+		FCollisionShape SphereShape = FCollisionShape::MakeSphere(40.0f);
 
-		if (GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility, Params))
+		bool bHit = GetWorld()->SweepSingleByChannel(
+			HitResult,
+			Start,
+			End,
+			FQuat::Identity,
+			ECC_Visibility,
+			SphereShape,
+			Params
+		);
+
+		if (bHit)
 		{
 			TargetActor = HitResult.GetActor();
 			UE_LOG(LogTemp, Warning, TEXT("1. Hit Something: %s"), *TargetActor->GetName());
@@ -892,8 +902,13 @@ void AOblivioCharacter::Interact()
 	{
 		if (TargetActor->ActorHasTag("Memento"))
 		{
+			if (AOblivioItemBase* PickedItem = Cast<AOblivioItemBase>(TargetActor))
+			{
+				PickedItem->OnInteract(this);
+			}
+
 			GM->AddMemento();
-			UE_LOG(LogTemp, Warning, TEXT("Get Memento!"));
+			
 
 			// 홍수 트리거 확인
 			if (TargetActor->ActorHasTag("FloodTrigger"))
