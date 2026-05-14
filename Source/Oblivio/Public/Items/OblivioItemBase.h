@@ -24,7 +24,7 @@ enum class EItemType : uint8
     Key     UMETA(DisplayName = "Key"),
     Memento UMETA(DisplayName = "Memento")
 };
-
+class UNiagaraComponent;
 UCLASS()
 class OBLIVIO_API AOblivioItemBase : public AActor
 {
@@ -97,4 +97,9 @@ public:
     UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Interaction")
     void OnInteract(AActor* Interactor);
     virtual void OnInteract_Implementation(AActor* Interactor);
+
+protected:
+    // [추가] 나이아가라 루팅 이펙트 컴포넌트
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Effect")
+    UNiagaraComponent* LootNiagaraComponent;
 };
