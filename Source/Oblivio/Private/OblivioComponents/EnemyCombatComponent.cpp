@@ -1,4 +1,4 @@
-﻿#include "OblivioComponents/EnemyCombatComponent.h"
+#include "OblivioComponents/EnemyCombatComponent.h"
 #include "AIEnemy/EnemyBase.h"
 #include "Kismet/GameplayStatics.h"
 #include "OblivioComponents/CombatInterface.h"
@@ -15,10 +15,21 @@ void UEnemyCombatComponent::BeginPlay()
 	//이벤트 구독 추가
 	if (AEnemyBase* OwnerEnemy = Cast<AEnemyBase>(GetOwner()))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Enemy AddDynamic"));
+		OwnerEnemy->OnEnemyDamaged.RemoveDynamic(this, &UEnemyCombatComponent::HandleOwnerDamaged);
+		OwnerEnemy->OnEnemyAttackCommitted.RemoveDynamic(this, &UEnemyCombatComponent::HandleOwnerAttack);
 		OwnerEnemy->OnEnemyDamaged.AddDynamic(this, &UEnemyCombatComponent::HandleOwnerDamaged);
 		OwnerEnemy->OnEnemyAttackCommitted.AddDynamic(this, &UEnemyCombatComponent::HandleOwnerAttack);
 	}
+}
+
+void UEnemyCombatComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (AEnemyBase* OwnerEnemy = Cast<AEnemyBase>(GetOwner()))
+	{
+		OwnerEnemy->OnEnemyDamaged.RemoveDynamic(this, &UEnemyCombatComponent::HandleOwnerDamaged);
+		OwnerEnemy->OnEnemyAttackCommitted.RemoveDynamic(this, &UEnemyCombatComponent::HandleOwnerAttack);
+	}
+	Super::EndPlay(EndPlayReason);
 }
 
 //적 클래스 피격 로직

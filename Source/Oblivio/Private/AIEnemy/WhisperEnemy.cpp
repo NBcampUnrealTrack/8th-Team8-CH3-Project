@@ -163,6 +163,15 @@ bool AWhisperEnemy::IsTargetInAttackRange() const
 	return IsWithinWhisperRange();
 }
 
+bool AWhisperEnemy::IsMeleeCommitNotifyHitValid(AActor const* HitTarget) const
+{
+	if (!IsValid(HitTarget) || HitTarget != TargetActor)
+	{
+		return false;
+	}
+	return IsWithinWhisperRange();
+}
+
 void AWhisperEnemy::PerformAttack_Implementation(AActor* /*Target*/)
 {
 	// 근접 피해는 TickWhisperDotDamage에서 초당 WhisperDotDamagePerSecond 로만 처리.

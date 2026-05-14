@@ -31,6 +31,10 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Enemy|Tank|Anim")
 	bool bIsTankHeartbeatAttackChanneling = false;
 
+	/** true면 점프 착지 패턴 FSM 활성(IsTankJumpAttackFsmActiveForAnim). */
+	UPROPERTY(BlueprintReadOnly, Category = "Enemy|Tank|Anim")
+	bool bTankJumpAttackFsmActive = false;
+
 	/** BP에서 디버깅용: 근처 본만 심작 몽타주 쓸 때 참고 가능 */
 	UPROPERTY(BlueprintReadOnly, Category = "Enemy|Tank|Anim")
 	bool bTankUsesHeartbeatAoEAttack = false;

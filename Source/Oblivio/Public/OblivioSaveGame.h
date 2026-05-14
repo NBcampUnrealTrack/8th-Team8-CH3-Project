@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/SaveGame.h"
@@ -11,21 +11,21 @@ class OBLIVIO_API UOblivioSaveGame : public USaveGame
 	GENERATED_BODY()
 
 public:
-	//저장할 데이터들
+	//저장할 데이터들(낡은 저장·부분 초기화에서 0 피 피격 방어)
 	UPROPERTY()
-	float SavedCurrentHealth;
+	float SavedCurrentHealth = 100.f;
 	UPROPERTY()
-	float SavedBattery;
+	float SavedBattery = 100.f;
 	UPROPERTY()
-	float SavedCurrentHunger;
+	float SavedCurrentHunger = 100.f;
 	UPROPERTY()
-	float SavedCurrentThirst;
+	float SavedCurrentThirst = 100.f;
 	UPROPERTY()
-	int32 SavedFloor;
+	int32 SavedFloor = 9;
 	UPROPERTY()
-	int32 SavedKills;
+	int32 SavedKills = 0;
 	UPROPERTY()
-	int32 SavedMementos;
+	int32 SavedMementos = 0;
 	UPROPERTY()
 	TArray<FInventorySlot> SavedInventorySlots;
 
