@@ -5,10 +5,13 @@
 #include "Notify/PlayerThrow.h"
 #include "OblivioComponents/SoundPropagationComponent.h"
 #include "OblivioComponents/PlayerCombatComponent.h"
+#include "OblivioComponents/LightAttackComponent.h"
+#include "Weapon/Flashlight.h"
 #include "Items/OblivioItemBase.h"
 #include "Items/OblivioInventoryComponent.h"
 #include "Crafting/OblivioCrafting.h"
 #include "DoorBase.h"
+#include "Memento/FloodLevelActor.h"
 
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -18,10 +21,12 @@
 #include "Kismet/GameplayStatics.h"
 #include "Camera/CameraComponent.h"
 #include "Engine/DamageEvents.h"
+#include "EnhancedInputSubsystems.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/MeshComponent.h"
 #include "Components/PrimitiveComponent.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Components/SceneComponent.h"
 #include "CollisionQueryParams.h"
 #include "Engine/HitResult.h"
 #include "Materials/MaterialInterface.h"
@@ -223,6 +228,41 @@ bool AOblivioCharacter::ShouldTreatHitAsOccluderWall(UPrimitiveComponent const* 
 	}
 
 	return Primitive->GetCollisionEnabled() != ECollisionEnabled::NoCollision;
+}
+
+bool AOblivioCharacter::ShouldApplyWallOcclusionToPrimitive(UPrimitiveComponent const* Prim) const
+{
+	if (!bWallOcclusionRestrictToBaseMaterial)
+	{
+		return true;
+	}
+	if (!IsValid(WallOcclusionAllowedBaseMaterial))
+	{
+		return false;
+	}
+
+	const UMeshComponent* const OcclMesh = Cast<const UMeshComponent>(Prim);
+	if (!OcclMesh)
+	{
+		return false;
+	}
+
+	const int32 NumSlots = OcclMesh->GetNumMaterials();
+	if (NumSlots <= 0)
+	{
+		return false;
+	}
+
+	const int32 Slot = FMath::Clamp(WallOcclusionMaterialMatchSlotIndex, 0, NumSlots - 1);
+	UMaterialInterface* const SlotMat = OcclMesh->GetMaterial(Slot);
+	if (!IsValid(SlotMat))
+	{
+		return false;
+	}
+
+	UMaterial* const SlotBase = SlotMat->GetBaseMaterial();
+	UMaterial* const AllowedBase = WallOcclusionAllowedBaseMaterial->GetBaseMaterial();
+	return SlotBase != nullptr && SlotBase == AllowedBase;
 }
 
 FVector AOblivioCharacter::GetWallOcclusionTraceStartWorld() const
@@ -566,6 +606,10 @@ void AOblivioCharacter::UpdateWallOcclusionDither()
 			{
 				continue;
 			}
+			if (!ShouldApplyWallOcclusionToPrimitive(Comp))
+			{
+				continue;
+			}
 			HitOccludersPrimitives.Add(Comp);
 		}
 	}
@@ -690,6 +734,7 @@ void AOblivioCharacter::Tick(float DeltaTime)
 	if (IsValid(CurrentWeapon)) {
 		CurrentWeapon->SetActorRotation(GetActorRotation());
 	}
+	UpdateFlashlightEmbedPullback(DeltaTime);
 }
 
 void AOblivioCharacter::UpdateStatus(float DeltaTime)
@@ -734,6 +779,35 @@ void AOblivioCharacter::UpdateStatus(float DeltaTime)
 		float BaseSpeed = bIsRunning ? RunSpeed : WalkSpeed;
 		GetCharacterMovement()->MaxWalkSpeed = bIsSlowed ? (BaseSpeed * CurrentSlowMultiplier) : BaseSpeed;
 	}
+
+	// [2층 기믹 추가] 수중 상태 확인
+	bool bIsInWater = IsInWater();
+	float WaterSpeedMultiplier = bIsInWater ? 0.5f : 1.0f; // 수중에서는 50% 감속
+
+	if (bIsStunned)
+	{
+		GetCharacterMovement()->MaxWalkSpeed = 0.0f;
+	}
+	else
+	{
+		float BaseSpeed = bIsRunning ? RunSpeed : WalkSpeed;
+
+		//수중Multiplier와 기존 슬로우Multiplier를 모두 적용
+		float FinalSpeed = BaseSpeed * WaterSpeedMultiplier;
+		if (bIsSlowed) FinalSpeed *= CurrentSlowMultiplier;
+
+		GetCharacterMovement()->MaxWalkSpeed = FinalSpeed;
+	}
+
+	// 수중 이동 시 첨벙거리는 소리로 적에게 위치 노출
+	if (bIsInWater && GetVelocity().Size() > 10.f)
+	{
+		if (IsValid(SoundPropagationComp))
+		{
+			// 물결 소리 전파
+			SoundPropagationComp->PropagateSound();
+		}
+	}
 }
 
 //==========================
@@ -774,70 +848,88 @@ void AOblivioCharacter::ToggleCrafting()
 
 void AOblivioCharacter::Interact()
 {
-	FHitResult HitResult;
-	FVector Start = GetActorLocation();
-	FVector End = Start + (GetActorForwardVector() * InteractionDistance);
-	FCollisionQueryParams Params;
-	Params.AddIgnoredActor(this);
+	// 상호작용할 대상(TargetActor) 하나만 확실하게 정하기
+	AActor* TargetActor = nullptr;
 
-	DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, 1.0f, 0, 2.0f);
-
+	// 우선순위 1: 발밑에 가까이 있는 아이템 (Overlap)
 	if (CurrentNearbyItem)
 	{
-		CurrentNearbyItem->OnInteract(this);
-		if (InventoryComponent && InventoryComponent->AddItem(CurrentNearbyItem))
+		TargetActor = CurrentNearbyItem;
+	}
+	else
+	{
+		// 우선순위 2: 크로스헤어로 쳐다보는 대상 (LineTrace)
+		FHitResult HitResult;
+		FVector Start = GetActorLocation();
+		FVector End = Start + (GetActorForwardVector() * InteractionDistance);
+		FCollisionQueryParams Params;
+		Params.AddIgnoredActor(this);
+
+		DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, 1.0f, 0, 2.0f);
+
+		if (GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility, Params))
 		{
-			CurrentNearbyItem->Destroy();
-			SetNearbyItem(nullptr);
-			return; // 습득 성공 시 종료
+			TargetActor = HitResult.GetActor();
+			UE_LOG(LogTemp, Warning, TEXT("1. Hit Something: %s"), *TargetActor->GetName());
 		}
 	}
 
-	if (GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility, Params))
+	// 상호작용할 대상이 아무것도 없으면 그대로 종료
+	if (!TargetActor) return;
+
+
+	// 문(Door) 상호작용
+	if (ADoorBase* HitDoor = Cast<ADoorBase>(TargetActor))
 	{
-		
-		//추가: 열쇠/유품 획득 시 정보 저장
-		AActor* HitActor = HitResult.GetActor();
-		UE_LOG(LogTemp, Warning, TEXT("1. Hit Something: %s"), *HitActor->GetName());
+		HitDoor->InteractDoor();
+		return;
+	}
 
-		if (ADoorBase* HitDoor = Cast<ADoorBase>(HitActor))
-		{
-			HitDoor->InteractDoor(); // 문 열기 애니메이션 실행!
-			return; // 문을 열었으니 함수 종료
-		}
 
-		if (AOblivioItemBase* PickedItem = Cast<AOblivioItemBase>(HitActor))
-		{
-			PickedItem->OnInteract(this);
-			if (InventoryComponent && InventoryComponent->AddItem(PickedItem))
-			{
-				PickedItem->Destroy();
-				UE_LOG(LogTemp, Warning, TEXT("3. Item Destroyed!"));
-				return;
-			}
-		}
-
-		AOblivioGameMode* GM = Cast<AOblivioGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
-		if (!GM) return;
-
-		if (HitActor->ActorHasTag("Key"))
-		{
-			GM->CollectedKeys++;
-			UE_LOG(LogTemp, Warning, TEXT("You Get a Key! Current: %d / %d"), GM->CollectedKeys, GM->RequiredKeys);
-			HitActor->Destroy();
-		}
-		else if (HitActor->ActorHasTag("Memento"))
+	// 태그 기반 상호작용 (유품, 열쇠, 체크포인트)
+	AOblivioGameMode* GM = Cast<AOblivioGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+	if (GM)
+	{
+		if (TargetActor->ActorHasTag("Memento"))
 		{
 			GM->AddMemento();
 			UE_LOG(LogTemp, Warning, TEXT("Get Memento!"));
-			HitActor->Destroy();
+
+			// 홍수 트리거 확인
+			if (TargetActor->ActorHasTag("FloodTrigger"))
+			{
+				GM->TriggerFloodEvent();
+			}
+
+			if (TargetActor == CurrentNearbyItem) SetNearbyItem(nullptr);
+			TargetActor->Destroy();
+			return;
 		}
-		//체크포인트 상호작용 시 저장
-		else if (HitActor->ActorHasTag("RestArea")) //체크포인트 태그 확인 후 태그명 수정 필요
+		else if (TargetActor->ActorHasTag("RestArea"))
 		{
 			GM->RestInteraction();
+			return;
 		}
-		//----
+	}
+
+
+	// 4. 일반 아이템 (인벤토리 추가)
+	if (AOblivioItemBase* PickedItem = Cast<AOblivioItemBase>(TargetActor))
+	{
+		PickedItem->OnInteract(this);
+
+		if (InventoryComponent && InventoryComponent->AddItem(PickedItem))
+		{
+			if (PickedItem->ActorHasTag("Key") && GM)
+			{
+				GM->CollectedKeys++;
+				UE_LOG(LogTemp, Warning, TEXT("Key Added to Inventory! Current: %d / %d"), GM->CollectedKeys, GM->RequiredKeys);
+			}
+			if (TargetActor == CurrentNearbyItem) SetNearbyItem(nullptr);
+			PickedItem->Destroy();
+			UE_LOG(LogTemp, Warning, TEXT("3. Item Added to Inventory and Destroyed!"));
+			return;
+		}
 	}
 }
 
@@ -906,6 +998,194 @@ void AOblivioCharacter::UpdateFlashlightVisuals()
 	}
 	else {	//Off
 		CurrentWeapon->StopWeapon();
+	}
+}
+
+
+void AOblivioCharacter::UpdateFlashlightEmbedPullback(float DeltaSeconds)
+{
+	UWorld* const World = GetWorld();
+	if (!World || DeltaSeconds <= 0.f)
+	{
+		return;
+	}
+
+	ULightAttackComponent* Lac =
+		IsValid(CurrentWeapon) ? CurrentWeapon->FindComponentByClass<ULightAttackComponent>() : nullptr;
+
+	const bool bWeaponOk =
+		IsValid(CurrentWeapon) && CurrentWeapon->IsA(AFlashlight::StaticClass()) && Lac != nullptr
+		&& Lac->bIsConcentrated && IsValid(Lac->GetSpotLightComp());
+
+	const bool bFlashOn = bIsFlashlightOn && Battery > 0.0f && !bFlashlightForcedOff;
+
+	const bool bWantPull =
+		bFlashlightPullbackFromWallsEnabled && bWeaponOk && bFlashOn;
+
+	const bool bWantAttenClamp = bFlashlightWallAttenuationClampEnabled && bWeaponOk && bFlashOn;
+
+	if (!bWantPull && !bWantAttenClamp)
+	{
+		FlashlightWallPullbackSmoothed = FMath::FInterpTo(FlashlightWallPullbackSmoothed, 0.f, DeltaSeconds,
+			FlashlightWallPullbackInterpSpeed);
+
+		if (FlashlightSpotPullbackWeakKey.IsValid() && bHasFlashlightSpotPullbackBaseline)
+		{
+			if (USpotLightComponent* const Spot = FlashlightSpotPullbackWeakKey.Get())
+			{
+				if (USceneComponent* const Parent = Spot->GetAttachParent())
+				{
+					const FVector MoveWorld = -Spot->GetForwardVector().GetSafeNormal() * FlashlightWallPullbackSmoothed;
+					const FVector PullDeltaLocal = Parent->GetComponentTransform().InverseTransformVectorNoScale(MoveWorld);
+					Spot->SetRelativeLocation(FlashlightSpotBaselineRelative + PullDeltaLocal);
+				}
+				else
+				{
+					Spot->SetRelativeLocation(FlashlightSpotBaselineRelative);
+				}
+			}
+		}
+
+		if (FMath::IsNearlyZero(FlashlightWallPullbackSmoothed, 0.02f))
+		{
+			FlashlightSpotPullbackWeakKey.Reset();
+			bHasFlashlightSpotPullbackBaseline = false;
+			FlashlightSpotBaselineRelative = FVector::ZeroVector;
+		}
+
+		if (bFlashlightAttenuationClampWasApplied && Lac != nullptr && IsValid(Lac->GetSpotLightComp()))
+		{
+			const float RefUU = Lac->LightDistance * 10.f;
+			FlashlightWallAttenuationSmoothedUU = FMath::FInterpTo(
+				FlashlightWallAttenuationSmoothedUU, RefUU, DeltaSeconds, FlashlightWallAttenuationInterpSpeed);
+			Lac->GetSpotLightComp()->SetAttenuationRadius(FlashlightWallAttenuationSmoothedUU);
+			if (FMath::IsNearlyEqual(FlashlightWallAttenuationSmoothedUU, RefUU, 1.f))
+			{
+				bFlashlightAttenuationClampWasApplied = false;
+			}
+		}
+		return;
+	}
+
+	USpotLightComponent* const ActiveSpot = Lac->GetSpotLightComp();
+
+	const FVector TraceStart = GetActorLocation() + FVector(0.f, 0.f, FlashlightWallTraceHeightFromCenter);
+	const FVector AimForward = GetActorForwardVector().GetSafeNormal();
+	const FVector TraceEnd = TraceStart + AimForward * FlashlightWallTraceDistance;
+
+	FHitResult Hit;
+	FCollisionQueryParams QP(FName(TEXT("Flash_wall_embed")), /*bTraceComplex=*/false);
+	QP.AddIgnoredActor(this);
+	if (IsValid(CurrentWeapon))
+	{
+		QP.AddIgnoredActor(CurrentWeapon.Get());
+	}
+
+	const bool bHitWall =
+		World->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, ECC_Visibility, QP) && Hit.bBlockingHit;
+
+	const float ClearAlongFwd =
+		bHitWall ? FMath::Max(Hit.Distance - FlashlightWallEmbedSafetyMargin, KINDA_SMALL_NUMBER)
+				 : FlashlightWallTraceDistance;
+
+	float PullTargetCm = 0.f;
+	if (bWantPull)
+	{
+		if (!FlashlightSpotPullbackWeakKey.IsValid() || FlashlightSpotPullbackWeakKey.Get() != ActiveSpot)
+		{
+			FlashlightWallPullbackSmoothed = 0.f;
+			FlashlightSpotPullbackWeakKey = ActiveSpot;
+			FlashlightSpotBaselineRelative = ActiveSpot->GetRelativeLocation();
+			bHasFlashlightSpotPullbackBaseline = true;
+		}
+
+		const FVector LampWorld = ActiveSpot->GetComponentLocation();
+		const float StickAlongView = FVector::DotProduct(LampWorld - TraceStart, AimForward);
+		PullTargetCm = FMath::Clamp(StickAlongView - ClearAlongFwd, 0.f, FlashlightWallEmbedMaxPullback);
+	}
+
+	if (bWantPull && bHasFlashlightSpotPullbackBaseline)
+	{
+		FlashlightWallPullbackSmoothed = FMath::FInterpTo(
+			FlashlightWallPullbackSmoothed, PullTargetCm, DeltaSeconds, FlashlightWallPullbackInterpSpeed);
+
+		const FVector MoveWorld = -ActiveSpot->GetForwardVector().GetSafeNormal() * FlashlightWallPullbackSmoothed;
+		if (USceneComponent* const Parent = ActiveSpot->GetAttachParent())
+		{
+			const FVector PullDeltaLocal = Parent->GetComponentTransform().InverseTransformVectorNoScale(MoveWorld);
+			ActiveSpot->SetRelativeLocation(FlashlightSpotBaselineRelative + PullDeltaLocal);
+		}
+		else
+		{
+			ActiveSpot->SetRelativeLocation(FlashlightSpotBaselineRelative);
+		}
+	}
+
+	if (!bWantPull)
+	{
+		FlashlightWallPullbackSmoothed = FMath::FInterpTo(
+			FlashlightWallPullbackSmoothed, 0.f, DeltaSeconds, FlashlightWallPullbackInterpSpeed);
+		if (FlashlightSpotPullbackWeakKey.IsValid() && bHasFlashlightSpotPullbackBaseline)
+		{
+			if (USpotLightComponent* const Spot = FlashlightSpotPullbackWeakKey.Get())
+			{
+				if (USceneComponent* const Parent = Spot->GetAttachParent())
+				{
+					const FVector MoveWorld = -Spot->GetForwardVector().GetSafeNormal() * FlashlightWallPullbackSmoothed;
+					const FVector PullDeltaLocal = Parent->GetComponentTransform().InverseTransformVectorNoScale(MoveWorld);
+					Spot->SetRelativeLocation(FlashlightSpotBaselineRelative + PullDeltaLocal);
+				}
+				else
+				{
+					Spot->SetRelativeLocation(FlashlightSpotBaselineRelative);
+				}
+			}
+		}
+		if (FMath::IsNearlyZero(FlashlightWallPullbackSmoothed, 0.02f))
+		{
+			FlashlightSpotPullbackWeakKey.Reset();
+			bHasFlashlightSpotPullbackBaseline = false;
+			FlashlightSpotBaselineRelative = FVector::ZeroVector;
+		}
+	}
+
+	if (bWantAttenClamp)
+	{
+		const float RefCapUU = Lac->LightDistance * 10.f;
+		float TargetAttenuationUU = RefCapUU;
+		if (bHitWall)
+		{
+			const float DistLampToImpact = FVector::Distance(ActiveSpot->GetComponentLocation(), Hit.ImpactPoint);
+			TargetAttenuationUU = FMath::Clamp(
+				DistLampToImpact - FlashlightWallAttenuationMarginUU,
+				FlashlightWallAttenuationMinUU,
+				RefCapUU);
+		}
+
+		if (!bFlashlightAttenuationClampWasApplied)
+		{
+			FlashlightWallAttenuationSmoothedUU = ActiveSpot->AttenuationRadius;
+		}
+		bFlashlightAttenuationClampWasApplied = true;
+
+		FlashlightWallAttenuationSmoothedUU = FMath::FInterpTo(
+			FlashlightWallAttenuationSmoothedUU,
+			TargetAttenuationUU,
+			DeltaSeconds,
+			FlashlightWallAttenuationInterpSpeed);
+
+		ActiveSpot->SetAttenuationRadius(FlashlightWallAttenuationSmoothedUU);
+	}
+	else if (bFlashlightAttenuationClampWasApplied && Lac != nullptr && IsValid(Lac->GetSpotLightComp()))
+	{
+		const float RefUU = Lac->LightDistance * 10.f;
+		FlashlightWallAttenuationSmoothedUU = FMath::FInterpTo(
+			FlashlightWallAttenuationSmoothedUU, RefUU, DeltaSeconds, FlashlightWallAttenuationInterpSpeed);
+		Lac->GetSpotLightComp()->SetAttenuationRadius(FlashlightWallAttenuationSmoothedUU);
+		if (FMath::IsNearlyEqual(FlashlightWallAttenuationSmoothedUU, RefUU, 1.f))
+		{
+			bFlashlightAttenuationClampWasApplied = false;
+		}
 	}
 }
 
@@ -1014,6 +1294,17 @@ void AOblivioCharacter::ApplyHealth(float Damage)
 	// 체력을 차감하고 최소값을 0으로 유지
 	CurrentHealth = FMath::Clamp(CurrentHealth - Damage, 0.0f, MaxHealth);
 
+	if (Damage > 0.0f)
+	{
+
+		if (IsValid(HitCameraShakeClass))
+		{
+			if (APlayerController* PC = Cast<APlayerController>(GetController()))
+			{
+				PC->ClientStartCameraShake(HitCameraShakeClass);
+			}
+		}
+	}
 	//TakeDamage에서 호출하던 델리게이트 이동
 	// 블루프린트나 UI 갱신을 위해 델리게이트 방송
 	OnPlayerDamaged.Broadcast(Damage, CurrentHealth, MaxHealth);
@@ -1054,10 +1345,43 @@ void AOblivioCharacter::GenerateFootstep()
 void AOblivioCharacter::HandleDeath()
 {
 	if (bIsDead) return;
-
 	bIsDead = true;
-	DisableInput(Cast<APlayerController>(GetController()));
 
+	if (bIsFlashlightOn)
+	{
+		bIsFlashlightOn = false;
+		UpdateFlashlightVisuals();
+	}
+
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		if (ULocalPlayer* LocalPlayer = PC->GetLocalPlayer())
+		{
+			if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(LocalPlayer))
+			{
+				Subsystem->ClearAllMappings(); // 점프, 이동 등 모든 입력 끊기
+			}
+		}
+	}
+
+	if (UCapsuleComponent* Capsule = GetCapsuleComponent())
+	{
+		Capsule->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}
+	if (USkeletalMeshComponent* MeshComp = GetMesh())
+	{
+		MeshComp->bPauseAnims = true;
+
+		MeshComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+
+		MeshComp->SetCollisionProfileName(TEXT("Ragdoll"));
+		MeshComp->SetSimulatePhysics(true);
+	}
+	AActor* FloodActor = UGameplayStatics::GetActorOfClass(GetWorld(), AFloodLevelActor::StaticClass());
+	if (FloodActor)
+	{
+		Cast<AFloodLevelActor>(FloodActor)->StopFloodEffects();
+	}
 	if (AOblivioGameMode* GM = Cast<AOblivioGameMode>(UGameplayStatics::GetGameMode(GetWorld())))
 	{
 		GM->GameOver();

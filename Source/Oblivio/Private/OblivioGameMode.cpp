@@ -2,6 +2,7 @@
 #include "OblivioCharacter.h"
 #include "OblivioCharacterController.h"
 #include "OblivioGameInstance.h"
+#include "Memento/FloodLevelActor.h"
 #include "Kismet/GameplayStatics.h"
 
 AOblivioGameMode::AOblivioGameMode()
@@ -114,6 +115,39 @@ EGameEndingType AOblivioGameMode::DetermineEnding()
 	//추가 로직 필요하면 이쪽에
 	UE_LOG(LogTemp, Warning, TEXT("Final Ending Determined: %d"), (int32)FinalEnding);
 	return FinalEnding;
+}
+
+void AOblivioGameMode::TriggerFloodEvent()
+{
+	if (!ActiveFloodActor)
+	{
+		ActiveFloodActor = Cast<AFloodLevelActor>(UGameplayStatics::GetActorOfClass(GetWorld(), AFloodLevelActor::StaticClass()));
+	}
+
+	if (ActiveFloodActor)
+	{
+		ActiveFloodActor->StartFloodEvent();
+
+		GetWorldTimerManager().SetTimer(FloodTimerHandle, this, &AOblivioGameMode::HandleFloodTimeout, 60.0f, false);
+
+		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("비탄의 눈물이 차오릅니다! 1분 안에 탈출하세요!"));
+	}
+}
+void AOblivioGameMode::HandleFloodTimeout()
+{
+	AOblivioCharacter* Player = Cast<AOblivioCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+
+	if (Player && Player->IsAlive())
+	{
+		Player->ApplyHealth(Player->MaxHealth + 100.0f);
+
+		UE_LOG(LogTemp, Warning, TEXT("Flood Event Failed: Player drowned in tears."));
+	}
+
+	if (ActiveFloodActor)
+	{
+		ActiveFloodActor->StopFloodEffects();
+	}
 }
 
 void AOblivioGameMode::GameOver()
