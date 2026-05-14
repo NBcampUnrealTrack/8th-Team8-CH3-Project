@@ -4,6 +4,7 @@
 #include "OblivioCharacter.h"
 #include "Camera/PlayerCameraManager.h" 
 #include "TimerManager.h"
+#include "Sound/SoundBase.h"
 
 ADoorBase::ADoorBase()
 {
@@ -44,7 +45,15 @@ void ADoorBase::InteractDoor_Implementation()
 	}
 	else
 	{
-		// 일반 문 처리
+		bIsOpen = !bIsOpen;
+
+		USoundBase* TargetSound = bIsOpen ? DoorOpenSound : DoorCloseSound;
+
+		// 에셋이 비어있지 않은지 검사 후, 문이 있는 3D 위치에서 재생
+		if (IsValid(TargetSound))
+		{
+			UGameplayStatics::PlaySoundAtLocation(this, TargetSound, GetActorLocation());
+		}
 	}
 }
 
