@@ -32,6 +32,7 @@
 #include "Materials/MaterialInterface.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "DrawDebugHelpers.h"
+#include "Animation/AnimInstance.h"
 #include "Components/AudioComponent.h"
 #include "Sound/SoundBase.h"
 
@@ -1309,7 +1310,6 @@ void AOblivioCharacter::BeginThrow(TSubclassOf<AThrowableWeapon> Weapon)
 		PendingThrowClass = Weapon;
 		bIsThrowing = true;
 	}
-
 }
 
 void AOblivioCharacter::ThrowWeapon() {
@@ -1393,6 +1393,9 @@ void AOblivioCharacter::ApplyHealth(float Damage)
 	{
 		HandleDeath();
 	}
+	else {
+		PlayHitAnim();
+	}
 }
 
 float AOblivioCharacter::TakeDamage(float DamageAmount, const FDamageEvent& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
@@ -1403,6 +1406,17 @@ float AOblivioCharacter::TakeDamage(float DamageAmount, const FDamageEvent& Dama
 
 	return AppliedDamage;
 }
+
+void AOblivioCharacter::PlayHitAnim()
+{
+	UAnimInstance* Anim = GetMesh()->GetAnimInstance();
+
+	if (Anim && !Anim->Montage_IsPlaying(HitMontage)) {
+		PlayAnimMontage(HitMontage);
+	}
+	
+}
+
 
 void AOblivioCharacter::GenerateFootstep()
 {
