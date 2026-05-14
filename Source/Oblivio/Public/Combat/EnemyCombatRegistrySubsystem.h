@@ -12,8 +12,8 @@
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FEnemyCombatRegistryEnemyDelegate, AEnemyBase*, Enemy);
 /** (Enemy, DamageAmount, CurrentHealth, MaxHealth) — TakeDamage 차감 직후. Heal/Set은 부호로 구분. */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FEnemyCombatRegistryDamageDelegate, AEnemyBase*, Enemy, float, DamageAmount, float, CurrentHealth, float, MaxHealth);
-/** (Enemy, Target, DamageAmount) — PerformAttack 판정 통과 직후. */
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FEnemyCombatRegistryAttackDelegate, AEnemyBase*, Enemy, AActor*, Target, float, DamageAmount);
+/** (Enemy, Target, DamageAmount, DamageTypeClass) — nullptr 타입이면 기본 UDamageType. */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FEnemyCombatRegistryAttackDelegate, AEnemyBase*, Enemy, AActor*, Target, float, DamageAmount, UClass*, DamageTypeClass);
 /** (Enemy, Old, New) — FSM 전이. */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FEnemyCombatRegistryFSMDelegate, AEnemyBase*, Enemy, EEnemyAIState, OldState, EEnemyAIState, NewState);
 
@@ -249,7 +249,7 @@ public:
 	/** AEnemyBase가 직접 호출. 외부에서 임의 호출하지 않음. */
 	void NotifyEnemyDamaged(AEnemyBase* Enemy, float DamageAmount, float CurrentHealth, float MaxHealth);
 	void NotifyEnemyDied(AEnemyBase* Enemy);
-	void NotifyEnemyAttackCommitted(AEnemyBase* Enemy, AActor* Target, float DamageAmount);
+	void NotifyEnemyAttackCommitted(AEnemyBase* Enemy, AActor* Target, float DamageAmount, UClass* DamageTypeClass = nullptr);
 	void NotifyEnemyFSMStateChanged(AEnemyBase* Enemy, EEnemyAIState OldState, EEnemyAIState NewState);
 
 private:

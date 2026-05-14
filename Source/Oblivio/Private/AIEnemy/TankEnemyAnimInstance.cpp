@@ -1,0 +1,31 @@
+#include "AIEnemy/TankEnemyAnimInstance.h"
+
+#include "AIEnemy/TankEnemy.h"
+#include "GameFramework/Pawn.h"
+
+void UTankEnemyAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
+{
+	Super::NativeUpdateAnimation(DeltaSeconds);
+
+	TankAnimEnemyState = EEnemyAIState::Idle;
+	EnemyCruntState = EEnemyAIState::Idle;
+	bIsTankHeartbeatAttackChanneling = false;
+	bTankUsesHeartbeatAoEAttack = false;
+
+	APawn* const OwnerPawn = TryGetPawnOwner();
+	const ATankEnemy* const Tank = OwnerPawn ? Cast<ATankEnemy>(OwnerPawn) : nullptr;
+	if (!IsValid(Tank))
+	{
+		return;
+	}
+
+	TankAnimEnemyState = Tank->GetEnemyState();
+	EnemyCruntState = TankAnimEnemyState;
+	if (!Tank->IsAlive())
+	{
+		return;
+	}
+
+	bTankUsesHeartbeatAoEAttack = Tank->UsesHeartbeatAoEAttack();
+	bIsTankHeartbeatAttackChanneling = Tank->IsTankHeartbeatChannelingForAnim();
+}

@@ -25,7 +25,7 @@ protected:
 
 	//공격 로직 함수
 	UFUNCTION()
-	void HandleOwnerAttack(class AEnemyBase* Enemy, AActor* Target, float DamageAmount);
+	void HandleOwnerAttack(class AEnemyBase* Enemy, AActor* Target, float DamageAmount, UClass* DamageTypeClass);
 
 public:
 	//데미지 기준치

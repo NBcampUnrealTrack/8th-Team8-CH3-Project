@@ -18,6 +18,11 @@
 #include "Engine/World.h"
 #include "Crafting/ObstacleBase.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/AudioComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "Materials/MaterialInterface.h"
+#include "Sound/SoundBase.h"
+#include "UObject/ConstructorHelpers.h"
 
 // =============================================================================
 // AEnemyBase 구현 요약
@@ -41,12 +46,49 @@ AEnemyBase::AEnemyBase()
 	GetCharacterMovement()->MaxWalkSpeed = MoveSpeed;
 
 	CombatComp = CreateDefaultSubobject<UEnemyCombatComponent>(TEXT("CombatComp"));
+
+	IdleChaseLocomotionAudioComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("IdleChaseLocomotionAudio"));
+	if (IdleChaseLocomotionAudioComponent)
+	{
+		IdleChaseLocomotionAudioComponent->SetupAttachment(RootComponent);
+		IdleChaseLocomotionAudioComponent->bAutoActivate = false;
+		IdleChaseLocomotionAudioComponent->bStopWhenOwnerDestroyed = true;
+	}
+
+	MeleeAttackRangeIndicatorMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeleeAttackRangeIndicator"));
+	if (MeleeAttackRangeIndicatorMesh)
+	{
+		MeleeAttackRangeIndicatorMesh->SetupAttachment(RootComponent);
+		MeleeAttackRangeIndicatorMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		MeleeAttackRangeIndicatorMesh->SetGenerateOverlapEvents(false);
+		MeleeAttackRangeIndicatorMesh->SetCastShadow(false);
+		MeleeAttackRangeIndicatorMesh->SetHiddenInGame(true);
+
+		static ConstructorHelpers::FObjectFinder<UStaticMesh> CylinderAsset(TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
+		if (CylinderAsset.Succeeded())
+		{
+			MeleeAttackRangeIndicatorMesh->SetStaticMesh(CylinderAsset.Object);
+		}
+	}
+}
+
+EEnemyAIState AEnemyBase::GetEnemyState() const
+{
+	return bCCStunned ? EEnemyAIState::Stunned : EnemyState;
 }
 
 // 생존·체력·첫 FSM. 패트롤 포인트가 있으면 플레이어 없을 때 Patrol로 시작 가능.
 void AEnemyBase::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (IdleChaseLocomotionAudioComponent)
+	{
+		IdleChaseLocomotionAudioComponent->OnAudioFinished.RemoveDynamic(
+			this, &AEnemyBase::OnIdleChaseLocomotionAmbientPlaybackFinished);
+		IdleChaseLocomotionAudioComponent->OnAudioFinished.AddDynamic(
+			this, &AEnemyBase::OnIdleChaseLocomotionAmbientPlaybackFinished);
+	}
 
 	CurrentHealth = MaxHealth;
 	RefreshWalkSpeedFromSources();
@@ -61,7 +103,7 @@ void AEnemyBase::BeginPlay()
 	{
 		LastKnownTargetLocation = TargetActor->GetActorLocation();
 		bHadAggroLastTick = true;
-		SetEnemyState(IsTargetInAttackRange() ? EEnemyAIState::Attack : EEnemyAIState::Chase);
+		SetEnemyState(SelectStateWhileAggroed());
 	}
 	else if (!PatrolPoints.IsEmpty())
 	{
@@ -80,6 +122,13 @@ void AEnemyBase::BeginPlay()
 		IdleWanderRetargetCooldown = FMath::FRandRange(0.5f, 2.0f);
 	}
 
+	UpdateIdleChaseLocomotionAmbientForFsmState(EnemyState);
+
+	if (MeleeAttackRangeIndicatorMesh && MeleeAttackRangeIndicatorMaterial)
+	{
+		MeleeAttackRangeIndicatorMesh->SetMaterial(0, MeleeAttackRangeIndicatorMaterial);
+	}
+
 	if (UWorld* World = GetWorld())
 	{
 		if (UEnemyCombatRegistrySubsystem* Reg = World->GetSubsystem<UEnemyCombatRegistrySubsystem>())
@@ -91,6 +140,26 @@ void AEnemyBase::BeginPlay()
 
 void AEnemyBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(IdleChaseLocomotionAmbientFadeTimerHandle);
+	}
+	if (IdleChaseLocomotionAudioComponent)
+	{
+		IdleChaseLocomotionAudioComponent->OnAudioFinished.RemoveDynamic(
+			this, &AEnemyBase::OnIdleChaseLocomotionAmbientPlaybackFinished);
+
+		const EAudioComponentPlayState PS = IdleChaseLocomotionAudioComponent->GetPlayState();
+		if (PS == EAudioComponentPlayState::Playing || PS == EAudioComponentPlayState::FadingIn
+			|| PS == EAudioComponentPlayState::FadingOut)
+		{
+			IdleChaseLocomotionAudioComponent->FadeOut(
+				FMath::Max(0.05f, IdleChaseLocomotionAmbientFadeOutDuration),
+				0.f,
+				EAudioFaderCurve::Linear);
+		}
+	}
+
 	if (UWorld* World = GetWorld())
 	{
 		if (UEnemyCombatRegistrySubsystem* Reg = World->GetSubsystem<UEnemyCombatRegistrySubsystem>())
@@ -106,6 +175,8 @@ void AEnemyBase::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
+	UpdateMeleeAttackRangeIndicatorVisual();
+
 	if (!IsAlive())
 	{
 		return;
@@ -120,6 +191,7 @@ void AEnemyBase::Tick(float DeltaSeconds)
 	UpdateState();
 
 	DrawAggroDebug();
+	DrawDebugCombatExtras();
 
 	if (bCCStunned)
 	{
@@ -132,7 +204,8 @@ void AEnemyBase::Tick(float DeltaSeconds)
 		return;
 	}
 
-	switch (EnemyState)
+	// Tank 심작 등: 파생의 GetEnemyState()(복제 안 되는 EnemyState 보정 포함)와 스위치 일치
+	switch (GetEnemyState())
 	{
 	case EEnemyAIState::Idle:
 		UpdateIdle(DeltaSeconds);
@@ -147,6 +220,8 @@ void AEnemyBase::Tick(float DeltaSeconds)
 		break;
 	case EEnemyAIState::Attack:
 		UpdateAttack();
+		break;
+	case EEnemyAIState::Heartbeat:
 		break;
 	case EEnemyAIState::Patrol:
 		UpdatePatrol(DeltaSeconds);
@@ -465,6 +540,29 @@ bool AEnemyBase::HasValidAggroTarget() const
 	return DistSq <= FMath::Square(AggroRadius);
 }
 
+EEnemyAIState AEnemyBase::SelectStateWhileAggroed() const
+{
+	return IsTargetInAttackRange() ? EEnemyAIState::Attack : EEnemyAIState::Chase;
+}
+
+bool AEnemyBase::TryConsumeSpecialFSMUpdate()
+{
+	return false;
+}
+
+void AEnemyBase::ApplyAggroCombatTransientCleanup()
+{
+	ClearLightTrackState();
+	if (IsValid(TargetActor))
+	{
+		LastKnownTargetLocation = TargetActor->GetActorLocation();
+	}
+	SearchTimeRemaining = 0.0f;
+	SearchRetargetCooldown = 0.0f;
+	bHasPendingInvestigate = false;
+	bHadAggroLastTick = true;
+}
+
 // 어그로 → Chase/Attack, 없으면 TrackLight(옵션) → 방금 놓침 Search → 자극 Investigate → …
 void AEnemyBase::UpdateState()
 {
@@ -474,17 +572,17 @@ void AEnemyBase::UpdateState()
 		return;
 	}
 
+	if (TryConsumeSpecialFSMUpdate())
+	{
+		return;
+	}
+
 	const bool bAggro = HasValidAggroTarget();
 
 	if (bAggro)
 	{
-		ClearLightTrackState();
-		LastKnownTargetLocation = TargetActor->GetActorLocation();
-		SearchTimeRemaining = 0.0f;
-		SearchRetargetCooldown = 0.0f;
-		bHasPendingInvestigate = false;
-		SetEnemyState(IsTargetInAttackRange() ? EEnemyAIState::Attack : EEnemyAIState::Chase);
-		bHadAggroLastTick = true;
+		ApplyAggroCombatTransientCleanup();
+		SetEnemyState(SelectStateWhileAggroed());
 		return;
 	}
 
@@ -1081,17 +1179,28 @@ void AEnemyBase::CommitAttackFromAnimNotify(AActor* OptionalTargetOverride)
 
 void AEnemyBase::DispatchEnemyAttackCommitted(AActor* Target)
 {
+	DispatchEnemyAttackCommitted(Target, AttackDamage, nullptr);
+}
+
+void AEnemyBase::DispatchEnemyAttackCommitted(AActor* Target, float DamageAmount)
+{
+	DispatchEnemyAttackCommitted(Target, DamageAmount, nullptr);
+}
+
+void AEnemyBase::DispatchEnemyAttackCommitted(AActor* Target, float DamageAmount, TSubclassOf<UDamageType> DamageTypeClass)
+{
 	if (!IsValid(Target))
 	{
 		return;
 	}
 
-	OnEnemyAttackCommitted.Broadcast(this, Target, AttackDamage);
+	UClass* const TypePtr = DamageTypeClass.Get();
+	OnEnemyAttackCommitted.Broadcast(this, Target, DamageAmount, TypePtr);
 	if (UWorld* World = GetWorld())
 	{
 		if (UEnemyCombatRegistrySubsystem* Reg = World->GetSubsystem<UEnemyCombatRegistrySubsystem>())
 		{
-			Reg->NotifyEnemyAttackCommitted(this, Target, AttackDamage);
+			Reg->NotifyEnemyAttackCommitted(this, Target, DamageAmount, TypePtr);
 		}
 	}
 }
@@ -1141,7 +1250,7 @@ void AEnemyBase::UpdateIdle(float DeltaSeconds)
 	// 어그로가 생긴 채로 Idle에 남아 있는 경우(AggroRadius=0 등) 즉시 Chase로 전환
 	if (HasValidAggroTarget())
 	{
-		SetEnemyState(EEnemyAIState::Chase);
+		SetEnemyState(SelectStateWhileAggroed());
 		return;
 	}
 
@@ -1273,6 +1382,11 @@ void AEnemyBase::Die()
 	SetEnemyState(EEnemyAIState::Dead);
 	StopEnemyMovement();
 
+	if (MeleeAttackRangeIndicatorMesh)
+	{
+		MeleeAttackRangeIndicatorMesh->SetVisibility(false);
+	}
+
 	GetWorldTimerManager().ClearTimer(CCSlowTimerHandle);
 	GetWorldTimerManager().ClearTimer(CCStunTimerHandle);
 	bCCSlowActive = false;
@@ -1298,10 +1412,10 @@ void AEnemyBase::Die()
 	}
 }
 
-// 동일 상태면 무시(로그 스팸 방지). Verbose 로그만 출력
-void AEnemyBase::SetEnemyState(EEnemyAIState NewState)
+// 동일 상태면 무시(bForce 시 이속·Chase 초기화 등 갱신 — 심작 종료 후 추격 재개 등).
+void AEnemyBase::SetEnemyState(EEnemyAIState NewState, bool bForce)
 {
-	if (EnemyState == NewState)
+	if (!bForce && EnemyState == NewState)
 	{
 		return;
 	}
@@ -1354,6 +1468,221 @@ void AEnemyBase::SetEnemyState(EEnemyAIState NewState)
 	UE_LOG(LogTemp, Verbose, TEXT("%s state changed to %s"), *GetNameSafe(this), *UEnum::GetValueAsString(EnemyState));
 }
 
+void AEnemyBase::NotifyEnemyStateChanged(EEnemyAIState OldState, EEnemyAIState NewState)
+{
+	(void)OldState;
+	UpdateIdleChaseLocomotionAmbientForFsmState(NewState);
+}
+
+AEnemyBase::ELocomotionAmbientLayer AEnemyBase::LocomotionAmbientLayerFromFsmState(EEnemyAIState State)
+{
+	switch (State)
+	{
+	case EEnemyAIState::Idle:
+		return ELocomotionAmbientLayer::Idle;
+	case EEnemyAIState::Chase:
+	case EEnemyAIState::Attack:
+	case EEnemyAIState::Heartbeat:
+		return ELocomotionAmbientLayer::Chase;
+	default:
+		return ELocomotionAmbientLayer::None;
+	}
+}
+
+USoundBase* AEnemyBase::GetLocomotionAmbientSoundForLayer(ELocomotionAmbientLayer Layer) const
+{
+	switch (Layer)
+	{
+	case ELocomotionAmbientLayer::Idle:
+		return IdleLocomotionAmbientSound.Get();
+	case ELocomotionAmbientLayer::Chase:
+		return ChaseLocomotionAmbientSound.Get();
+	default:
+		return nullptr;
+	}
+}
+
+void AEnemyBase::ApplyIdleChaseLocomotionAmbientVolume()
+{
+	if (!IdleChaseLocomotionAudioComponent)
+	{
+		return;
+	}
+
+	const float CombinedVol = FMath::Max(0.0f, EnemySoundVolumeMultiplier);
+	IdleChaseLocomotionAudioComponent->SetVolumeMultiplier(CombinedVol);
+}
+
+void AEnemyBase::StopIdleChaseLocomotionAmbientImmediate()
+{
+	if (!IdleChaseLocomotionAudioComponent)
+	{
+		return;
+	}
+
+	const bool bPrevSuppress = bIdleChaseLocomotionAmbientSuppressFinished;
+	bIdleChaseLocomotionAmbientSuppressFinished = true;
+	IdleChaseLocomotionAudioComponent->Stop();
+	CurrentLocomotionAmbientLayer = ELocomotionAmbientLayer::None;
+	bIdleChaseLocomotionAmbientSuppressFinished = bPrevSuppress;
+}
+
+void AEnemyBase::StartIdleChaseLocomotionAmbientPlay(ELocomotionAmbientLayer Layer, USoundBase* Sound)
+{
+	if (!IdleChaseLocomotionAudioComponent || !Sound)
+	{
+		return;
+	}
+
+	bIdleChaseLocomotionAmbientSuppressFinished = true;
+	IdleChaseLocomotionAudioComponent->Stop();
+	IdleChaseLocomotionAudioComponent->SetSound(Sound);
+	ApplyIdleChaseLocomotionAmbientVolume();
+	CurrentLocomotionAmbientLayer = Layer;
+	bIdleChaseLocomotionAmbientSuppressFinished = false;
+
+	IdleChaseLocomotionAudioComponent->FadeIn(
+		FMath::Max(0.02f, IdleChaseLocomotionAmbientFadeInDuration),
+		1.f,
+		0.f,
+		EAudioFaderCurve::Linear);
+}
+
+void AEnemyBase::UpdateIdleChaseLocomotionAmbientForFsmState(EEnemyAIState NewState)
+{
+	if (!IdleChaseLocomotionAudioComponent || !GetWorld())
+	{
+		return;
+	}
+
+	UWorld* const World = GetWorld();
+	const ELocomotionAmbientLayer DesiredLayer = LocomotionAmbientLayerFromFsmState(NewState);
+	USoundBase* const DesiredSound = GetLocomotionAmbientSoundForLayer(DesiredLayer);
+
+	const auto IsPlaybackActiveOrFading = [](EAudioComponentPlayState PS) -> bool {
+		return PS == EAudioComponentPlayState::Playing || PS == EAudioComponentPlayState::FadingIn
+			|| PS == EAudioComponentPlayState::FadingOut;
+	};
+
+	const EAudioComponentPlayState CurrentPlayState = IdleChaseLocomotionAudioComponent->GetPlayState();
+	const bool bAudioBusy = IsPlaybackActiveOrFading(CurrentPlayState);
+
+	const bool bWantSilence = (DesiredLayer == ELocomotionAmbientLayer::None || DesiredSound == nullptr);
+
+	if (bWantSilence)
+	{
+		World->GetTimerManager().ClearTimer(IdleChaseLocomotionAmbientFadeTimerHandle);
+
+		if (!bAudioBusy && CurrentLocomotionAmbientLayer == ELocomotionAmbientLayer::None)
+		{
+			return;
+		}
+
+		bIdleChaseLocomotionAmbientSuppressFinished = true;
+
+		if (bAudioBusy)
+		{
+			const float Fo = FMath::Max(0.05f, IdleChaseLocomotionAmbientFadeOutDuration);
+			IdleChaseLocomotionAudioComponent->FadeOut(Fo, 0.f, EAudioFaderCurve::Linear);
+			World->GetTimerManager().SetTimer(
+				IdleChaseLocomotionAmbientFadeTimerHandle,
+				this,
+				&AEnemyBase::OnIdleChaseLocomotionAmbientFadeFinished,
+				Fo,
+				false);
+		}
+		else
+		{
+			StopIdleChaseLocomotionAmbientImmediate();
+			bIdleChaseLocomotionAmbientSuppressFinished = false;
+		}
+
+		return;
+	}
+
+	if (DesiredLayer == CurrentLocomotionAmbientLayer && IdleChaseLocomotionAudioComponent->GetSound() == DesiredSound)
+	{
+		if (IsPlaybackActiveOrFading(CurrentPlayState))
+		{
+			return;
+		}
+	}
+
+	World->GetTimerManager().ClearTimer(IdleChaseLocomotionAmbientFadeTimerHandle);
+
+	bIdleChaseLocomotionAmbientSuppressFinished = true;
+
+	if (bAudioBusy)
+	{
+		const float Fo = FMath::Max(0.05f, IdleChaseLocomotionAmbientFadeOutDuration);
+		IdleChaseLocomotionAudioComponent->FadeOut(Fo, 0.f, EAudioFaderCurve::Linear);
+		World->GetTimerManager().SetTimer(
+			IdleChaseLocomotionAmbientFadeTimerHandle,
+			this,
+			&AEnemyBase::OnIdleChaseLocomotionAmbientFadeFinished,
+			Fo,
+			false);
+	}
+	else
+	{
+		bIdleChaseLocomotionAmbientSuppressFinished = false;
+		StartIdleChaseLocomotionAmbientPlay(DesiredLayer, DesiredSound);
+	}
+}
+
+void AEnemyBase::OnIdleChaseLocomotionAmbientFadeFinished()
+{
+	bIdleChaseLocomotionAmbientSuppressFinished = false;
+
+	if (!IdleChaseLocomotionAudioComponent)
+	{
+		return;
+	}
+
+	const ELocomotionAmbientLayer DesiredLayer = LocomotionAmbientLayerFromFsmState(EnemyState);
+	USoundBase* const DesiredSound = GetLocomotionAmbientSoundForLayer(DesiredLayer);
+
+	if (DesiredLayer == ELocomotionAmbientLayer::None || DesiredSound == nullptr)
+	{
+		bIdleChaseLocomotionAmbientSuppressFinished = true;
+		IdleChaseLocomotionAudioComponent->Stop();
+		CurrentLocomotionAmbientLayer = ELocomotionAmbientLayer::None;
+		bIdleChaseLocomotionAmbientSuppressFinished = false;
+		return;
+	}
+
+	StartIdleChaseLocomotionAmbientPlay(DesiredLayer, DesiredSound);
+}
+
+void AEnemyBase::OnIdleChaseLocomotionAmbientPlaybackFinished()
+{
+	if (bIdleChaseLocomotionAmbientSuppressFinished || !IdleChaseLocomotionAudioComponent)
+	{
+		return;
+	}
+
+	const ELocomotionAmbientLayer WantLayer = LocomotionAmbientLayerFromFsmState(EnemyState);
+	USoundBase* const ExpectedSound = GetLocomotionAmbientSoundForLayer(WantLayer);
+
+	if (WantLayer == ELocomotionAmbientLayer::None || ExpectedSound == nullptr)
+	{
+		return;
+	}
+
+	if (WantLayer != CurrentLocomotionAmbientLayer)
+	{
+		return;
+	}
+
+	if (IdleChaseLocomotionAudioComponent->GetSound() != ExpectedSound)
+	{
+		return;
+	}
+
+	ApplyIdleChaseLocomotionAmbientVolume();
+	IdleChaseLocomotionAudioComponent->Play();
+}
+
 // AttackRange 제곱 거리로 근접 판정
 bool AEnemyBase::IsTargetInAttackRange() const
 {
@@ -1382,6 +1711,13 @@ void AEnemyBase::RefreshWalkSpeedFromSources()
 		return;
 	}
 
+	// 탱커 심작·Luxeater 차징 등: Chase 이속이 남으면 ABP 속도 블렌드가 심작/차징 위에 덮임
+	if (ShouldSuppressAILocomotion())
+	{
+		GetCharacterMovement()->MaxWalkSpeed = 0.0f;
+		return;
+	}
+
 	const float CCSlowMult = bCCSlowActive ? CCSlowSpeedMultiplier : 1.0f;
 	const float BaseSpeed = GetLocomotionBaseSpeed();
 	GetCharacterMovement()->MaxWalkSpeed = BaseSpeed * CCSlowMult;
@@ -1389,10 +1725,12 @@ void AEnemyBase::RefreshWalkSpeedFromSources()
 
 float AEnemyBase::GetLocomotionBaseSpeed() const
 {
+	const EEnemyAIState LocState = GetEnemyState();
 	const bool bCombatLocomotion =
-		EnemyState == EEnemyAIState::Chase ||
-		EnemyState == EEnemyAIState::Attack ||
-		EnemyState == EEnemyAIState::TrackLight;
+		LocState == EEnemyAIState::Chase ||
+		LocState == EEnemyAIState::Attack ||
+		LocState == EEnemyAIState::Heartbeat ||
+		LocState == EEnemyAIState::TrackLight;
 	if (bCombatLocomotion && ChaseMoveSpeed > KINDA_SMALL_NUMBER)
 	{
 		return ChaseMoveSpeed;
@@ -1448,6 +1786,41 @@ void AEnemyBase::DrawAggroDebug()
 #endif
 }
 
+void AEnemyBase::DrawDebugCombatExtras()
+{
+}
+
+void AEnemyBase::UpdateMeleeAttackRangeIndicatorVisual()
+{
+	if (!MeleeAttackRangeIndicatorMesh)
+	{
+		return;
+	}
+
+	const bool bShouldShow =
+		ShouldShowMeleeAttackRangeIndicator() && IsAlive() && IsValid(MeleeAttackRangeIndicatorMaterial);
+
+	const float RadiusCm = GetMeleeAttackRangeIndicatorRadiusCm();
+
+	if (!bShouldShow || RadiusCm <= KINDA_SMALL_NUMBER || MeleeAttackRangeIndicatorBuiltInSphereRadiusUU <= KINDA_SMALL_NUMBER)
+	{
+		MeleeAttackRangeIndicatorMesh->SetVisibility(false);
+		MeleeAttackRangeIndicatorMesh->SetHiddenInGame(true);
+		return;
+	}
+
+	if (const UCapsuleComponent* Cap = GetCapsuleComponent())
+	{
+		MeleeAttackRangeIndicatorMesh->SetRelativeLocation(FVector(0.f, 0.f, -Cap->GetScaledCapsuleHalfHeight()));
+	}
+
+	const float XYScale = RadiusCm / MeleeAttackRangeIndicatorBuiltInSphereRadiusUU;
+	const float ZScale = FMath::Clamp(MeleeAttackRangeIndicatorDiskThicknessScale, 0.001f, 2.f);
+	MeleeAttackRangeIndicatorMesh->SetRelativeScale3D(FVector(XYScale, XYScale, ZScale));
+	MeleeAttackRangeIndicatorMesh->SetHiddenInGame(false);
+	MeleeAttackRangeIndicatorMesh->SetVisibility(true);
+}
+
 void AEnemyBase::SetEnemySoundVolumeMultiplier(float NewMultiplier)
 {
 	EnemySoundVolumeMultiplier = FMath::Clamp(NewMultiplier, 0.0f, 4.0f);
@@ -1456,6 +1829,13 @@ void AEnemyBase::SetEnemySoundVolumeMultiplier(float NewMultiplier)
 
 void AEnemyBase::ApplyEnemySoundVolumes()
 {
+	const EAudioComponentPlayState PS =
+		IdleChaseLocomotionAudioComponent ? IdleChaseLocomotionAudioComponent->GetPlayState() : EAudioComponentPlayState::Stopped;
+	if (PS == EAudioComponentPlayState::Playing || PS == EAudioComponentPlayState::FadingIn
+		|| PS == EAudioComponentPlayState::FadingOut)
+	{
+		ApplyIdleChaseLocomotionAmbientVolume();
+	}
 }
 
 void AEnemyBase::ApplyHealth(float Damage) {	//전투 컴포넌트 체력 업데이트용
