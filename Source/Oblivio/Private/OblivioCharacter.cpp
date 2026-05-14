@@ -836,7 +836,6 @@ void AOblivioCharacter::Interact()
 		else if (HitActor->ActorHasTag("RestArea")) //체크포인트 태그 확인 후 태그명 수정 필요
 		{
 			GM->RestInteraction();
-				//아래에 체크포인트 시 회복 등 넣을 수 있음
 		}
 		//----
 	}
