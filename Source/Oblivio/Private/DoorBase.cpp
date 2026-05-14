@@ -55,13 +55,14 @@ void ADoorBase::ExecuteLevelTransition()
 
 	if (GI && Player)
 	{
+		FString SlotName = "Slot1";
 		GI->CurrentHealth = Player->CurrentHealth;
 		GI->CurrentBattery = Player->Battery;
 		GI->CurrentHunger = Player->Hunger;
 		GI->CurrentThirst = Player->Thirst;
 		GI->CurrentFloor += 1;
 
-		GI->SaveGameData(); // 자동 저장
+		GI->SaveGameData(SlotName); // 자동 저장
 
 		if (!NextLevelName.IsNone())
 		{

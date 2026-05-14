@@ -1059,7 +1059,29 @@ void AEnemyBase::UpdateAttack()
 // 기본 근접: 범위 내 공격 가능 판단만 브로드캐스트. 실제 공격 방식은 전투 시스템/BP에서 담당.
 void AEnemyBase::PerformAttack_Implementation(AActor* Target)
 {
-	if (!IsValid(Target) || !IsTargetInAttackRange())
+	(void)Target;
+	// 근접 타격은 UEnemyMeleeCommitNotify → CommitAttackFromAnimNotify 에서 처리. BP/C++ 전용 공격은 PerformAttack 을 오버라이드.
+}
+
+void AEnemyBase::CommitAttackFromAnimNotify(AActor* OptionalTargetOverride)
+{
+	if (!IsAlive())
+	{
+		return;
+	}
+
+	AActor* const HitTarget = IsValid(OptionalTargetOverride) ? OptionalTargetOverride : TargetActor.Get();
+	if (!IsValid(HitTarget))
+	{
+		return;
+	}
+
+	DispatchEnemyAttackCommitted(HitTarget);
+}
+
+void AEnemyBase::DispatchEnemyAttackCommitted(AActor* Target)
+{
+	if (!IsValid(Target))
 	{
 		return;
 	}

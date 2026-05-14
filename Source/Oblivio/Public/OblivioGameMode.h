@@ -39,6 +39,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Level")
 	void RestInteraction();
 
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "UI")
+	void OpenSaveMenuUI();
+
 	UFUNCTION(BlueprintCallable, Category = "Karma")
 	void AddMonsterKill();
 

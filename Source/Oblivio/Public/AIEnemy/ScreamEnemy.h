@@ -9,7 +9,7 @@
 //   2) Transit   : TransitSeconds(기본 0.18초) 동안 현재 위치 → SnapshotLocation
 //                  으로 직선 초고속 보간(벽 통과). 한 프레임 텔레포트가 아니라
 //                  연속 위치 업데이트로 “순식간에 끊겨 이동” 체감.
-//   3) Attack    : 도착 직후 PerformAttack(TargetActor) 1회 → 전투 시스템 위임.
+//   3) Attack    : 도착 직후 CommitAttackFromAnimNotify 1회(블링크 유효 거리 검사 포함) → 전투 레지스트리.
 //   4) Root      : PostBlinkRootSeconds(기본 3초) 동안 착지 좌표에 고정 — 이동/추격
 //                  입력 없음. 플레이어의 반격·거리 벌리기 윈도.
 //   5) Cooldown  : AbilityCooldownSeconds(기본 90초) 동안 능력 봉인. 이 동안은
@@ -83,6 +83,9 @@ public:
 
 	/** 광원 누적값 갱신 — 임계 도달 시 라이트 스턴 트리거. */
 	virtual void OnLightHit(float Intensity, float Duration) override;
+
+	/** 블링크 착지(코드) 또는 노티 공통 — BlinkLanding 거리 초과 시 히트 무효 */
+	virtual void CommitAttackFromAnimNotify(AActor* OptionalTargetOverride = nullptr) override;
 
 	UPROPERTY(BlueprintAssignable, Category = "Enemy|Scream|Events")
 	FScreamAbilityPhaseChangedSignature OnAbilityPhaseChanged;
@@ -189,6 +192,13 @@ protected:
 	/** Grace 만료 후 누적 감소 속도 배수(초당 LightStunBuildupSeconds 의 몇 배만큼 깎을지). 기본 2.0 → 누적 3초가 1.5초만에 0. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Scream|CC", meta = (ClampMin = "0.0"))
 	float LightExposureDecayRate = 2.0f;
+
+	/**
+	 * 블링크 착지 후 Commit 에서 현재 타겟과의 거리가 이(cm) 초과면 히트 취소.
+	 * 차지 중 플레이어 이동을 허용하려면 공격 거리보다 크게 두고, 착지만으로 항상 맞히려면 0.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Scream|Combat", meta = (ClampMin = "0.0"))
+	float BlinkLandingDamageMaxTargetDistanceCm = 900.0f;
 
 	/** 디버그: 현재 능력 페이즈/스냅샷 좌표/Transit 보간 라인을 그린다. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Scream|Debug")

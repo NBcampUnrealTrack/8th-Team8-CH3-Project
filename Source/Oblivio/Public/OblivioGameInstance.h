@@ -27,9 +27,9 @@ public:
 
 	//세이브/로드 함수
 	UFUNCTION(BlueprintCallable, Category = "SaveSystem")
-	void SaveGameData();
+	void SaveGameData(FString SlotName);
 	UFUNCTION(BlueprintCallable, Category = "SaveSystem")
-	void LoadGameData();
+	void LoadGameData(FString SlotName);
 
 	//게임 도중 계속 유지되어야 하는 자원 정보
 	//인벤토리
@@ -62,4 +62,7 @@ public:
 	//레벨 이름 저장하는 맵
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Game Data")
 	TMap<int32, FName> FloorMapNames;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+	bool bIsSaveMode = false;
 };

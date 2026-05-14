@@ -8,7 +8,7 @@
 //   - 불사: Die()는 no-op — CurrentHealth를 1로 클램프해 사망 판정 차단.
 //   - 암전 능력: 3분(BlackoutCooldown)마다 플레이어 후레시를 5초(BlackoutDuration) 강제 OFF.
 //     플레이어 거리·범위 무관하게 발동한다.
-//   - 공포 공격: 근접 공격 히트 시 플레이어 이동 방향을 MovementInversionDuration초 반전.
+//   - 공포 공격: Anim Notify 의 Commit 타이밍에 플레이어 이동 방향을 MovementInversionDuration초 반전.
 // =============================================================================
 
 #include "CoreMinimal.h"
@@ -32,6 +32,9 @@ public:
 	/** 불사 — HP가 0 이하가 돼도 사망하지 않는다. */
 	virtual void Die() override;
 
+	/** 헤드리스 공포 타격: 노티 타이밍에 이동 반전 + 브로드캐스트. */
+	virtual void CommitAttackFromAnimNotify(AActor* OptionalTargetOverride = nullptr) override;
+
 	/** 소리에 반응하지 않는다. */
 	virtual bool IsSoundInvestigationEnabled() const override { return false; }
 
@@ -50,9 +53,6 @@ public:
 	/** 근접 공격 히트 시 이동 반전 지속 시간(초). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|HeadlessLover|Fear", meta = (ClampMin = "0.1"))
 	float MovementInversionDuration = 5.0f;
-
-protected:
-	virtual void PerformAttack_Implementation(AActor* Target) override;
 
 private:
 	FTimerHandle BlackoutPulseTimer;

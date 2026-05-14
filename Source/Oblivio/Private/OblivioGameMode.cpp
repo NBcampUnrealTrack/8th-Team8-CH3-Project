@@ -60,11 +60,9 @@ void AOblivioGameMode::NextFloor()
 // 체크포인트에서 상호작용 시 세이브할 경우
 void AOblivioGameMode::RestInteraction()
 {
-	if (UOblivioGameInstance* GI = Cast<UOblivioGameInstance>(GetGameInstance()))
-	{
-		GI->SaveGameData();
-		UE_LOG(LogTemp, Warning, TEXT("Rest Area: Checkpoint Reached and Saved."));
-	}
+	UOblivioGameInstance* GI = Cast<UOblivioGameInstance>(GetGameInstance());
+	GI->bIsSaveMode = true;
+	OpenSaveMenuUI();
 }
 
 /* //메뉴 진입해서 수동 세이브할 경우
