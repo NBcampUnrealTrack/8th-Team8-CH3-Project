@@ -32,6 +32,8 @@
 #include "Materials/MaterialInterface.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "DrawDebugHelpers.h"
+#include "Components/AudioComponent.h"
+#include "Sound/SoundBase.h"
 
 namespace
 {
@@ -90,6 +92,11 @@ AOblivioCharacter::AOblivioCharacter()
 	InventoryComponent = CreateDefaultSubobject<UOblivioInventoryComponent>(TEXT("InventoryComponent"));
 
 	WheelControlMultiplier = 3.f;
+
+	// [추가] 체력 저하 사운드 전용 오디오 컴포넌트 생성
+	LowHealthAudioComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("LowHealthAudioComponent"));
+	LowHealthAudioComponent->SetupAttachment(RootComponent);
+	LowHealthAudioComponent->bAutoActivate = false;
 }
 
 void AOblivioCharacter::RemoveWallOcclusionVisualFromOccluder(UPrimitiveComponent* Prim)
@@ -780,6 +787,38 @@ void AOblivioCharacter::UpdateStatus(float DeltaTime)
 		GetCharacterMovement()->MaxWalkSpeed = bIsSlowed ? (BaseSpeed * CurrentSlowMultiplier) : BaseSpeed;
 	}
 
+	// [사운드 추가] 체력 저하 시 과호흡/심박수 사운드 재생
+	if (IsValid(LowHealthAudioComponent) && IsValid(LowHealthSound))
+	{
+		// 컴포넌트에 사운드가 세팅 안 되어있다면 한 번 세팅
+		if (LowHealthAudioComponent->GetSound() != LowHealthSound)
+		{
+			LowHealthAudioComponent->SetSound(LowHealthSound);
+		}
+
+		// 체력이 임계점 이하이고, 살아있을 때
+		if (CurrentHealth <= LowHealthThreshold && !bIsDead)
+		{
+			if (!LowHealthAudioComponent->IsPlaying())
+			{
+				LowHealthAudioComponent->Play();
+			}
+
+			// (호러 디테일) 체력이 0에 가까워질수록 심장 소리/호흡이 1.5배까지 빨라짐
+			float HealthRatio = CurrentHealth / LowHealthThreshold; // 1.0 -> 0.0으로 감소
+			float DynamicPitch = FMath::Lerp(1.5f, 1.0f, HealthRatio);
+			LowHealthAudioComponent->SetPitchMultiplier(DynamicPitch);
+		}
+		else
+		{
+			// 체력을 회복했거나 사망했다면 소리 정지
+			if (LowHealthAudioComponent->IsPlaying())
+			{
+				LowHealthAudioComponent->Stop();
+			}
+		}
+	}
+
 	// [2층 기믹 추가] 수중 상태 확인
 	bool bIsInWater = IsInWater();
 	float WaterSpeedMultiplier = bIsInWater ? 0.5f : 1.0f; // 수중에서는 50% 감속
@@ -832,6 +871,12 @@ void AOblivioCharacter::ToggleInventory()
 {
 	bIsInventoryOpen = !bIsInventoryOpen;
 	
+	USoundBase* PlaySound = bIsInventoryOpen ? InventoryOpenSound : InventoryCloseSound;
+	if (IsValid(PlaySound))
+	{
+		UGameplayStatics::PlaySound2D(GetWorld(), PlaySound);
+	}
+
 	OnInventoryToggle(bIsInventoryOpen);
 }
 
@@ -842,7 +887,22 @@ void AOblivioCharacter::ToggleCrafting()
 		CraftingComponent->ToggleCraftingMode();
 		bIsCraftingOpen = CraftingComponent->bIsCraftingModeActive;
 		
+		USoundBase* TargetSound = bIsCraftingOpen ? CraftingOpenSound : CraftingCloseSound;
+		if (IsValid(TargetSound))
+		{
+			UGameplayStatics::PlaySound2D(GetWorld(), TargetSound);
+		}
+
 		OnCraftingUIToggle(bIsCraftingOpen);
+	}
+}
+
+void AOblivioCharacter::PlaceObstacle()
+{
+	if (IsValid(ObstaclePlaceSound))
+	{
+		// 설치한 위치(내 발밑)에서 소리 재생
+		UGameplayStatics::PlaySoundAtLocation(this, ObstaclePlaceSound, GetActorLocation());
 	}
 }
 
@@ -1007,6 +1067,11 @@ void AOblivioCharacter::ToggleFlashlight()
 void AOblivioCharacter::UpdateFlashlightVisuals()
 {
 	if (!IsValid(CurrentWeapon)) return;
+
+	if (IsValid(FlashlightClickSound))
+	{
+		UGameplayStatics::PlaySound2D(GetWorld(), FlashlightClickSound);
+	}
 
 	if (bIsFlashlightOn) {	//On
 		CurrentWeapon->UseWeapon();
@@ -1361,6 +1426,11 @@ void AOblivioCharacter::HandleDeath()
 {
 	if (bIsDead) return;
 	bIsDead = true;
+
+	if (IsValid(LowHealthAudioComponent) && LowHealthAudioComponent->IsPlaying())
+	{
+		LowHealthAudioComponent->Stop();
+	}
 
 	if (bIsFlashlightOn)
 	{

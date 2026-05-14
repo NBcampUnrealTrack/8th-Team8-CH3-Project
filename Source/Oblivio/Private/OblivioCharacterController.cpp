@@ -263,6 +263,7 @@ void AOblivioCharacterController::OnPlaceObstacle(const FInputActionValue& Value
 		if (auto* CraftingComp = ObjChar->FindComponentByClass<UOblivioCrafting>())
 		{
 			CraftingComp->PlaceObstacle();
+			ObjChar->PlaceObstacle();
 		}
 	}
 }
