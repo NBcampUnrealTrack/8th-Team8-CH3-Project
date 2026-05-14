@@ -10,6 +10,7 @@ void UTankEnemyAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	TankAnimEnemyState = EEnemyAIState::Idle;
 	EnemyCruntState = EEnemyAIState::Idle;
 	bIsTankHeartbeatAttackChanneling = false;
+	bTankJumpAttackFsmActive = false;
 	bTankUsesHeartbeatAoEAttack = false;
 
 	APawn* const OwnerPawn = TryGetPawnOwner();
@@ -28,4 +29,5 @@ void UTankEnemyAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 
 	bTankUsesHeartbeatAoEAttack = Tank->UsesHeartbeatAoEAttack();
 	bIsTankHeartbeatAttackChanneling = Tank->IsTankHeartbeatChannelingForAnim();
+	bTankJumpAttackFsmActive = Tank->IsTankJumpAttackFsmActiveForAnim();
 }

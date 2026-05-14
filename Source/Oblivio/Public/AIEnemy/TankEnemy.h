@@ -13,6 +13,9 @@
 #include "TankEnemy.generated.h"
 
 class UMaterialInterface;
+class UAnimMontage;
+class UNiagaraSystem;
+
 
 /** 탱커 기본형 — Basic 대비 체력↑·이동↓·공격력 소폭↑. 세부값은 BP에서 조정. */
 UCLASS(Blueprintable)
@@ -48,7 +51,7 @@ public:
 
 	virtual void Die() override;
 
-	/** 기본 어그로 밖이어도 심작 AoE 안이면 추격·심작 유지 (AggroRadius < HeartbeatAoERadius 일 때 안 끊김). */
+	/** 기본 AggroRadius 진입 시부터는 거리와 무관하게 추격(플레이어가 죽거나 타겟이 없어질 때까지). 심작 AoE 보조 판정 유지. */
 	virtual bool HasValidAggroTarget() const override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -74,6 +77,26 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Enemy|Tank|Heartbeat")
 	void FinishHeartbeatAttackFromAnimNotify();
+
+	/** 애님 노티 타이밍(30fps 프레임 15/33/60) 및 심작 종료 후 몽타주와 연결됩니다. */
+	UFUNCTION(BlueprintCallable, Category = "Enemy|Tank|JumpAttack")
+	void JumpAttack_NotifyLiftOff();
+
+	UFUNCTION(BlueprintCallable, Category = "Enemy|Tank|JumpAttack")
+	void JumpAttack_NotifyLandingImpact();
+
+	UFUNCTION(BlueprintCallable, Category = "Enemy|Tank|JumpAttack")
+	void JumpAttack_NotifyMontageFinished();
+
+	/** ABP 상태 머신: 점프 공격 패턴 활성 여부(GetEnemyState==JumpAttack과 동등). */
+	UFUNCTION(BlueprintPure, Category = "Enemy|Tank|JumpAttack")
+	bool IsTankJumpAttackFsmActiveForAnim() const;
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlayTankJumpMontage();
+
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_SpawnJumpRingBurst(FVector BurstLocationFloor);
 
 protected:
 	virtual void BeginPlay() override;
@@ -114,6 +137,25 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tank|Heartbeat|Visual")
 	TObjectPtr<UStaticMeshComponent> HeartbeatAoERangeIndicatorMesh;
+
+	/**
+	 * 점프 착지 슬램 AoE 디스크(월드 XY는 TankJumpLandingFloorWorld 로 동기화, 반경 스케일은 TankJumpSlamRadiusCm).
+	 * 바깥 링 파동은 TankJumpRingOuterCm 과 Niagara 등으로 표현됩니다.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tank|JumpAttack|Visual")
+	bool bShowJumpLandingAoETelegraph = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tank|JumpAttack|Visual")
+	TObjectPtr<UMaterialInterface> JumpLandingAoERangeIndicatorMaterial;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tank|JumpAttack|Visual", meta = (ClampMin = "0.01"))
+	float JumpLandingAoERangeIndicatorBuiltInSphereRadiusUU = 50.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tank|JumpAttack|Visual", meta = (ClampMin = "0.001", ClampMax = "2.0"))
+	float JumpLandingAoERangeIndicatorDiskThicknessScale = 0.02f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tank|JumpAttack|Visual")
+	TObjectPtr<UStaticMeshComponent> JumpLandingAoERangeIndicatorMesh;
 
 	/** PIE/게임: 근접 AttackRange·심작 Heartbeat AoE 구 시각화(Aggro 디버그와 별개). Shipping 빌드 제외. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Tank|Debug", meta = (DisplayName = "Debug Draw Combat Ranges"))
@@ -158,6 +200,10 @@ private:
 	UPROPERTY(ReplicatedUsing = OnRep_HeartbeatChanneling)
 	bool bHeartbeatChanneling = false;
 
+	/** 한 번 AggroRadius 안에 들어오면 Death·타겟 소실 전까지 추격 유지(서버가 잠금, 복제). */
+	UPROPERTY(Replicated)
+	bool bTankStickyAggroUntilDeath = false;
+
 	/** 복제로 채널링 끝날 때 심장 숨김만(표시는 애님 Show 노티). */
 	UFUNCTION()
 	void OnRep_HeartbeatChanneling();
@@ -168,7 +214,7 @@ private:
 	void ClearHeartbeatTimers();
 
 	bool IsTargetInHeartbeatAoERange() const;
-	/** 심작 피해 노티 전용: 항상 3D 구(HeartbeatAoERadius). FSM/심작 시작 판정의 수평 옵션과 별개 */
+	/** 심작 피해 노티: HeartbeatAoERadius·bHeartbeatUseHorizontalDistance 를 FSM/범위 표시와 동일하게 사용 */
 	bool IsTargetInHeartbeatDamageRange() const;
 	bool IsHeartbeatCooldownReady(float NowWorldSeconds) const;
 	bool TryStartHeartbeatWhenReady();
@@ -204,4 +250,124 @@ private:
 	float HeartPulseLightFadeCurrent = 0.f;
 
 	bool bLoggedTankHeartStaticMeshMissing = false;
+
+	// -------------------------------------------------------------------------
+	// 점프 착지 공격(심작 직후, 애님 30fps 2.00s 프레임 15·20·33·60 과 동기 노티 필요)
+	// -------------------------------------------------------------------------
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Tank|JumpAttack|Setup",
+		meta = (AllowPrivateAccess = "true", DisplayName = "Jump Attack After Heartbeat"))
+	bool bUseTankJumpAttackAfterHeartbeat = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Tank|JumpAttack|Setup",
+		meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UAnimMontage> TankJumpAttackMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Tank|JumpAttack|Setup",
+		meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UNiagaraSystem> TankJumpRingNiagaraSystem;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Tank|JumpAttack|Damage",
+		meta = (AllowPrivateAccess = "true", ClampMin = "1.0", DisplayName = "Slam Damage"))
+	float TankJumpSlamDamage = 30.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Tank|JumpAttack|Damage",
+		meta = (AllowPrivateAccess = "true", ClampMin = "1.0", DisplayName = "Slam Radius (cm)"))
+	float TankJumpSlamRadiusCm = 220.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Tank|JumpAttack|Damage",
+		meta = (AllowPrivateAccess = "true", ClampMin = "0.0", DisplayName = "Ring Wave Damage"))
+	float TankJumpRingWaveDamage = 16.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Tank|JumpAttack|Damage",
+		meta = (AllowPrivateAccess = "true", ClampMin = "1.0", DisplayName = "Ring Outer Radius (cm)"))
+	float TankJumpRingOuterCm = 900.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Tank|JumpAttack|Damage",
+		meta = (AllowPrivateAccess = "true", ClampMin = "0.0",
+			DisplayName = "Slam: Max Victim Feet Above Floor (cm)"))
+	float TankJumpSlamVictimMaxFeetCmAboveLanding = 95.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Tank|JumpAttack|Damage",
+		meta = (AllowPrivateAccess = "true", ClampMin = "0.0", DisplayName = "Ring: Victim Vertical Clear (cm)"))
+	float TankJumpRingVictimJumpClearCmAboveLanding = 115.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Tank|JumpAttack|Arc",
+		meta = (AllowPrivateAccess = "true", ClampMin = "0.0", DisplayName = "Arc Peak Z Delta (cm)"))
+	float TankJumpPeakZDeltaCm = 450.f;
+
+	/** 리프트오프 순간 서버에서 캡슐을 위로 순간 이동(월드 공중 궤적 시작점). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Tank|JumpAttack|Arc",
+		meta = (AllowPrivateAccess = "true", ClampMin = "0.0", DisplayName = "Lift-off Instant Z (cm)"))
+	float TankJumpLiftOffInstantZCm = 120.f;
+
+	/** 플레이어 발밑 XY 에서 분리 후 착지 — 탱·플레이어 캡슐 XY 겹침 방지 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Tank|JumpAttack|Landing",
+		meta = (AllowPrivateAccess = "true", DisplayName = "Avoid Overlap With Player Capsule"))
+	bool bTankJumpLandingAvoidPlayerCapsuleOverlap = true;
+
+	/** 착지까지 최소 거리(cm) = 플레이어 캡슐반경 + 탱커 캡슐반경 + 이 값 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Tank|JumpAttack|Landing",
+		meta = (AllowPrivateAccess = "true", ClampMin = "0.0",
+			DisplayName = "Landing Extra Radial Gap (cm)"))
+	float TankJumpLandingExtraRadialGapCm = 72.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Tank|JumpAttack|Timers",
+		meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	float TankJumpFailsafeSeconds = 2.2f;
+
+	/** 이륙 노티 놓치면 이 시간(sec)부터 곡선 호흡을 강제(30fps 프레임 15). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Tank|JumpAttack|Timers",
+		meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	float TankJumpForcedLiftOffAfterMontageStartsSeconds = 0.55f;
+
+	/** 몽타주 시작 후 착지 강제 대체(프레임 33 → 33/30 초). 노티 놓치면 보정. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Tank|JumpAttack|Timers",
+		meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	float TankJumpForcedLandingAfterMontageStartsSeconds = 1.13333333f;
+
+	UPROPERTY(ReplicatedUsing = OnRep_TankJumpAttackActive)
+	bool bTankJumpAttackActive = false;
+
+	UPROPERTY(Replicated)
+	bool bTankJumpShowLandingTelegraph = false;
+
+	UPROPERTY(Replicated)
+	FVector TankJumpLandingFloorWorld = FVector::ZeroVector;
+
+	/** bTankJumpAttackActive 복제 시 클라 Idle/Chase 로코 앰비언트가 Jump 까지 따라붙도록 동기화. */
+	UFUNCTION()
+	void OnRep_TankJumpAttackActive();
+
+	FTimerHandle TankJumpFailsafeTimerHandle;
+	FTimerHandle TankJumpLiftOffFailsafeTimerHandle;
+	FTimerHandle TankJumpLandingFailsafeTimerHandle;
+
+	bool bTankJumpKinematicAscent_Server = false;
+	bool bTankJumpLandingDamageCommitted_Server = false;
+	double TankJumpLiftOffStampServerSecs = -1.e20;
+
+	FVector TankJumpArcBeginWorld = FVector::ZeroVector;
+
+	/** 심작 종료 직후 점프 패턴. 심작 AoE 밖이어도 TargetActor 유효 시 시전. */
+	bool TryBeginTankJumpAttackAfterHeartbeat();
+	bool StartTankJumpAttackSequence_Server();
+	void CompleteTankJumpAttackSequence_Server();
+	void ClearTankJumpTimers();
+	void OnTankJumpFailsafe_Server();
+	void TankJumpLiftOffFailsafe_Server();
+	void TankJumpLandingFailsafe_Server();
+
+	void TickTankJumpArc_Server();
+	void LiftOffJumpAttack_Server_Impl();
+	void ApplyJumpSlamAndRing_Server(const FVector& LandFloorWorld);
+
+	void UpdateJumpLandingAoEIndicatorVisual();
+
+	static bool TankJumpTraceLandscapeFloor(UWorld* World, AActor* IgnoreActor, AActor* TraceAlsoIgnoreActor,
+		FVector WorldProbePt, FVector& OutFloorImpact);
+	static float TankJumpResolveFeetCmAboveLandingZ(AActor const* Victim, float LandingFloorWorldZ);
+
+	FVector ComputeJumpLandingFeetProbeWorld_Server() const;
+
+	void SnapshotJumpLandingFloorFromActor_Server(FVector ProbeLocation, AActor* TraceAlsoIgnoreActor);
 };

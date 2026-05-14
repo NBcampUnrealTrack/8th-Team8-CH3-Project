@@ -1,15 +1,17 @@
-﻿#include "OblivioGameInstance.h"
+#include "OblivioGameInstance.h"
 #include "OblivioSaveGame.h"
 #include "Kismet/GameplayStatics.h"
 
 void UOblivioGameInstance::SaveGameData(FString SlotName)
 {
-	//세이브 객체 생성
 	UOblivioSaveGame* SaveInstance = Cast<UOblivioSaveGame>(UGameplayStatics::CreateSaveGameObject(UOblivioSaveGame::StaticClass()));
+	if (!SaveInstance)
+	{
+		return;
+	}
 
-	//현재 GameInstance의 데이터를 세이브 객체로 복사
+	SaveInstance->SaveSlotName = SlotName;
 	SaveInstance->SavedInventorySlots = SavedInventorySlots;
-	UGameplayStatics::SaveGameToSlot(SaveInstance, SaveInstance->SaveSlotName, SaveInstance->UserIndex);
 	SaveInstance->SavedCurrentHealth = CurrentHealth;
 	SaveInstance->SavedBattery = CurrentBattery;
 	SaveInstance->SavedCurrentHunger = CurrentHunger;
@@ -17,33 +19,45 @@ void UOblivioGameInstance::SaveGameData(FString SlotName)
 	SaveInstance->SavedFloor = CurrentFloor;
 	SaveInstance->SavedKills = TotalKills;
 	SaveInstance->SavedMementos = TotalMementos;
-	SaveInstance->SaveSlotName = SlotName;
 
-	//파일로 저장
-	UGameplayStatics::SaveGameToSlot(SaveInstance, SaveInstance->SaveSlotName, SaveInstance->UserIndex);
+	if (SlotName.Len() <= 0)
+	{
+		UE_LOG(LogTemp, Error, TEXT("SaveGameData: Slot name is empty; aborting."));
+		return;
+	}
+
+	UGameplayStatics::SaveGameToSlot(SaveInstance, SlotName, SaveInstance->UserIndex);
 	UE_LOG(LogTemp, Warning, TEXT("Game Saved Successfully!"));
 }
 
 void UOblivioGameInstance::LoadGameData(FString SlotName)
 {
-
-	// 세이브 파일이 존재하는지 확인
-	if (UGameplayStatics::DoesSaveGameExist(SlotName, 0))
+	const uint32 UserIdx = 0;
+	if (!UGameplayStatics::DoesSaveGameExist(SlotName, UserIdx))
 	{
-		USaveGame* LoadedData = UGameplayStatics::LoadGameFromSlot(SlotName, 0);
-
-		UOblivioSaveGame* LoadInstance = Cast<UOblivioSaveGame>(LoadedData);
-
-		// 파일 데이터를 다시 GameInstance 변수로 복구
-		SavedInventorySlots = LoadInstance->SavedInventorySlots;
-		CurrentHealth = LoadInstance->SavedCurrentHealth;
-		CurrentBattery = LoadInstance->SavedBattery;
-		CurrentHunger = LoadInstance->SavedCurrentHunger;
-		CurrentThirst = LoadInstance->SavedCurrentThirst;
-		CurrentFloor = LoadInstance->SavedFloor;
-		TotalKills = LoadInstance->SavedKills;
-		TotalMementos = LoadInstance->SavedMementos;
-
-		UE_LOG(LogTemp, Warning, TEXT("Game Loaded Successfully!"));
+		/** 슬롯이 없는데 로드만 호출하면 GameInstance 에 이전 세션 값이 그대로 남아 시작 체력이 틀어질 수 있음 */
+		ResetGameData();
+		UE_LOG(LogTemp, Warning, TEXT("Save slot '%s' not found — game data reset to defaults."), *SlotName);
+		return;
 	}
+
+	USaveGame* LoadedData = UGameplayStatics::LoadGameFromSlot(SlotName, UserIdx);
+	UOblivioSaveGame* const LoadInstance = Cast<UOblivioSaveGame>(LoadedData);
+	if (!LoadInstance)
+	{
+		ResetGameData();
+		UE_LOG(LogTemp, Error, TEXT("LoadGameData: slot '%s' invalid type — reset to defaults."), *SlotName);
+		return;
+	}
+
+	SavedInventorySlots = LoadInstance->SavedInventorySlots;
+	CurrentHealth = LoadInstance->SavedCurrentHealth;
+	CurrentBattery = LoadInstance->SavedBattery;
+	CurrentHunger = LoadInstance->SavedCurrentHunger;
+	CurrentThirst = LoadInstance->SavedCurrentThirst;
+	CurrentFloor = LoadInstance->SavedFloor;
+	TotalKills = LoadInstance->SavedKills;
+	TotalMementos = LoadInstance->SavedMementos;
+
+	UE_LOG(LogTemp, Warning, TEXT("Game Loaded Successfully from '%s'."), *SlotName);
 }

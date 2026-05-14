@@ -82,6 +82,10 @@ void AHeadlessLoverEnemy::CommitAttackFromAnimNotify(AActor* OptionalTargetOverr
 	{
 		return;
 	}
+	if (!IsMeleeCommitNotifyHitValid(HitTarget))
+	{
+		return;
+	}
 
 	if (AOblivioCharacter* Player = Cast<AOblivioCharacter>(HitTarget))
 	{
