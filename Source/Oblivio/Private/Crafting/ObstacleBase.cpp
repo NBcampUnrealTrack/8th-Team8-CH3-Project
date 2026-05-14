@@ -37,7 +37,7 @@ void AObstacleBase::SetGhostMode(bool bIsGhost, bool bCanPlace)
             {
                 // FLinearColor(R, G, B, A)
                 FLinearColor TargetColor = bCanPlace ?
-                    FLinearColor(0.0f, 1.0f, 0.0f, 0.5f) : // 설치 가능/치트 켜짐: 초록색
+                    FLinearColor(1.0f, 1.0f, 1.0f, 0.5f) : // 설치 가능/치트 켜짐: 초록색
                     FLinearColor(1.0f, 0.0f, 0.0f, 0.5f);  // 자원 부족/거리 초과: 빨간색
 
                 DynamicGhostMat->SetVectorParameterValue(FName("TintColor"), TargetColor);
