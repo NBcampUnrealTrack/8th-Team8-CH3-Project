@@ -68,6 +68,8 @@ void AStalkerEnemy::Die()
 
 void AStalkerEnemy::NotifyEnemyStateChanged(EEnemyAIState OldState, EEnemyAIState NewState)
 {
+	Super::NotifyEnemyStateChanged(OldState, NewState);
+
 	if (NewState != EEnemyAIState::Chase && NewState != EEnemyAIState::Attack)
 	{
 		ChaseBurstTimeRemaining = 0.0f;

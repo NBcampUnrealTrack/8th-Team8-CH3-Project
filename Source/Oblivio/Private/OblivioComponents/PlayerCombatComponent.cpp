@@ -21,8 +21,12 @@ void UPlayerCombatComponent::BeginPlay()
 	}
 }
 
-void UPlayerCombatComponent::HandleOwnerDamaged(AEnemyBase* Enemy, AActor* Target, float DamageAmount)
+void UPlayerCombatComponent::HandleOwnerDamaged(AEnemyBase* Enemy, AActor* Target, float DamageAmount,
+	UClass* DamageTypeClass)
 {
+	(void)Enemy;
+	(void)Target;
+	(void)DamageTypeClass;
 	ICombatInterface* MyOwner = Cast<ICombatInterface>(GetOwner());
 	//체력 감소 적용
 	if (MyOwner)

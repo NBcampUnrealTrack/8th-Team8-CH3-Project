@@ -113,9 +113,10 @@ void UEnemyCombatRegistrySubsystem::NotifyEnemyDied(AEnemyBase* Enemy)
 	OnAnyEnemyDied.Broadcast(Enemy);
 }
 
-void UEnemyCombatRegistrySubsystem::NotifyEnemyAttackCommitted(AEnemyBase* Enemy, AActor* Target, float DamageAmount)
+void UEnemyCombatRegistrySubsystem::NotifyEnemyAttackCommitted(AEnemyBase* Enemy, AActor* Target, float DamageAmount,
+	UClass* DamageTypeClass)
 {
-	OnAnyEnemyAttackCommitted.Broadcast(Enemy, Target, DamageAmount);
+	OnAnyEnemyAttackCommitted.Broadcast(Enemy, Target, DamageAmount, DamageTypeClass);
 }
 
 void UEnemyCombatRegistrySubsystem::NotifyEnemyFSMStateChanged(AEnemyBase* Enemy, EEnemyAIState OldState, EEnemyAIState NewState)
