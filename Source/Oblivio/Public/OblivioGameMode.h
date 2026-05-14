@@ -60,6 +60,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Level|Flood")
 	void HandleFloodTimeout();
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Save")
+	bool bIsSaveMode = false;
 private:
 	FTimerHandle FloodTimerHandle;
 
