@@ -886,7 +886,7 @@ void AOblivioCharacter::Interact()
 	}
 
 
-	// 태그 기반 상호작용 (유품, 열쇠, 체크포인트)
+	// 태그 기반 상호작용 (유품, 체크포인트)
 	AOblivioGameMode* GM = Cast<AOblivioGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
 	if (GM)
 	{
