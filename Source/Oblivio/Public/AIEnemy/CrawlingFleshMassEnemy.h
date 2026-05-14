@@ -2,6 +2,7 @@
 
 // =============================================================================
 // ACrawlingFleshMassEnemy (CRAWLING_FLESH_MASS) — swarm: Nav로 퍼진 뒤 한꺼번에 추격.
+// 근접 즉발 타격 없음 — ProximityDotDamagePerSecond 로 AttackRange 안 플레이어에게 초당 피해(서버).
 // 동기는 AEnemySpawner::OnWaveSpawnQueueEmptied. 즉사/빛/함정은 전투팀에서 TakeDamage 등 처리.
 // =============================================================================
 
@@ -61,6 +62,10 @@ protected:
 
 	virtual bool IsObstacleAttackEnabled() const override { return false; }
 
+	/** 근접(AttackRange, 3D 거리 이내)일 때 초당 피해. 0 이면 비활성. 서버만 적용. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Crawler|Damage", meta = (ClampMin = "0.0"))
+	float ProximityDotDamagePerSecond = 4.44f;
+
 private:
 	UFUNCTION()
 	void HandleWaveSpawnQueueEmptied(int32 WaveIndex, AEnemySpawner* Spawner);
@@ -70,6 +75,7 @@ private:
 	bool TryPickRandomScatterPoint(FVector const& Origin, FVector& OutLocation) const;
 	void TransitionToChasePhase();
 	void CleanupSwarmDelegates();
+	void TickProximityDotDamage(float DeltaSeconds);
 
 	UPROPERTY()
 	TWeakObjectPtr<AEnemySpawner> OwningSwarmSpawner;
@@ -81,7 +87,4 @@ private:
 	float CachedChaseAggroRadius = 0.f;
 	bool bCachedLightTracking = true;
 	bool bHasCachedChaseAggroRadius = false;
-
-	/** swarm 전용 공격 쿨다운 트래킹 — 베이스의 LastAttackTime은 private라 직접 못 씀. */
-	float LastSwarmAttackTime = -BIG_NUMBER;
 };

@@ -6,6 +6,7 @@
 // 플레이어 등 뒤에서 Chase 진입 시 단기 ChaseBurstSpeedMultiplier 적용.
 // 손전등 켜짐 + 배터리 + 스포트 콘·거리 안: 메시 표시·소리. 밖이면 투명·무음.
 // 메시·애니·루프 사운드는 BP Class Defaults에서 지정.
+// 근공격 타격은 공격 Anim 의 UEnemyMeleeCommitNotify 필요.
 // =============================================================================
 
 #include "CoreMinimal.h"

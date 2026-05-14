@@ -9,7 +9,7 @@
 //   · AggroRadius: UE 단위 cm (1000 ≈ 10m). 0이면 거리 무시 항상 추격. 타겟은 GetPlayerPawn(0)
 //
 // 전투(외부): TakeDamage 적용 → CurrentHealth 차감 → OnEnemyDamaged → 0이하면 Die().
-//   PerformAttack 근접 판단은 OnEnemyAttackCommitted 만 발행(실 데미지/연출은 전투 측).
+//   PerformAttack 는 기본 빈 구현; 근접 타격은 UEnemyMeleeCommitNotify → CommitAttackFromAnimNotify.
 //   · OnLightHit 도 이벤트만 발행(특수 AI용·Luxeater 흡수). 빛으로 슬로우/스턴/사망은 전투 측이 ApplyCC*/TakeDamage로 처리.
 //
 // CC(기술·아이템 등): EEnemyCCState — Slow(이속 배율), Stun(경직·행동 정지).
@@ -149,6 +149,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Enemy|Combat")
 	void SetAttackDamage(float NewDamage) { AttackDamage = FMath::Max(0.f, NewDamage); }
 
+	/**
+	 * 근공격 Anim Notify 재생 타이밍에서 호출. AttackRange 검사 없이 근공격 브로드캐스트를 내보냅니다.
+	 * PerformAttack 의 기본 구현은 비어 있으므로 타격은 노티(또는 이 함수의 파생 오버라이드)에서 처리합니다.
+	 * OptionalTargetOverride 가 유효하면 그 액터를 타겟으로, 아니면 TargetActor 사용.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Enemy|Combat")
+	virtual void CommitAttackFromAnimNotify(AActor* OptionalTargetOverride = nullptr);
+
 	/** 회복(양수). 0 이하 무시. UI/회복 스킬용. OnEnemyDamaged 로 음수 데미지 형태 브로드캐스트 가능하나 여기선 별도. */
 	UFUNCTION(BlueprintCallable, Category = "Enemy|Stats")
 	void Heal(float Amount);
@@ -221,7 +229,7 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Crafting")
 	TObjectPtr<UEnemyCombatComponent> CombatComp;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy|Stats", meta = (ClampMin = "1.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Stats", meta = (ClampMin = "1.0"))
 	float MaxHealth = 100.0f;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy|Stats")
@@ -489,6 +497,9 @@ protected:
 
 	/** SetEnemySoundVolumeMultiplier 이후 호출 — 스토커 등 오디오 컴포넌트 동기화용. */
 	virtual void ApplyEnemySoundVolumes();
+
+	/** PerformAttack·Anim Notify 공통: OnEnemyAttackCommitted + 레지스트리 알림 */
+	void DispatchEnemyAttackCommitted(AActor* Target);
 
 private:
 	float LastAttackTime = -BIG_NUMBER;

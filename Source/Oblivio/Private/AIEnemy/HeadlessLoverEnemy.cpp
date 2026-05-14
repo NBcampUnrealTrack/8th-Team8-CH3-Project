@@ -10,7 +10,7 @@
 // BeginPlay : BlackoutCooldown 주기 타이머 시작
 // Die       : no-op (불사) — CurrentHealth를 1로 클램프해 사망 차단
 // OnLightHit: HP/사망 없이 1초 경직만
-// PerformAttack: 근접 히트 → 플레이어 이동 반전(MovementInversionDuration초)
+// PerformAttack 베이스는 빈 구현 → 근공격은 Anim Notify 에서 CommitAttackFromAnimNotify.
 // TriggerBlackoutPulse: 타이머 콜백 — 범위 무관하게 플레이어 후레시 강제 OFF
 // =============================================================================
 
@@ -68,16 +68,27 @@ void AHeadlessLoverEnemy::Die()
 	CurrentHealth = FMath::Max(CurrentHealth, 1.0f);
 }
 
-// 근접 공격 히트 → 플레이어 이동 방향 반전(MovementInversionDuration초).
-// AttackDamage = 0 이므로 EnemyCombatComponent는 HP 피해 0을 전달한다.
-void AHeadlessLoverEnemy::PerformAttack_Implementation(AActor* Target)
+// 근공격 공포 효과는 Anim Notify 의 CommitAttack 경로와 동기화.
+// AttackDamage = 0 이므로 레지스트리 통해 HP 피해는 들어오지 않는다.
+void AHeadlessLoverEnemy::CommitAttackFromAnimNotify(AActor* OptionalTargetOverride)
 {
-	if (AOblivioCharacter* Player = Cast<AOblivioCharacter>(Target))
+	if (!IsAlive())
+	{
+		return;
+	}
+
+	AActor* const HitTarget = IsValid(OptionalTargetOverride) ? OptionalTargetOverride : TargetActor.Get();
+	if (!IsValid(HitTarget))
+	{
+		return;
+	}
+
+	if (AOblivioCharacter* Player = Cast<AOblivioCharacter>(HitTarget))
 	{
 		Player->ApplyMovementInversion(MovementInversionDuration);
 	}
 
-	OnEnemyAttackCommitted.Broadcast(this, Target, AttackDamage);
+	DispatchEnemyAttackCommitted(HitTarget);
 }
 
 // 3분 타이머 콜백 — 플레이어 거리/범위 무관하게 후레시를 BlackoutDuration초 강제 OFF.
