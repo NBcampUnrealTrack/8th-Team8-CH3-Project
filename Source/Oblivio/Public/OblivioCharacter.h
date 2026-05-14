@@ -330,10 +330,10 @@ public:
 	// Movement & Interaction 이동 및 상호작용
 	// =====================================
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
-	float WalkSpeed = 300.0f;
+	float WalkSpeed = 200.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
-	float RunSpeed = 550.0f;
+	float RunSpeed = 400.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
 	float InteractionDistance = 200.0f;
