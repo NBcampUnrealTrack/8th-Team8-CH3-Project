@@ -1,4 +1,4 @@
-﻿#include "AIEnemy/EnemyBase.h"
+#include "AIEnemy/EnemyBase.h"
 #include "Combat/EnemyCombatRegistrySubsystem.h"
 #include "AIEnemy/EnemyAIController.h"
 #include "AIController.h"
@@ -122,7 +122,7 @@ void AEnemyBase::BeginPlay()
 		IdleWanderRetargetCooldown = FMath::FRandRange(0.5f, 2.0f);
 	}
 
-	UpdateIdleChaseLocomotionAmbientForFsmState(EnemyState);
+	UpdateIdleChaseLocomotionAmbientForFsmState(GetEnemyState());
 
 	if (MeleeAttackRangeIndicatorMesh && MeleeAttackRangeIndicatorMaterial)
 	{
@@ -222,6 +222,8 @@ void AEnemyBase::Tick(float DeltaSeconds)
 		UpdateAttack();
 		break;
 	case EEnemyAIState::Heartbeat:
+		break;
+	case EEnemyAIState::JumpAttack:
 		break;
 	case EEnemyAIState::Patrol:
 		UpdatePatrol(DeltaSeconds);
@@ -519,13 +521,13 @@ void AEnemyBase::FindDefaultTarget()
 	TargetActor = UGameplayStatics::GetPlayerPawn(this, 0);
 }
 
-// 유효 폰 + AggroRadius(0이면 거리 무시). 수평 전용이면 Z 무시.
-bool AEnemyBase::HasValidAggroTarget() const
+bool AEnemyBase::IsAggroDistanceSatisfiedForTarget() const
 {
 	if (!IsValid(TargetActor))
 	{
 		return false;
 	}
+
 	if (AggroRadius <= 0.0f)
 	{
 		return true;
@@ -538,6 +540,12 @@ bool AEnemyBase::HasValidAggroTarget() const
 		: FVector::DistSquared(A, B);
 
 	return DistSq <= FMath::Square(AggroRadius);
+}
+
+// 유효 폰 + AggroRadius(0이면 거리 무시). 수평 전용이면 Z 무시.
+bool AEnemyBase::HasValidAggroTarget() const
+{
+	return IsAggroDistanceSatisfiedForTarget();
 }
 
 EEnemyAIState AEnemyBase::SelectStateWhileAggroed() const
@@ -1174,7 +1182,22 @@ void AEnemyBase::CommitAttackFromAnimNotify(AActor* OptionalTargetOverride)
 		return;
 	}
 
+	if (!IsMeleeCommitNotifyHitValid(HitTarget))
+	{
+		return;
+	}
+
 	DispatchEnemyAttackCommitted(HitTarget);
+}
+
+bool AEnemyBase::IsMeleeCommitNotifyHitValid(AActor const* HitTarget) const
+{
+	if (!IsValid(HitTarget))
+	{
+		return false;
+	}
+	const float MaxReach = FMath::Max(0.f, AttackRange + MeleeCommitRangeSlackCm);
+	return FVector::DistSquared(GetActorLocation(), HitTarget->GetActorLocation()) <= FMath::Square(MaxReach);
 }
 
 void AEnemyBase::DispatchEnemyAttackCommitted(AActor* Target)
@@ -1471,7 +1494,9 @@ void AEnemyBase::SetEnemyState(EEnemyAIState NewState, bool bForce)
 void AEnemyBase::NotifyEnemyStateChanged(EEnemyAIState OldState, EEnemyAIState NewState)
 {
 	(void)OldState;
-	UpdateIdleChaseLocomotionAmbientForFsmState(NewState);
+	(void)NewState;
+	/** Tank 등: 내부 EnemyState 값과 브루 노출 FSM 이 다를 수 있어 GetEnemyState 기준으로 앰비언트 갱신. */
+	UpdateIdleChaseLocomotionAmbientForFsmState(GetEnemyState());
 }
 
 AEnemyBase::ELocomotionAmbientLayer AEnemyBase::LocomotionAmbientLayerFromFsmState(EEnemyAIState State)
@@ -1480,6 +1505,8 @@ AEnemyBase::ELocomotionAmbientLayer AEnemyBase::LocomotionAmbientLayerFromFsmSta
 	{
 	case EEnemyAIState::Idle:
 		return ELocomotionAmbientLayer::Idle;
+	case EEnemyAIState::JumpAttack:
+		return ELocomotionAmbientLayer::None;
 	case EEnemyAIState::Chase:
 	case EEnemyAIState::Attack:
 	case EEnemyAIState::Heartbeat:
@@ -1487,6 +1514,16 @@ AEnemyBase::ELocomotionAmbientLayer AEnemyBase::LocomotionAmbientLayerFromFsmSta
 	default:
 		return ELocomotionAmbientLayer::None;
 	}
+}
+
+void AEnemyBase::SyncIdleChaseLocomotionAmbientToFsm(EEnemyAIState ResolvedFsmState)
+{
+	UpdateIdleChaseLocomotionAmbientForFsmState(ResolvedFsmState);
+}
+
+void AEnemyBase::RefreshIdleChaseLocomotionAmbientFromCurrentDisplayState()
+{
+	UpdateIdleChaseLocomotionAmbientForFsmState(GetEnemyState());
 }
 
 USoundBase* AEnemyBase::GetLocomotionAmbientSoundForLayer(ELocomotionAmbientLayer Layer) const
@@ -1639,7 +1676,7 @@ void AEnemyBase::OnIdleChaseLocomotionAmbientFadeFinished()
 		return;
 	}
 
-	const ELocomotionAmbientLayer DesiredLayer = LocomotionAmbientLayerFromFsmState(EnemyState);
+	const ELocomotionAmbientLayer DesiredLayer = LocomotionAmbientLayerFromFsmState(GetEnemyState());
 	USoundBase* const DesiredSound = GetLocomotionAmbientSoundForLayer(DesiredLayer);
 
 	if (DesiredLayer == ELocomotionAmbientLayer::None || DesiredSound == nullptr)
@@ -1661,7 +1698,7 @@ void AEnemyBase::OnIdleChaseLocomotionAmbientPlaybackFinished()
 		return;
 	}
 
-	const ELocomotionAmbientLayer WantLayer = LocomotionAmbientLayerFromFsmState(EnemyState);
+	const ELocomotionAmbientLayer WantLayer = LocomotionAmbientLayerFromFsmState(GetEnemyState());
 	USoundBase* const ExpectedSound = GetLocomotionAmbientSoundForLayer(WantLayer);
 
 	if (WantLayer == ELocomotionAmbientLayer::None || ExpectedSound == nullptr)
@@ -1730,6 +1767,7 @@ float AEnemyBase::GetLocomotionBaseSpeed() const
 		LocState == EEnemyAIState::Chase ||
 		LocState == EEnemyAIState::Attack ||
 		LocState == EEnemyAIState::Heartbeat ||
+		LocState == EEnemyAIState::JumpAttack ||
 		LocState == EEnemyAIState::TrackLight;
 	if (bCombatLocomotion && ChaseMoveSpeed > KINDA_SMALL_NUMBER)
 	{

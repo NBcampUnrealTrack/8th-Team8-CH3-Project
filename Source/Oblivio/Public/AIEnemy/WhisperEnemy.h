@@ -34,6 +34,7 @@ protected:
 	virtual void PerformAttack_Implementation(AActor* Target) override;
 	virtual float GetLocomotionBaseSpeed() const override;
 	virtual bool IsTargetInAttackRange() const override;
+	virtual bool IsMeleeCommitNotifyHitValid(AActor const* HitTarget) const override;
 	virtual float GetMeleeAttackRangeIndicatorRadiusCm() const override { return WhisperRange; }
 	virtual void ApplyEnemySoundVolumes() override;
 

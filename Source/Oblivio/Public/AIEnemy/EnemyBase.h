@@ -52,7 +52,9 @@ enum class EEnemyAIState : uint8
 	Stunned = 7 UMETA(DisplayName = "Stunned"),
 	Dead = 8 UMETA(DisplayName = "Dead"),
 	/** 심작 박동 연출 전용 표시값. 내부 EnemyState는 보통 Attack 유지. */
-	Heartbeat = 9 UMETA(DisplayName = "Heartbeat")
+	Heartbeat = 9 UMETA(DisplayName = "Heartbeat"),
+	/** 탱커 점프 착지 공격 등: 심작 직후 몽타주 구간 내비게이션 FSM 표시값. */
+	JumpAttack = 10 UMETA(DisplayName = "JumpAttack"),
 };
 
 /** 이동 저하·경직 등 CC(FSM과 별개). GetCrowdControlState는 빛 둔화/정지도 함께 반영. */
@@ -159,12 +161,15 @@ public:
 	void SetAttackDamage(float NewDamage) { AttackDamage = FMath::Max(0.f, NewDamage); }
 
 	/**
-	 * 근공격 Anim Notify 재생 타이밍에서 호출. AttackRange 검사 없이 근공격 브로드캐스트를 내보냅니다.
+	 * 근공격 Anim Notify 재생 타이밍에서 호출. 기본 클래스는 거리 검사 후 근공격 브로드캐스트.
 	 * PerformAttack 의 기본 구현은 비어 있으므로 타격은 노티(또는 이 함수의 파생 오버라이드)에서 처리합니다.
 	 * OptionalTargetOverride 가 유효하면 그 액터를 타겟으로, 아니면 TargetActor 사용.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Enemy|Combat")
 	virtual void CommitAttackFromAnimNotify(AActor* OptionalTargetOverride = nullptr);
+
+	/** UEnemyMeleeCommitNotify 피해 직전: 기본은 3D AttackRange+MeleeCommitRangeSlackCm. Whisper 등은 도넛 등으로 오버라이드 */
+	virtual bool IsMeleeCommitNotifyHitValid(AActor const* HitTarget) const;
 
 	/** 회복(양수). 0 이하 무시. UI/회복 스킬용. OnEnemyDamaged 로 음수 데미지 형태 브로드캐스트 가능하나 여기선 별도. */
 	UFUNCTION(BlueprintCallable, Category = "Enemy|Stats")
@@ -292,6 +297,10 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy|Combat", meta = (ClampMin = "0.1"))
 	float AttackCooldown = 1.0f;
+
+	/** 근타격 AnimNotify 커밋 허용 = AttackRange + Slack(cm). 이동/블렌드 애니에 노티가 박힐 때 허공·원거리 판정 방지 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Combat", meta = (ClampMin = "0.0", AllowPrivateAccess = "true"))
+	float MeleeCommitRangeSlackCm = 85.f;
 
 	/** MoveToActor 도착 판정. AttackRange보다 크면 추격이 먼저 멈춰 Chase→Attack 전환이 안 될 수 있음(UpdateChase에서 자동으로 AttackRange보다 안쪽으로 제한). */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy|Navigation", meta = (ClampMin = "1.0"))
@@ -550,6 +559,10 @@ protected:
 	virtual EEnemyAIState SelectStateWhileAggroed() const;
 	/** AggroRadius 내(또는 0이면 무한)일 때 true. 보스 등은 “한 번 들어오면 영구 추격”용으로 오버라이드 가능. */
 	virtual bool HasValidAggroTarget() const;
+
+	/** 타겟 폰이 있을 때 AggroRadius(수평 옵션)만 검사 — sticky 어그로 잠금 트리거 등에 사용. */
+	bool IsAggroDistanceSatisfiedForTarget() const;
+
 	void StopEnemyMovement();
 
 	virtual void RefreshWalkSpeedFromSources();
@@ -578,6 +591,15 @@ protected:
 
 	/** SetEnemySoundVolumeMultiplier 이후 호출 — 스토커 등 오디오 컴포넌트 동기화용. */
 	virtual void ApplyEnemySoundVolumes();
+
+	/**
+	 * Rep/멀티캐스트 레이턴시 보정 등: 알려준 FSM 으로 로코모션 앰비언트만 갱신(IdleChase 레이어만 해당).
+	 * JumpAttack 같은 특수 상태는 로코 무음 레이어로 들어올 때 사용.
+	 */
+	void SyncIdleChaseLocomotionAmbientToFsm(EEnemyAIState ResolvedFsmState);
+
+	/** GetEnemyState() 기준 로코모션 앰비언트 갱신 Tank bTankJumpAttackActive 복제 시 등. */
+	void RefreshIdleChaseLocomotionAmbientFromCurrentDisplayState();
 
 	/** PerformAttack·Anim Notify 공통: OnEnemyAttackCommitted + 레지스트리 알림. DamageType 생략 시 기본 근접 타입. */
 	void DispatchEnemyAttackCommitted(AActor* Target);

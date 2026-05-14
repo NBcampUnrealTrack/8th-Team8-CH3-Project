@@ -1,4 +1,4 @@
-﻿#include "Items/OblivioInventoryComponent.h"
+#include "Items/OblivioInventoryComponent.h"
 #include "Items/OblivioItemBase.h"
 #include "OblivioCharacter.h"
 #include "OblivioGameInstance.h"
@@ -96,8 +96,32 @@ void UOblivioInventoryComponent::UseItem(int32 SlotIndex)
 
 	if (Player)
 	{
-		if (Slot.ItemType == EItemType::Food) Player->Hunger = FMath::Min(100.0f, Player->Hunger + 30.0f);
-		if (Slot.ItemType == EItemType::Water) Player->Thirst = FMath::Min(100.0f, Player->Thirst + 20.0f);
+		float HungerRestore = 30.0f;
+		float ThirstRestore = 20.0f;
+		if (Slot.ItemClass)
+		{
+			const AOblivioItemBase* CDO = Slot.ItemClass.GetDefaultObject();
+			if (IsValid(CDO))
+			{
+				if (Slot.ItemType == EItemType::Food && CDO->ItemType == EItemType::Food)
+				{
+					HungerRestore = CDO->RestoreValue;
+				}
+				else if (Slot.ItemType == EItemType::Water && CDO->ItemType == EItemType::Water)
+				{
+					ThirstRestore = CDO->RestoreValue;
+				}
+			}
+		}
+
+		if (Slot.ItemType == EItemType::Food)
+		{
+			Player->Hunger = FMath::Min(100.0f, Player->Hunger + HungerRestore);
+		}
+		if (Slot.ItemType == EItemType::Water)
+		{
+			Player->Thirst = FMath::Min(100.0f, Player->Thirst + ThirstRestore);
+		}
 
 		if (Slot.ItemType == EItemType::Key || Slot.ItemType == EItemType::Memento)
 		{
@@ -222,7 +246,14 @@ void UOblivioInventoryComponent::SyncInventoryToGameInstance()
 {
 	if (UOblivioGameInstance* GI = Cast<UOblivioGameInstance>(UGameplayStatics::GetGameInstance(GetWorld())))
 	{
-		//인스턴스 배열을 덮어씌움
 		GI->SavedInventorySlots = InventorySlots;
+		// 음식/물 사용 등으로 캐릭터만 갱신되면 GI 가 남아 다음 BeginPlay/저장에서 덮어쓰기 됨
+		if (AOblivioCharacter* const Player = Cast<AOblivioCharacter>(GetOwner()))
+		{
+			GI->CurrentHealth = Player->CurrentHealth;
+			GI->CurrentBattery = Player->Battery;
+			GI->CurrentHunger = Player->Hunger;
+			GI->CurrentThirst = Player->Thirst;
+		}
 	}
 }

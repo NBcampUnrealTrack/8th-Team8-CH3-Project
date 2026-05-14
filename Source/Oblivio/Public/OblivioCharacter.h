@@ -319,12 +319,17 @@ public:
 	void ThrowWeapon();
 	TSubclassOf<AThrowableWeapon> PendingThrowClass;
 	bool bIsThrowing;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Animation")
-	UAnimMontage* ThrowMontage;
 
 	FTimerHandle FlashbangTimerHandle;
 	float FlashbangIntensity = 0.0f;
 	void FadeOutFlashbang();
+
+	//특수 애니메이션
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Animation")
+	UAnimMontage* ThrowMontage;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Animation")
+	UAnimMontage* HitMontage;
+	void PlayHitAnim();
 
 	// =====================================
 	// Movement & Interaction 이동 및 상호작용
