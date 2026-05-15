@@ -1397,7 +1397,16 @@ void AOblivioCharacter::PlayHitAnim()
 	}
 	
 }
+bool AOblivioCharacter::IsInWater() const
+{
+	if (UCapsuleComponent* Capsule = GetCapsuleComponent())
+	{
+		float FeetZ = GetActorLocation().Z - Capsule->GetScaledCapsuleHalfHeight();
 
+		return (FeetZ + 5.0f) < CurrentWaterLevel;
+	}
+	return false;
+}
 
 void AOblivioCharacter::GenerateFootstep()
 {
