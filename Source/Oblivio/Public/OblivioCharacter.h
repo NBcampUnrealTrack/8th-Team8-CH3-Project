@@ -456,7 +456,7 @@ public:
 
 	/** 물속에 있는지 여부를 반환하는 함수 */
 	UFUNCTION(BlueprintPure, Category = "Status|Flood")
-	bool IsInWater() const { return GetActorLocation().Z < CurrentWaterLevel; }
+	bool IsInWater() const;
 
 	// ================= [사운드 에셋 변수] =================
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
