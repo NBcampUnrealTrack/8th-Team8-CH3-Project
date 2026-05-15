@@ -11,7 +11,6 @@
 #include "Items/OblivioInventoryComponent.h"
 #include "Crafting/OblivioCrafting.h"
 #include "DoorBase.h"
-#include "Memento/FloodLevelActor.h"
 
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -959,13 +958,6 @@ void AOblivioCharacter::Interact()
 
 			GM->AddMemento();
 			
-
-			// 홍수 트리거 확인
-			if (TargetActor->ActorHasTag("FloodTrigger"))
-			{
-				GM->TriggerFloodEvent();
-			}
-
 			if (TargetActor == CurrentNearbyItem) SetNearbyItem(nullptr);
 			TargetActor->Destroy();
 			return;
@@ -1487,11 +1479,7 @@ void AOblivioCharacter::HandleDeath()
 		MeshComp->SetCollisionProfileName(TEXT("Ragdoll"));
 		MeshComp->SetSimulatePhysics(true);
 	}
-	AActor* FloodActor = UGameplayStatics::GetActorOfClass(GetWorld(), AFloodLevelActor::StaticClass());
-	if (FloodActor)
-	{
-		Cast<AFloodLevelActor>(FloodActor)->StopFloodEffects();
-	}
+	OnPlayerDied.Broadcast();
 	if (AOblivioGameMode* GM = Cast<AOblivioGameMode>(UGameplayStatics::GetGameMode(GetWorld())))
 	{
 		GM->GameOver();

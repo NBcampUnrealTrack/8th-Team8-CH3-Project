@@ -4,6 +4,8 @@
 #include "GameFramework/Actor.h"
 #include "OblivioItemBase.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMementoCollected, class AOblivioCharacter*, Interactor);
+
 UENUM(BlueprintType)
 enum class EItemCategory : uint8
 {
@@ -93,6 +95,9 @@ public:
     // 이 아이템을 주웠을 때 연쇄적으로 작동시킬 액터들의 배열
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Story Events")
     TArray<AActor*> LinkedActors;
+
+    UPROPERTY(BlueprintAssignable, Category = "Events")
+    FOnMementoCollected OnMementoCollected;
 
     UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Interaction")
     void OnInteract(AActor* Interactor);
