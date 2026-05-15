@@ -1,4 +1,4 @@
-//SoundPropagationComponent.h
+﻿//SoundPropagationComponent.h
 #pragma once
 
 #include "CoreMinimal.h"
@@ -15,7 +15,7 @@ public:
 	USoundPropagationComponent();
 
 	UFUNCTION(BlueprintCallable, Category = "Sound")
-	void PropagateSound();
+	void PropagateSound(float VolumeMultiplier = 1.0f);
 
 	UPROPERTY(EditAnywhere, Category = "Sound")
 	float Radius;

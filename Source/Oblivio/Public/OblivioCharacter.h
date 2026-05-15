@@ -340,6 +340,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
 	float RunSpeed = 400.0f;
 
+	float CrouchSpeed = 100.0f;
+
+	bool bIsCrouching = false;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
 	float InteractionDistance = 200.0f;
 
@@ -351,6 +355,8 @@ public:
 	void Move(const FVector2D& Value);
 	void StartRunning();
 	void StopRunning();
+	void StartCrouching();
+	void StopCrouching();
 	void ToggleFlashlight();
 	void UseFlashbang();
 	void UseFlare();
@@ -417,6 +423,9 @@ public:
 	FPlayerAnimationEvent OnPlayerFootstep;
 	FTimerHandle FootstepTimerHandle;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sound|Animation")
+	TObjectPtr<USoundBase> WaterFootstepSound;
+
 	//===============================
 	//Cheat
 	//=================================

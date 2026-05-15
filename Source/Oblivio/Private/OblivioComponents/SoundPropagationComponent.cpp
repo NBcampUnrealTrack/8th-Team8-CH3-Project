@@ -1,4 +1,4 @@
-#include "OblivioComponents/SoundPropagationComponent.h"
+﻿#include "OblivioComponents/SoundPropagationComponent.h"
 #include "AIEnemy/EnemyBase.h"
 
 #include "Engine/World.h"
@@ -14,15 +14,17 @@ USoundPropagationComponent::USoundPropagationComponent()
 	Radius = 700;
 }
 
-void USoundPropagationComponent::PropagateSound()
+void USoundPropagationComponent::PropagateSound(float VolumeMultiplier)
 {
 	UE_LOG(LogTemp, Warning, TEXT("Stimulusing nearby enemies..."));
 	FVector SoundLocation = GetOwner()->GetActorLocation();
 
+	float FinalRadius = Radius * VolumeMultiplier;
+
 	// 소리 전파 범위 표시
 	if (bShowDebugSphere)
 	{
-		DrawDebugCircle(GetWorld(), SoundLocation + FVector::UpVector * 20, Radius, 16, FColor::Cyan, false, 0.5f, 0, 2.0f, FVector::ForwardVector, FVector::RightVector, false);
+		DrawDebugCircle(GetWorld(), SoundLocation + FVector::UpVector * 20, FinalRadius, 16, FColor::Cyan, false, 0.5f, 0, 2.0f, FVector::ForwardVector, FVector::RightVector, false);
 	}
 	//주변 적 파악 (ECC_Pawn + ECC_WorldDynamic 명시 — 빈 배열이면 아무것도 감지 안 됨)
 	TArray<AActor*> OverlapActors;
@@ -33,7 +35,7 @@ void USoundPropagationComponent::PropagateSound()
 	UKismetSystemLibrary::SphereOverlapActors(
 		GetWorld(),
 		SoundLocation,
-		Radius,
+		FinalRadius,
 		EnemyObjectTypes,
 		AEnemyBase::StaticClass(),
 		TArray{ GetOwner() },

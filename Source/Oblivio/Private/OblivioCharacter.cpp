@@ -781,7 +781,8 @@ void AOblivioCharacter::UpdateStatus(float DeltaTime)
 		}
 	}
 
-	GetCharacterMovement()->MaxWalkSpeed = bIsRunning ? RunSpeed : WalkSpeed;
+	bool bIsInWater = IsInWater();
+	float WaterSpeedMultiplier = bIsInWater ? 0.5f : 1.0f;
 
 	if (bIsStunned)
 	{
@@ -790,8 +791,14 @@ void AOblivioCharacter::UpdateStatus(float DeltaTime)
 	}
 	else
 	{
-		float BaseSpeed = bIsRunning ? RunSpeed : WalkSpeed;
-		GetCharacterMovement()->MaxWalkSpeed = bIsSlowed ? (BaseSpeed * CurrentSlowMultiplier) : BaseSpeed;
+		float BaseSpeed = WalkSpeed;
+		if (bIsCrouching) BaseSpeed = CrouchSpeed;
+		else if (bIsRunning) BaseSpeed = RunSpeed;
+
+		float FinalSpeed = BaseSpeed * WaterSpeedMultiplier;
+		if (bIsSlowed) FinalSpeed *= CurrentSlowMultiplier;
+
+		GetCharacterMovement()->MaxWalkSpeed = FinalSpeed;
 	}
 
 	// [사운드 추가] 체력 저하 시 과호흡/심박수 사운드 재생
@@ -825,35 +832,6 @@ void AOblivioCharacter::UpdateStatus(float DeltaTime)
 			}
 		}
 	}
-
-	// [2층 기믹 추가] 수중 상태 확인
-	bool bIsInWater = IsInWater();
-	float WaterSpeedMultiplier = bIsInWater ? 0.5f : 1.0f; // 수중에서는 50% 감속
-
-	if (bIsStunned)
-	{
-		GetCharacterMovement()->MaxWalkSpeed = 0.0f;
-	}
-	else
-	{
-		float BaseSpeed = bIsRunning ? RunSpeed : WalkSpeed;
-
-		//수중Multiplier와 기존 슬로우Multiplier를 모두 적용
-		float FinalSpeed = BaseSpeed * WaterSpeedMultiplier;
-		if (bIsSlowed) FinalSpeed *= CurrentSlowMultiplier;
-
-		GetCharacterMovement()->MaxWalkSpeed = FinalSpeed;
-	}
-
-	// 수중 이동 시 첨벙거리는 소리로 적에게 위치 노출
-	if (bIsInWater && GetVelocity().Size() > 10.f)
-	{
-		if (IsValid(SoundPropagationComp))
-		{
-			// 물결 소리 전파
-			SoundPropagationComp->PropagateSound();
-		}
-	}
 }
 
 //==========================
@@ -873,6 +851,15 @@ void AOblivioCharacter::Move(const FVector2D& Value)
 void AOblivioCharacter::StartRunning() { bIsRunning = true; }
 void AOblivioCharacter::StopRunning() { bIsRunning = false; }
 
+void AOblivioCharacter::StartCrouching()
+{
+	bIsCrouching = true;
+	bIsRunning = false;
+}
+void AOblivioCharacter::StopCrouching()
+{
+	bIsCrouching = false;
+}
 
 void AOblivioCharacter::ToggleInventory()
 {
@@ -1426,19 +1413,41 @@ void AOblivioCharacter::PlayHitAnim()
 
 void AOblivioCharacter::GenerateFootstep()
 {
+	UE_LOG(LogTemp, Warning, TEXT("GenerateFootstep Called"));
 	if (GetWorld()->GetTimerManager().IsTimerActive(FootstepTimerHandle)) {
 		return;
 	}
 	GetWorld()->GetTimerManager().SetTimer(FootstepTimerHandle, 0.2f, false);
-	UE_LOG(LogTemp, Warning, TEXT("GenerateFootstep Called"));
+
+	GetWorld()->GetTimerManager().SetTimer(
+		FootstepTimerHandle,
+		FTimerDelegate::CreateLambda([]() {}),
+		0.2f,
+		false
+	);
+
+	bool bInWater = IsInWater();
+
+	float SoundMultiplier = (bIsCrouching && !bInWater) ? 0.5f : 1.0f;
+
+	USoundBase* SoundToPlay = bInWater ? WaterFootstepSound : FootstepSound;
+
+	FString SoundStatus = IsValid(SoundToPlay) ? TEXT("정상(사운드 있음)") : TEXT("오류(사운드 비어있음!)");
+	FString DebugMsg = FString::Printf(TEXT("물속인가?: %s | 재생상태: %s"), bInWater ? TEXT("YES") : TEXT("NO"), *SoundStatus);
+
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, IsValid(SoundToPlay) ? FColor::Green : FColor::Red, DebugMsg);
+
 	//발걸음 SFX 출력
-	if (IsValid(FootstepSound)) {
-		UGameplayStatics::PlaySound2D(GetWorld(), FootstepSound);
+	if (IsValid(SoundToPlay)) {
+		UGameplayStatics::PlaySound2D(GetWorld(), SoundToPlay, SoundMultiplier);
+	}
+	else {
+		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("오류: 사운드 에셋이 비어있습니다! BP 확인 요망!"));
 	}
 
 	//추적용 소리 전파
 	if (IsValid(SoundPropagationComp)) {
-		SoundPropagationComp->PropagateSound();
+		SoundPropagationComp->PropagateSound(SoundMultiplier);
 	}
 }
 

@@ -14,6 +14,7 @@ AOblivioCharacterController::AOblivioCharacterController()
 	, JumpAction(nullptr)
 	, WheelAction(nullptr)
 	, RunAction(nullptr)
+	, CrouchAction(nullptr)
 	, FlashlightToggleAction(nullptr)
 	, FlashbangAction(nullptr)
 	, FlareAction(nullptr)
@@ -62,6 +63,8 @@ void AOblivioCharacterController::SetupInputComponent()
 		EIC->BindAction(WheelAction, ETriggerEvent::Triggered, this, &AOblivioCharacterController::OnWheel);
 		EIC->BindAction(RunAction, ETriggerEvent::Started, this, &AOblivioCharacterController::OnRunStarted);
 		EIC->BindAction(RunAction, ETriggerEvent::Completed, this, &AOblivioCharacterController::OnRunCompleted);
+		EIC->BindAction(CrouchAction, ETriggerEvent::Started, this, &AOblivioCharacterController::OnCrouchStarted);
+		EIC->BindAction(CrouchAction, ETriggerEvent::Completed, this, &AOblivioCharacterController::OnCrouchCompleted);
 		EIC->BindAction(FlashlightToggleAction, ETriggerEvent::Started, this, &AOblivioCharacterController::OnFlashlightToggle);
 		EIC->BindAction(FlashbangAction, ETriggerEvent::Started, this, &AOblivioCharacterController::OnFlashbang);
 		EIC->BindAction(FlareAction, ETriggerEvent::Started, this, &AOblivioCharacterController::OnFlare);
@@ -157,6 +160,18 @@ void AOblivioCharacterController::OnRunCompleted(const FInputActionValue& Value)
 {
 	if (AOblivioCharacter* ObjChar = Cast<AOblivioCharacter>(GetPawn()))
 		ObjChar->StopRunning();
+}
+
+void AOblivioCharacterController::OnCrouchStarted(const FInputActionValue& Value)
+{
+	if (AOblivioCharacter* ObjChar = Cast<AOblivioCharacter>(GetPawn()))
+		ObjChar->StartCrouching();
+}
+
+void AOblivioCharacterController::OnCrouchCompleted(const FInputActionValue& Value)
+{
+	if (AOblivioCharacter* ObjChar = Cast<AOblivioCharacter>(GetPawn()))
+		ObjChar->StopCrouching();
 }
 
 void AOblivioCharacterController::OnFlashlightToggle(const FInputActionValue& Value)
