@@ -342,6 +342,7 @@ public:
 
 	float CrouchSpeed = 100.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
 	bool bIsCrouching = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
