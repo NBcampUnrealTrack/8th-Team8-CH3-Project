@@ -3,6 +3,7 @@
 
 #include "Weapon/Flashbang.h"
 #include "OblivioComponents/LightAttackComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 AFlashbang::AFlashbang()
 {
@@ -31,7 +32,14 @@ void AFlashbang::UseWeapon()
 				FVector SourceLocation = LightAttackComp->GetComponentLocation();
 				FVector LightDirection = LightAttackComp->GetForwardVector();
 				// 단발 섬광 — 빛이 켜져 있는 시간(FlashDuration) 만큼을 노출량으로 한 번에 전달.
-				LightAttackComp->CreateLightAttack(SourceLocation, LightDirection, FlashDuration); },
+				LightAttackComp->CreateLightAttack(SourceLocation, LightDirection, FlashDuration); 
+			
+				if (IsValid(ExplosionSound))
+				{
+					UGameplayStatics::PlaySoundAtLocation(this, ExplosionSound, GetActorLocation());
+				}
+
+			},
 			BangDelay,
 			false);
 		GetWorld()->GetTimerManager().SetTimer(DestroyTimerHandle, this, &AFlashbang::StopWeapon, BangDelay + FlashDuration, false);
