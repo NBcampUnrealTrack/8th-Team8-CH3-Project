@@ -817,11 +817,7 @@ void AOblivioCharacter::UpdateStatus(float DeltaTime)
 			{
 				LowHealthAudioComponent->Play();
 			}
-
-			// (호러 디테일) 체력이 0에 가까워질수록 심장 소리/호흡이 1.5배까지 빨라짐
-			float HealthRatio = CurrentHealth / LowHealthThreshold; // 1.0 -> 0.0으로 감소
-			float DynamicPitch = FMath::Lerp(1.5f, 1.0f, HealthRatio);
-			LowHealthAudioComponent->SetPitchMultiplier(DynamicPitch);
+			LowHealthAudioComponent->SetPitchMultiplier(1.0f);
 		}
 		else
 		{
