@@ -1,4 +1,4 @@
-#include "OblivioCharacter.h"
+﻿#include "OblivioCharacter.h"
 #include "OblivioGameMode.h"
 #include "OblivioGameInstance.h"
 #include "Notify/PlayerFootstep.h"
@@ -769,10 +769,16 @@ void AOblivioCharacter::UpdateStatus(float DeltaTime)
 		}
 	}
 
-	// 굶주림·갈증: 둘 중 하나라도 0 이하면 체력 감소(둘 다 채워야 멈춤). 음식만/물만으로는 부족할 수 있음.
 	if (Hunger <= 0.0f || Thirst <= 0.0f)
 	{
-		ApplyHealth(DeltaTime * 1.0f);
+		CurrentHealth = FMath::Clamp(CurrentHealth - (DeltaTime * 1.0f), 0.0f, MaxHealth);
+
+		OnPlayerDamaged.Broadcast(DeltaTime * 1.0f, CurrentHealth, MaxHealth);
+
+		if (CurrentHealth <= 0.0f && !bIsDead)
+		{
+			HandleDeath();
+		}
 	}
 
 	GetCharacterMovement()->MaxWalkSpeed = bIsRunning ? RunSpeed : WalkSpeed;
