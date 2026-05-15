@@ -41,6 +41,9 @@ protected:
 	class UInputAction* RunAction;
 
 	UPROPERTY(EditAnywhere, Category = "Input")
+	class UInputAction* CrouchAction;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
 	class UInputAction* FlashlightToggleAction;
 
 	UPROPERTY(EditAnywhere, Category = "Input")
@@ -78,6 +81,8 @@ protected:
 	void OnWheel(const FInputActionValue& Value);
 	void OnRunStarted(const FInputActionValue& Value);
 	void OnRunCompleted(const FInputActionValue& Value);
+	void OnCrouchStarted(const FInputActionValue& Value);
+	void OnCrouchCompleted(const FInputActionValue& Value);
 	void OnFlashlightToggle(const FInputActionValue& Value);
 	void OnFlashbang(const FInputActionValue& Value);
 	void OnFlare(const FInputActionValue& Value);
