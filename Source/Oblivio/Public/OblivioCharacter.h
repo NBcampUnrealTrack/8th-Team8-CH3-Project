@@ -14,6 +14,7 @@
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FPlayerDamagedSignature, float, DamageAmount, float, CurrentHealth, float, MaxHealth);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnNearbyItemChanged, class AOblivioItemBase*, NearbyItem);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPlayerAnimationEvent);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPlayerDied);
 
 class UOblivioCrafting;
 class UOblivioInventoryComponent;
@@ -404,6 +405,9 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Feedback")
 	TSubclassOf<class UCameraShakeBase> HitCameraShakeClass;
+
+	UPROPERTY(BlueprintAssignable, Category = "Events")
+	FOnPlayerDied OnPlayerDied;
 
 	//===============================
 	// Fear Effects (공포 효과)

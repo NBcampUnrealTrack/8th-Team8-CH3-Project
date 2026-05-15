@@ -77,4 +77,8 @@ void AOblivioItemBase::OnSphereEndOverlap(UPrimitiveComponent* OverlappedCompone
 
 void AOblivioItemBase::OnInteract_Implementation(AActor* Interactor)
 {
+    if (AOblivioCharacter* Player = Cast<AOblivioCharacter>(Interactor))
+    {
+        OnMementoCollected.Broadcast(Player);
+    }
 }
