@@ -30,8 +30,8 @@ public:
 		const FAnimNotifyEventReference& EventReference) override;
 };
 
-/** 애님 프레임 60 — 몽타주·FSM 정리 후 Chase/추격 복귀. */
-UCLASS(meta = (DisplayName = "Tank Jump Montage Finished (CPP)"))
+/** 애님 끝 — 점프 FSM 종료 후 Chase 등 복귀(선택 노티; 없으면 시퀀스 길이로 서버 자동 종료). */
+UCLASS(meta = (DisplayName = "Tank Jump Sequence Finished (CPP)"))
 class OBLIVIO_API UTankJumpFinishedNotify : public UAnimNotify
 {
 	GENERATED_BODY()

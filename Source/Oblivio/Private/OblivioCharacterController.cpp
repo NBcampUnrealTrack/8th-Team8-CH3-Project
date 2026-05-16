@@ -1,8 +1,9 @@
-﻿#include "OblivioCharacterController.h"
+#include "OblivioCharacterController.h"
 #include "OblivioCharacter.h"
 #include "Crafting/OblivioCrafting.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "Engine/LocalPlayer.h"
 #include "Kismet/KismetMathLibrary.h"
 #define ECC_Floor ECC_GameTraceChannel1
 
