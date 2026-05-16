@@ -63,6 +63,7 @@ AEnemyBase::AEnemyBase()
 		MeleeAttackRangeIndicatorMesh->SetGenerateOverlapEvents(false);
 		MeleeAttackRangeIndicatorMesh->SetCastShadow(false);
 		MeleeAttackRangeIndicatorMesh->SetHiddenInGame(true);
+		MeleeAttackRangeIndicatorMesh->SetVisibility(false);
 
 		static ConstructorHelpers::FObjectFinder<UStaticMesh> CylinderAsset(TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
 		if (CylinderAsset.Succeeded())
@@ -127,6 +128,11 @@ void AEnemyBase::BeginPlay()
 	if (MeleeAttackRangeIndicatorMesh && MeleeAttackRangeIndicatorMaterial)
 	{
 		MeleeAttackRangeIndicatorMesh->SetMaterial(0, MeleeAttackRangeIndicatorMaterial);
+	}
+	if (MeleeAttackRangeIndicatorMesh)
+	{
+		MeleeAttackRangeIndicatorMesh->SetVisibility(false);
+		MeleeAttackRangeIndicatorMesh->SetHiddenInGame(true);
 	}
 
 	if (UWorld* World = GetWorld())
@@ -224,6 +230,16 @@ void AEnemyBase::Tick(float DeltaSeconds)
 	case EEnemyAIState::Heartbeat:
 		break;
 	case EEnemyAIState::JumpAttack:
+		break;
+	case EEnemyAIState::PlacentaDefense:
+		break;
+	case EEnemyAIState::Membrane:
+		CheckAndRecoverFromStuck(DeltaSeconds);
+		HandleBlockingObstacle(DeltaSeconds);
+		if (!IsValid(BlockingObstacle))
+		{
+			UpdateChase();
+		}
 		break;
 	case EEnemyAIState::Patrol:
 		UpdatePatrol(DeltaSeconds);
@@ -1510,6 +1526,8 @@ AEnemyBase::ELocomotionAmbientLayer AEnemyBase::LocomotionAmbientLayerFromFsmSta
 	case EEnemyAIState::Chase:
 	case EEnemyAIState::Attack:
 	case EEnemyAIState::Heartbeat:
+	case EEnemyAIState::Membrane:
+	case EEnemyAIState::PlacentaDefense:
 		return ELocomotionAmbientLayer::Chase;
 	default:
 		return ELocomotionAmbientLayer::None;
@@ -1768,6 +1786,8 @@ float AEnemyBase::GetLocomotionBaseSpeed() const
 		LocState == EEnemyAIState::Attack ||
 		LocState == EEnemyAIState::Heartbeat ||
 		LocState == EEnemyAIState::JumpAttack ||
+		LocState == EEnemyAIState::Membrane ||
+		LocState == EEnemyAIState::PlacentaDefense ||
 		LocState == EEnemyAIState::TrackLight;
 	if (bCombatLocomotion && ChaseMoveSpeed > KINDA_SMALL_NUMBER)
 	{

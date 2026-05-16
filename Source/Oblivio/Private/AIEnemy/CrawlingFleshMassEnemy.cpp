@@ -5,6 +5,7 @@
 #include "NavigationSystem.h"
 #include "AIController.h"
 #include "Engine/World.h"
+#include "GameFramework/DamageType.h"
 #include "Kismet/GameplayStatics.h"
 
 ACrawlingFleshMassEnemy::ACrawlingFleshMassEnemy()

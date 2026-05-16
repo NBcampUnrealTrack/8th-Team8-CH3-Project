@@ -2,6 +2,7 @@
 
 #include "OblivioComponents/LightAttackComponent.h"
 #include "AIEnemy/EnemyBase.h"
+#include "AIEnemy/Tank/TankPlacentaShellActor.h"
 #include "Combat/LightDamageType.h"
 
 #include "Engine/OverlapResult.h"
@@ -200,6 +201,7 @@ void ULightAttackComponent::CreateLightAttack(FVector SourceLocation, FVector Li
     //linetrace 충돌한 액터가 대상 적 액터면 데미지 판정 진행, maxdistance까진 Damage그대로, maxDamageDistance이후로는 데미지 감쇠
     const UObject* WorldContext = GetWorld();
     TSet<AActor*> HitActors;
+	TSet<const AActor*> DamagedTankPlacentaShellsThisAttack;
 
     for (AActor* Target : Candidates)
     {
@@ -210,6 +212,20 @@ void ULightAttackComponent::CreateLightAttack(FVector SourceLocation, FVector Li
         FVector ToTarget = (Center - SourceLocation);
         float Distance = ToTarget.Size();
         FVector ToTargetNorm = ToTarget.GetSafeNormal();
+
+		float FinalDamage = 0.f;
+		if (Distance <= MaxDamageDistance)
+		{
+			FinalDamage = Damage;
+		}
+		else
+		{
+			const float Denom = LightDistance - MaxDamageDistance;
+			float AttenuationRatio = Denom <= KINDA_SMALL_NUMBER
+										 ? 0.f
+										 : 1.f - FMath::Clamp((Distance - MaxDamageDistance) / Denom, 0.f, 1.f);
+			FinalDamage = Damage * AttenuationRatio * DamageAttenuationRate;
+		}
 
         //적 캡슐 반경 접점 계산
         float CapsuleRadius = 30.f;
@@ -245,22 +261,26 @@ void ULightAttackComponent::CreateLightAttack(FVector SourceLocation, FVector Li
                 FLinearColor::Green,
                 .02f);
 
+            AActor* const HitActor = HitResult.GetActor();
+
+			if (bHit && HitActor && HitActor != Target && Cast<ATankPlacentaShellActor>(HitActor))
+			{
+				const AActor* const ShellActorKey = HitActor;
+				if (!DamagedTankPlacentaShellsThisAttack.Contains(ShellActorKey))
+				{
+					DamagedTankPlacentaShellsThisAttack.Add(ShellActorKey);
+					UGameplayStatics::ApplyDamage(HitActor, FinalDamage, nullptr, GetOwner(), ULightDamageType::StaticClass());
+					UE_LOG(LogTemp, Verbose,
+						TEXT("LightAttack: applying %.1f to tank placenta shell %s (blocked line to enemy %s)"),
+						FinalDamage, *GetNameSafe(HitActor), *GetNameSafe(Target));
+				}
+				break;
+			}
+
             //적이면 데미지 계산 진행
-            if (!bHit || HitResult.GetActor() == Target)
+            if (!bHit || HitActor == Target)
             {
                 HitActors.Add(Target);
-
-                float FinalDamage = 0.f;
-
-				if (Distance <= MaxDamageDistance)
-				{
-					FinalDamage = Damage;
-				}
-				else
-				{
-					float AttenuationRatio = 1.f - FMath::Clamp((Distance - MaxDamageDistance) / (LightDistance - MaxDamageDistance), 0.f, 1.f);
-					FinalDamage = Damage * AttenuationRatio * DamageAttenuationRate;
-				}
 
                 UGameplayStatics::ApplyDamage(Target, FinalDamage, nullptr, GetOwner(), ULightDamageType::StaticClass());
                 UE_LOG(LogTemp, Warning, TEXT("Applying %f damage to the actor %s!"), FinalDamage, *Target->GetName());

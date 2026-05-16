@@ -4,7 +4,7 @@
 #include "Combat/TankJumpAttackDamageType.h"
 
 #include "Animation/AnimInstance.h"
-#include "Animation/AnimMontage.h"
+#include "Animation/AnimSequence.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/PointLightComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -17,11 +17,17 @@
 #include "Kismet/GameplayStatics.h"
 #include "Materials/MaterialInterface.h"
 #include "Engine/World.h"
-#include "NiagaraFunctionLibrary.h"
-#include "NiagaraSystem.h"
 #include "Net/UnrealNetwork.h"
 #include "TimerManager.h"
 #include "UObject/ConstructorHelpers.h"
+
+#include "AIEnemy/Tank/TankMembraneEmitterActor.h"
+#include "AIEnemy/Tank/TankMembraneProjectile.h"
+#include "AIEnemy/Tank/TankMembraneSpawnSubsystem.h"
+#include "AIEnemy/Tank/TankPlacentaShellActor.h"
+#include "Engine/DamageEvents.h"
+#include "GameFramework/PlayerController.h"
+#include "OblivioCharacter.h"
 
 ATankEnemy::ATankEnemy()
 {
@@ -61,6 +67,7 @@ ATankEnemy::ATankEnemy()
 		HeartbeatAoERangeIndicatorMesh->SetGenerateOverlapEvents(false);
 		HeartbeatAoERangeIndicatorMesh->SetCastShadow(false);
 		HeartbeatAoERangeIndicatorMesh->SetHiddenInGame(true);
+		HeartbeatAoERangeIndicatorMesh->SetVisibility(false);
 
 		static ConstructorHelpers::FObjectFinder<UStaticMesh> CylinderAsset(TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
 		if (CylinderAsset.Succeeded())
@@ -77,6 +84,7 @@ ATankEnemy::ATankEnemy()
 		JumpLandingAoERangeIndicatorMesh->SetGenerateOverlapEvents(false);
 		JumpLandingAoERangeIndicatorMesh->SetCastShadow(false);
 		JumpLandingAoERangeIndicatorMesh->SetHiddenInGame(true);
+		JumpLandingAoERangeIndicatorMesh->SetVisibility(false);
 
 		static ConstructorHelpers::FObjectFinder<UStaticMesh> CylinderJump(TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
 		if (CylinderJump.Succeeded())
@@ -84,6 +92,10 @@ ATankEnemy::ATankEnemy()
 			JumpLandingAoERangeIndicatorMesh->SetStaticMesh(CylinderJump.Object);
 		}
 	}
+
+	TankMembraneEmitterClass = ATankMembraneEmitterActor::StaticClass();
+	TankMembraneProjectileClass = ATankMembraneProjectile::StaticClass();
+	TankPlacentaShellActorClass = ATankPlacentaShellActor::StaticClass();
 }
 
 void ATankEnemy::SetTankHeartMeshVisible(const bool bVisible)
@@ -239,6 +251,16 @@ void ATankEnemy::BeginPlay()
 	{
 		JumpLandingAoERangeIndicatorMesh->SetMaterial(0, JumpLandingAoERangeIndicatorMaterial);
 	}
+	if (HeartbeatAoERangeIndicatorMesh)
+	{
+		HeartbeatAoERangeIndicatorMesh->SetVisibility(false);
+		HeartbeatAoERangeIndicatorMesh->SetHiddenInGame(true);
+	}
+	if (JumpLandingAoERangeIndicatorMesh)
+	{
+		JumpLandingAoERangeIndicatorMesh->SetVisibility(false);
+		JumpLandingAoERangeIndicatorMesh->SetHiddenInGame(true);
+	}
 }
 
 void ATankEnemy::OnRep_HeartbeatChanneling()
@@ -255,6 +277,54 @@ void ATankEnemy::OnRep_TankJumpAttackActive()
 	RefreshIdleChaseLocomotionAmbientFromCurrentDisplayState();
 }
 
+void ATankEnemy::OnRep_TankMembranePatternCycleActive()
+{
+	RefreshIdleChaseLocomotionAmbientFromCurrentDisplayState();
+}
+
+void ATankEnemy::OnRep_TankPlacentaDefenseActive()
+{
+	RefreshIdleChaseLocomotionAmbientFromCurrentDisplayState();
+}
+
+void ATankEnemy::ClearTankMembraneAnimReleaseTimer()
+{
+	if (UWorld* const W = GetWorld())
+	{
+		W->GetTimerManager().ClearTimer(TankMembraneAnimReleaseTimerHandle);
+	}
+}
+
+void ATankEnemy::ClearTankMembraneSummonNotifyFailSafeTimer()
+{
+	if (UWorld* const W = GetWorld())
+	{
+		W->GetTimerManager().ClearTimer(TankMembraneSummonNotifyFailSafeTimerHandle);
+	}
+}
+
+void ATankEnemy::ClearTankMembraneFinishNotifyFailSafeTimer()
+{
+	if (UWorld* const W = GetWorld())
+	{
+		W->GetTimerManager().ClearTimer(TankMembraneFinishNotifyFailSafeTimerHandle);
+	}
+}
+
+void ATankEnemy::FinishTankMembranePatternCycleAnimHold()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+	bTankMembranePatternCycleActive = false;
+	if (IsAlive())
+	{
+		SetEnemyState(SelectStateWhileAggroed(), true);
+	}
+	RefreshIdleChaseLocomotionAmbientFromCurrentDisplayState();
+}
+
 void ATankEnemy::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -263,6 +333,8 @@ void ATankEnemy::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifeti
 	DOREPLIFETIME(ATankEnemy, bTankJumpAttackActive);
 	DOREPLIFETIME(ATankEnemy, bTankJumpShowLandingTelegraph);
 	DOREPLIFETIME(ATankEnemy, TankJumpLandingFloorWorld);
+	DOREPLIFETIME(ATankEnemy, bTankMembranePatternCycleActive);
+	DOREPLIFETIME(ATankEnemy, bTankPlacentaDefenseActive);
 }
 
 bool ATankEnemy::HasValidAggroTarget() const
@@ -296,9 +368,17 @@ EEnemyAIState ATankEnemy::SelectStateWhileAggroed() const
 	{
 		return EEnemyAIState::JumpAttack;
 	}
+	if (bTankPlacentaDefenseActive && IsAlive())
+	{
+		return EEnemyAIState::PlacentaDefense;
+	}
 	if (bUseHeartbeatAoEAttack && bHeartbeatChanneling && IsAlive())
 	{
 		return EEnemyAIState::Heartbeat;
+	}
+	if (bTankMembranePatternCycleActive && bEnableTankMembranePattern && IsAlive())
+	{
+		return EEnemyAIState::Membrane;
 	}
 	return Super::SelectStateWhileAggroed();
 }
@@ -312,16 +392,29 @@ bool ATankEnemy::TryConsumeSpecialFSMUpdate()
 	if (bTankJumpAttackActive)
 	{
 		ApplyAggroCombatTransientCleanup();
-		SetEnemyState(EEnemyAIState::JumpAttack);
+		// JumpAttack 고정 상태에서 매틱 bForce는 FSM 노티 반복만 유발한다(점프 후반 블렌드 흔들림).
+		SetEnemyState(EEnemyAIState::JumpAttack, false);
 		return true;
 	}
-	if (!bUseHeartbeatAoEAttack || !bHeartbeatChanneling)
+	if (bTankPlacentaDefenseActive && IsAlive())
 	{
-		return false;
+		ApplyAggroCombatTransientCleanup();
+		SetEnemyState(EEnemyAIState::PlacentaDefense, false);
+		return true;
 	}
-	ApplyAggroCombatTransientCleanup();
-	SetEnemyState(EEnemyAIState::Heartbeat);
-	return true;
+	if (bUseHeartbeatAoEAttack && bHeartbeatChanneling)
+	{
+		ApplyAggroCombatTransientCleanup();
+		SetEnemyState(EEnemyAIState::Heartbeat, false);
+		return true;
+	}
+	if (bTankMembranePatternCycleActive && bEnableTankMembranePattern)
+	{
+		ApplyAggroCombatTransientCleanup();
+		SetEnemyState(EEnemyAIState::Membrane, false);
+		return true;
+	}
+	return false;
 }
 
 bool ATankEnemy::UsesHeartbeatAoEAttack() const
@@ -339,9 +432,17 @@ EEnemyAIState ATankEnemy::GetEnemyState() const
 	{
 		return EEnemyAIState::JumpAttack;
 	}
+	if (bTankPlacentaDefenseActive && IsAlive())
+	{
+		return EEnemyAIState::PlacentaDefense;
+	}
 	if (bUseHeartbeatAoEAttack && bHeartbeatChanneling)
 	{
 		return EEnemyAIState::Heartbeat;
+	}
+	if (bTankMembranePatternCycleActive && bEnableTankMembranePattern && IsAlive())
+	{
+		return EEnemyAIState::Membrane;
 	}
 	return EnemyState;
 }
@@ -394,6 +495,14 @@ void ATankEnemy::Die()
 {
 	bTankStickyAggroUntilDeath = false;
 
+	ClearTankMembraneAnimReleaseTimer();
+	ClearTankMembraneSummonNotifyFailSafeTimer();
+	ClearTankMembraneFinishNotifyFailSafeTimer();
+	bTankMembranePatternCycleActive = false;
+	bTankMembraneWaitingForSummonNotify = false;
+	bTankMembraneWaveEnded_Server = false;
+	bTankMembraneFinishNotifySeen_Server = false;
+
 	ClearTankJumpTimers();
 	bTankJumpAttackActive = false;
 	bTankJumpShowLandingTelegraph = false;
@@ -415,14 +524,34 @@ void ATankEnemy::Die()
 	ClearHeartPulseFlashTimer();
 	ClearHeartbeatTimers();
 	bHeartbeatChanneling = false;
+	if (HasAuthority())
+	{
+		ClearTankPlacentaDefenseTimers_Server();
+		DestroyTankPlacentaShellIfAny_Server();
+		bTankPlacentaDefenseActive = false;
+	}
 	Super::Die();
 }
 
 void ATankEnemy::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	if (HasAuthority())
+	{
+		ClearTankPlacentaDefenseTimers_Server();
+		DestroyTankPlacentaShellIfAny_Server();
+		bTankPlacentaDefenseActive = false;
+	}
 	ClearHeartPulseFlashTimer();
 	ClearHeartbeatTimers();
 	ClearTankJumpTimers();
+	ClearTankMembraneAnimReleaseTimer();
+	ClearTankMembraneSummonNotifyFailSafeTimer();
+	ClearTankMembraneFinishNotifyFailSafeTimer();
+	bTankMembranePatternCycleActive = false;
+	bTankMembraneWaitingForSummonNotify = false;
+	bTankMembraneWaveEnded_Server = false;
+	bTankMembraneFinishNotifySeen_Server = false;
+	DestroyActiveTankMembraneEmitters();
 	bHeartbeatChanneling = false;
 	bTankStickyAggroUntilDeath = false;
 	bTankJumpAttackActive = false;
@@ -458,10 +587,13 @@ void ATankEnemy::Tick(float DeltaSeconds)
 		{
 			bTankStickyAggroUntilDeath = true;
 		}
-		if (HasAuthority())
+		TickTankJumpArc_Server();
+		if (UWorld* const W = GetWorld())
 		{
-			TickTankJumpArc_Server();
+			double const NowSec = W->GetTimeSeconds();
+			TryPrimeMembraneCooldownAfterFirstAggro(NowSec);
 		}
+		TryTankPlacentaDefenseAfterIncomingDamage_Server();
 	}
 
 	// ALuxeaterEnemy: TickBossAbilities 가 Super::Tick 보다 먼저 — 심작은 FSM/이동보다 앞에서도 한 번 시도
@@ -499,6 +631,14 @@ void ATankEnemy::MaybeTryTankHeartbeatAoE()
 	}
 
 	if (bTankJumpAttackActive)
+	{
+		return;
+	}
+	if (bTankMembranePatternCycleActive)
+	{
+		return;
+	}
+	if (bTankPlacentaDefenseActive)
 	{
 		return;
 	}
@@ -543,6 +683,14 @@ bool ATankEnemy::TryStartHeartbeatWhenReady()
 		return false;
 	}
 	if (bTankJumpAttackActive)
+	{
+		return false;
+	}
+	if (bTankMembranePatternCycleActive)
+	{
+		return false;
+	}
+	if (bTankPlacentaDefenseActive)
 	{
 		return false;
 	}
@@ -614,7 +762,15 @@ bool ATankEnemy::ShouldSuppressAILocomotion() const
 	{
 		return true;
 	}
+	if (bTankPlacentaDefenseActive && IsAlive())
+	{
+		return true;
+	}
 	if (bUseHeartbeatAoEAttack && bHeartbeatChanneling)
+	{
+		return true;
+	}
+	if (bTankMembranePatternCycleActive && bEnableTankMembranePattern && IsAlive())
 	{
 		return true;
 	}
@@ -668,6 +824,14 @@ void ATankEnemy::TryStartHeartbeatSequence()
 	{
 		return;
 	}
+	if (bTankMembranePatternCycleActive)
+	{
+		return;
+	}
+	if (bTankPlacentaDefenseActive)
+	{
+		return;
+	}
 	if (HeartbeatPulseDamage <= KINDA_SMALL_NUMBER)
 	{
 		return;
@@ -715,7 +879,7 @@ void ATankEnemy::FinishHeartbeatSequence()
 		LastHeartbeatSequenceEndWorldTime = W->GetTimeSeconds();
 	}
 
-	if (IsAlive())
+	if (IsAlive() && HasAuthority())
 	{
 		if (!TryBeginTankJumpAttackAfterHeartbeat())
 		{
@@ -767,13 +931,18 @@ bool ATankEnemy::IsTankJumpAttackFsmActiveForAnim() const
 	return bTankJumpAttackActive && IsAlive();
 }
 
+bool ATankEnemy::IsTankMembraneFsmActiveForAnim() const
+{
+	return IsAlive() && bEnableTankMembranePattern && bTankMembranePatternCycleActive;
+}
+
 bool ATankEnemy::TryBeginTankJumpAttackAfterHeartbeat()
 {
 	if (!HasAuthority())
 	{
 		return false;
 	}
-	if (!bUseTankJumpAttackAfterHeartbeat || !IsValid(TankJumpAttackMontage))
+	if (!bUseTankJumpAttackAfterHeartbeat || !IsValid(TankJumpAttackAnimSequence))
 	{
 		return false;
 	}
@@ -781,13 +950,20 @@ bool ATankEnemy::TryBeginTankJumpAttackAfterHeartbeat()
 	{
 		return false;
 	}
+
+	if (bTankPlacentaDefenseActive)
+	{
+		return false;
+	}
+
 	// 심작 AoE 거리 무관: 종료 후에는 TargetActor 만 있으면 점프(HasValidAggroTarget 는 AoE 포함)
 	if (!IsValid(TargetActor))
 	{
 		return false;
 	}
 
-	return StartTankJumpAttackSequence_Server();
+	const bool bStarted = StartTankJumpAttackSequence_Server();
+	return bStarted;
 }
 
 bool ATankEnemy::StartTankJumpAttackSequence_Server()
@@ -801,7 +977,11 @@ bool ATankEnemy::StartTankJumpAttackSequence_Server()
 	{
 		return false;
 	}
-	if (!IsValid(TankJumpAttackMontage))
+	if (bTankPlacentaDefenseActive)
+	{
+		return false;
+	}
+	if (!IsValid(TankJumpAttackAnimSequence))
 	{
 		return false;
 	}
@@ -824,7 +1004,8 @@ bool ATankEnemy::StartTankJumpAttackSequence_Server()
 	bTankJumpShowLandingTelegraph = true;
 
 	SetEnemyState(EEnemyAIState::JumpAttack, true);
-	Multicast_PlayTankJumpMontage();
+	Multicast_SyncTankJumpAttackStart();
+	ScheduleTankJumpNaturalEnd_Server();
 
 	if (TankJumpFailsafeSeconds > KINDA_SMALL_NUMBER)
 	{
@@ -866,7 +1047,30 @@ void ATankEnemy::ClearTankJumpTimers()
 		W->GetTimerManager().ClearTimer(TankJumpFailsafeTimerHandle);
 		W->GetTimerManager().ClearTimer(TankJumpLiftOffFailsafeTimerHandle);
 		W->GetTimerManager().ClearTimer(TankJumpLandingFailsafeTimerHandle);
+		W->GetTimerManager().ClearTimer(TankJumpAnimNaturalEndTimerHandle);
 	}
+}
+
+void ATankEnemy::ScheduleTankJumpNaturalEnd_Server()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+	UWorld* const World = GetWorld();
+	if (!World || !IsValid(TankJumpAttackAnimSequence))
+	{
+		return;
+	}
+	World->GetTimerManager().ClearTimer(TankJumpAnimNaturalEndTimerHandle);
+	const float Delay = FMath::Max(TankJumpAttackAnimSequence->GetPlayLength() + 0.08f, 0.05f);
+	World->GetTimerManager().SetTimer(TankJumpAnimNaturalEndTimerHandle, this,
+		&ATankEnemy::TankJumpAnimNaturalEnd_Server, Delay, false);
+}
+
+void ATankEnemy::TankJumpAnimNaturalEnd_Server()
+{
+	JumpAttack_NotifyMontageFinished();
 }
 
 void ATankEnemy::OnTankJumpFailsafe_Server()
@@ -881,7 +1085,7 @@ void ATankEnemy::OnTankJumpFailsafe_Server()
 		{
 			LiftOffJumpAttack_Server_Impl();
 		}
-		ApplyJumpSlamAndRing_Server(FVector(TankJumpLandingFloorWorld));
+		ApplyJumpSlam_Server(FVector(TankJumpLandingFloorWorld));
 	}
 	CompleteTankJumpAttackSequence_Server();
 }
@@ -913,7 +1117,7 @@ void ATankEnemy::TankJumpLandingFailsafe_Server()
 	{
 		LiftOffJumpAttack_Server_Impl();
 	}
-	ApplyJumpSlamAndRing_Server(FVector(TankJumpLandingFloorWorld));
+	ApplyJumpSlam_Server(FVector(TankJumpLandingFloorWorld));
 }
 
 void ATankEnemy::CompleteTankJumpAttackSequence_Server()
@@ -944,7 +1148,11 @@ void ATankEnemy::CompleteTankJumpAttackSequence_Server()
 
 	if (IsAlive())
 	{
-		SetEnemyState(SelectStateWhileAggroed(), true);
+		const double Now = GetWorld() ? static_cast<double>(GetWorld()->GetTimeSeconds()) : 0.0;
+		if (!TryStartTankMembranePatternCycle(Now))
+		{
+			SetEnemyState(SelectStateWhileAggroed(), true);
+		}
 	}
 }
 
@@ -971,7 +1179,7 @@ void ATankEnemy::JumpAttack_NotifyLandingImpact()
 	{
 		W->GetTimerManager().ClearTimer(TankJumpLandingFailsafeTimerHandle);
 	}
-	ApplyJumpSlamAndRing_Server(FVector(TankJumpLandingFloorWorld));
+	ApplyJumpSlam_Server(FVector(TankJumpLandingFloorWorld));
 }
 
 void ATankEnemy::JumpAttack_NotifyMontageFinished()
@@ -985,6 +1193,43 @@ void ATankEnemy::JumpAttack_NotifyMontageFinished()
 		return;
 	}
 	CompleteTankJumpAttackSequence_Server();
+}
+
+void ATankEnemy::TankMembrane_NotifySummon()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+	if (!bTankMembranePatternCycleActive || !bTankMembraneWaitingForSummonNotify)
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[TankMembrane] %s Summon 노티 무시 — 패턴 비활성/대기 아님 (CycleActive=%d WaitingForSummon=%d)."
+				 " Membrane 애님이 패턴 트리거 없이 재생됐을 가능성."),
+			*GetNameSafe(this),
+			bTankMembranePatternCycleActive ? 1 : 0, bTankMembraneWaitingForSummonNotify ? 1 : 0);
+		return;
+	}
+	ClearTankMembraneSummonNotifyFailSafeTimer();
+	ClearTankMembraneFinishNotifyFailSafeTimer();
+	bTankMembraneWaveEnded_Server = false;
+	bTankMembraneFinishNotifySeen_Server = false;
+	bTankMembraneWaitingForSummonNotify = false;
+	StartTankMembranePatternWave();
+}
+
+void ATankEnemy::TankMembrane_NotifyMontageFinished()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+	if (!bTankMembranePatternCycleActive)
+	{
+		return;
+	}
+	bTankMembraneFinishNotifySeen_Server = true;
+	TryFinalizeTankMembranePatternDismissal_Server();
 }
 
 void ATankEnemy::LiftOffJumpAttack_Server_Impl()
@@ -1095,10 +1340,17 @@ void ATankEnemy::TickTankJumpArc_Server()
 	const float Now = World->GetTimeSeconds();
 	const float t = float(Now - TankJumpLiftOffStampServerSecs);
 
-	static constexpr float KAirborneTotal = 18.f / 30.f;
-	static constexpr float KAscend = 5.f / 30.f;
+	static constexpr float KLegacyAirborneTotal = 18.f / 30.f;
+	const float AirborneTotal = TankJumpArcKinematicAirborneSeconds > KINDA_SMALL_NUMBER
+		? TankJumpArcKinematicAirborneSeconds
+		: (IsValid(TankJumpAttackAnimSequence)
+			   ? FMath::Max(TankJumpAttackAnimSequence->GetPlayLength(), 0.05f)
+			   : KLegacyAirborneTotal);
 
-	if (t >= KAirborneTotal)
+	const float AscFrac = FMath::Clamp(TankJumpArcAscendFraction, 0.01f, 0.99f);
+	const float AscendSecs = AirborneTotal * AscFrac;
+
+	if (t >= AirborneTotal)
 	{
 		const FVector LandPt(TankJumpLandingFloorWorld);
 		const float HalfH = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
@@ -1106,7 +1358,7 @@ void ATankEnemy::TickTankJumpArc_Server()
 		return;
 	}
 
-	const float u = FMath::Clamp(t / KAirborneTotal, 0.f, 1.f);
+	const float u = FMath::Clamp(t / AirborneTotal, 0.f, 1.f);
 	const FVector StartXY(TankJumpArcBeginWorld.X, TankJumpArcBeginWorld.Y, 0.f);
 	const FVector LandPt = FVector(TankJumpLandingFloorWorld);
 	const FVector EndXY(LandPt.X, LandPt.Y, 0.f);
@@ -1115,7 +1367,7 @@ void ATankEnemy::TickTankJumpArc_Server()
 	const float HalfH = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
 	const float LandCenterZ = LandPt.Z + HalfH;
 
-	const float Asc = FMath::Max(KAscend, KINDA_SMALL_NUMBER);
+	const float Asc = FMath::Max(AscendSecs, KINDA_SMALL_NUMBER);
 	float NewZ = 0.f;
 	if (t <= Asc)
 	{
@@ -1126,7 +1378,7 @@ void ATankEnemy::TickTankJumpArc_Server()
 	}
 	else
 	{
-		const float FallT = KAirborneTotal - Asc;
+		const float FallT = AirborneTotal - Asc;
 		const float Alpha = FallT > KINDA_SMALL_NUMBER ? FMath::Clamp((t - Asc) / FallT, 0.f, 1.f) : 1.f;
 		NewZ = FMath::Lerp(TankJumpArcBeginWorld.Z + TankJumpPeakZDeltaCm, LandCenterZ, Alpha);
 	}
@@ -1135,7 +1387,7 @@ void ATankEnemy::TickTankJumpArc_Server()
 	SetActorLocation(NewLoc, false, nullptr, ETeleportType::TeleportPhysics);
 }
 
-void ATankEnemy::ApplyJumpSlamAndRing_Server(const FVector& LandFloorWorld)
+void ATankEnemy::ApplyJumpSlam_Server(const FVector& LandFloorWorld)
 {
 	if (!HasAuthority() || !bTankJumpAttackActive)
 	{
@@ -1186,6 +1438,7 @@ void ATankEnemy::ApplyJumpSlamAndRing_Server(const FVector& LandFloorWorld)
 		{
 			return;
 		}
+		DamageAmt *= TankOutgoingDamageMultiplierRuntime;
 
 		TArray<FOverlapResult> Hits;
 		FCollisionQueryParams Params(SCENE_QUERY_STAT(TankJumpDamageOverlap), false, this);
@@ -1231,52 +1484,6 @@ void ATankEnemy::ApplyJumpSlamAndRing_Server(const FVector& LandFloorWorld)
 		ApplyRadialDamageIgnoringSelf(FMath::Square(TankJumpSlamRadiusCm), TankJumpSlamDamage,
 			TankJumpSlamVictimMaxFeetCmAboveLanding);
 	}
-
-	if (TankJumpRingWaveDamage > KINDA_SMALL_NUMBER && TankJumpRingOuterCm > TankJumpSlamRadiusCm + KINDA_SMALL_NUMBER)
-	{
-		TArray<FOverlapResult> RingHits;
-		FCollisionQueryParams RingParams(SCENE_QUERY_STAT(TankJumpRingOv), false, this);
-		RingParams.AddIgnoredActor(this);
-		const FVector RC(LandFloorWorld.X, LandFloorWorld.Y, LandFloorWorld.Z + 85.f);
-
-		const float SqOuter = TankJumpRingOuterCm * TankJumpRingOuterCm;
-		const float SqInner = FMath::Square(TankJumpSlamRadiusCm + 5.f);
-
-		if (World->OverlapMultiByChannel(RingHits, RC, FQuat::Identity, ECC_Pawn,
-				FCollisionShape::MakeSphere(TankJumpRingOuterCm), RingParams))
-		{
-			TSet<AActor*> Seen;
-			for (const FOverlapResult& Ov : RingHits)
-			{
-				AActor* const Act = Ov.GetActor();
-				if (!IsValid(Act) || Seen.Contains(Act))
-				{
-					continue;
-				}
-				const FVector AL = Act->GetActorLocation();
-				const float Dx = AL.X - LandFloorWorld.X;
-				const float Dy = AL.Y - LandFloorWorld.Y;
-				const float DxySq = Dx * Dx + Dy * Dy;
-
-				if (DxySq < SqInner || DxySq > SqOuter + SMALL_NUMBER)
-				{
-					continue;
-				}
-
-				const float FeetAbove = TankJumpResolveFeetCmAboveLandingZ(Act, FloorZ);
-				if (FeetAbove > TankJumpRingVictimJumpClearCmAboveLanding)
-				{
-					continue;
-				}
-
-				UGameplayStatics::ApplyDamage(
-					Act, TankJumpRingWaveDamage, Inst, this, UTankJumpAttackDamageType::StaticClass());
-				Seen.Add(Act);
-			}
-		}
-	}
-
-	Multicast_SpawnJumpRingBurst(LandFloorWorld);
 }
 
 float ATankEnemy::TankJumpResolveFeetCmAboveLandingZ(AActor const* Victim, float LandingFloorWorldZ)
@@ -1354,31 +1561,604 @@ void ATankEnemy::UpdateJumpLandingAoEIndicatorVisual()
 	JumpLandingAoERangeIndicatorMesh->SetWorldScale3D(FVector(XYScale, XYScale, ZScale));
 }
 
-void ATankEnemy::Multicast_PlayTankJumpMontage_Implementation()
+void ATankEnemy::Multicast_SyncTankJumpAttackStart_Implementation()
 {
 	SyncIdleChaseLocomotionAmbientToFsm(EEnemyAIState::JumpAttack);
 
-	if (!IsValid(TankJumpAttackMontage) || !GetMesh())
+	if (!GetMesh())
 	{
 		return;
 	}
 	if (UAnimInstance* const AI = GetMesh()->GetAnimInstance())
 	{
-		/** 심장박동 몽타주 등이 같은 스켈에서 돌며 점프 착지 노티·타임라인과 겹치는 것 방지 */
 		AI->StopAllMontages(0.12f);
-		AI->Montage_Play(TankJumpAttackMontage, 1.f, EMontagePlayReturnType::MontageLength, 0.f, true);
 	}
 }
 
-void ATankEnemy::Multicast_SpawnJumpRingBurst_Implementation(FVector BurstLocationFloor)
+void ATankEnemy::TryPrimeMembraneCooldownAfterFirstAggro(double const Now)
 {
-	if (!IsValid(TankJumpRingNiagaraSystem))
+	if (!bEnableTankMembranePattern || !IsAlive())
 	{
 		return;
 	}
+	if (bTankMembraneFirstCooldownScheduled)
+	{
+		return;
+	}
+	// 최초 조우 시에만 쿨 타이머를 잡는다. 발동은 별도로 점프 종료 순간에서만 검사된다.
+	if (!HasValidAggroTarget())
+	{
+		return;
+	}
+	NextTankMembranePatternTime = Now + static_cast<double>(TankMembraneCooldownSeconds);
+	bTankMembraneFirstCooldownScheduled = true;
+}
+
+bool ATankEnemy::IsTankMembraneCooldownReady(double const Now) const
+{
+	if (TankMembraneCooldownSeconds <= KINDA_SMALL_NUMBER)
+	{
+		return true;
+	}
+	if (NextTankMembranePatternTime < 0.0)
+	{
+		return false;
+	}
+	return Now >= NextTankMembranePatternTime;
+}
+
+bool ATankEnemy::TryStartTankMembranePatternCycle(double const Now)
+{
+	UWorld* const World = GetWorld();
+	if (!World || !HasAuthority() || !IsAlive() || !bEnableTankMembranePattern)
+	{
+		UE_LOG(LogTemp, Verbose,
+			TEXT("[TankMembrane] %s 시작 스킵 — 권한/생존/Enable 게이트 (HasWorld=%d HasAuth=%d Alive=%d Enable=%d)"),
+			*GetNameSafe(this),
+			World ? 1 : 0, HasAuthority() ? 1 : 0, IsAlive() ? 1 : 0, bEnableTankMembranePattern ? 1 : 0);
+		return false;
+	}
+	if (bTankMembranePatternCycleActive || bHeartbeatChanneling || bTankJumpAttackActive || bTankPlacentaDefenseActive)
+	{
+		UE_LOG(LogTemp, Verbose,
+			TEXT("[TankMembrane] %s 시작 스킵 — 다른 패턴 진행 중 (Active=%d Heartbeat=%d JumpAttack=%d Placenta=%d)"),
+			*GetNameSafe(this),
+			bTankMembranePatternCycleActive ? 1 : 0, bHeartbeatChanneling ? 1 : 0, bTankJumpAttackActive ? 1 : 0,
+			bTankPlacentaDefenseActive ? 1 : 0);
+		return false;
+	}
+	if (!IsTankMembraneCooldownReady(Now))
+	{
+		UE_LOG(LogTemp, Verbose,
+			TEXT("[TankMembrane] %s 시작 스킵 — 쿨다운 (Now=%.2f Next=%.2f Cooldown=%.1fs)"),
+			*GetNameSafe(this), Now, NextTankMembranePatternTime, TankMembraneCooldownSeconds);
+		return false;
+	}
+	if (!TankMembraneEmitterClass || !TankMembraneProjectileClass)
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[TankMembrane] %s 시작 실패 — Tank BP 의 'Tank Membrane Emitter Class'/'Tank Membrane Projectile Class' 가 비어 있음"
+				 " (EmitterClass=%s ProjectileClass=%s)"),
+			*GetNameSafe(this),
+			*GetNameSafe(TankMembraneEmitterClass), *GetNameSafe(TankMembraneProjectileClass));
+		NextTankMembranePatternTime = World->GetTimeSeconds() + static_cast<double>(TankMembraneCooldownSeconds);
+		return false;
+	}
+	UTankMembraneSpawnSubsystem* const Sub = World->GetSubsystem<UTankMembraneSpawnSubsystem>();
+	if (!Sub || Sub->GetRegisteredPointCount() < 2)
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[TankMembrane] %s 시작 실패 — 레벨에 ATankMembraneSpawnPoint 가 부족 (Subsystem=%d Registered=%d, 최소 2개 필요)"),
+			*GetNameSafe(this),
+			Sub ? 1 : 0, Sub ? Sub->GetRegisteredPointCount() : 0);
+		NextTankMembranePatternTime = World->GetTimeSeconds() + static_cast<double>(TankMembraneCooldownSeconds);
+		return false;
+	}
+
+	ClearTankMembraneAnimReleaseTimer();
+	ClearTankMembraneSummonNotifyFailSafeTimer();
+	ClearTankMembraneFinishNotifyFailSafeTimer();
+	DestroyActiveTankMembraneEmitters();
+	TankMembraneEmittersPendingThisWave = 0;
+	bTankMembraneWaveEnded_Server = false;
+	bTankMembraneFinishNotifySeen_Server = false;
+	bTankMembranePatternCycleActive = true;
+	bTankMembraneWaitingForSummonNotify = true;
+
+	ApplyAggroCombatTransientCleanup();
+	SetEnemyState(EEnemyAIState::Membrane, true);
+	StopEnemyMovement();
+	if (UCharacterMovementComponent* const Move = GetCharacterMovement())
+	{
+		Move->StopMovementImmediately();
+	}
+
+	if (TankMembraneSummonNotifyFailSafeSeconds > KINDA_SMALL_NUMBER)
+	{
+		World->GetTimerManager().SetTimer(
+			TankMembraneSummonNotifyFailSafeTimerHandle,
+			this,
+			&ATankEnemy::OnTankMembraneSummonNotifyFailSafe,
+			TankMembraneSummonNotifyFailSafeSeconds,
+			false);
+	}
+
+	return true;
+}
+
+void ATankEnemy::StartTankMembranePatternWave()
+{
+	UWorld* const World = GetWorld();
+	if (!World || !HasAuthority())
+	{
+		CompleteTankMembranePatternCycle(World ? World->GetTimeSeconds() : 0.0, false);
+		return;
+	}
+	UTankMembraneSpawnSubsystem* const Sub = World->GetSubsystem<UTankMembraneSpawnSubsystem>();
+	FTransform TA;
+	FTransform TB;
+	if (!Sub || !Sub->TryPickTwoRandomSpawnTransforms(TA, TB))
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[TankMembrane] %s 웨이브 스폰 실패 — TryPickTwoRandomSpawnTransforms 실패 (Subsystem=%d Registered=%d)."
+				 " 레벨에 ATankMembraneSpawnPoint 가 2개 이상 배치되었는지 확인."),
+			*GetNameSafe(this),
+			Sub ? 1 : 0, Sub ? Sub->GetRegisteredPointCount() : 0);
+		CompleteTankMembranePatternCycle(World->GetTimeSeconds(), false);
+		return;
+	}
+	UE_LOG(LogTemp, Verbose,
+		TEXT("[TankMembrane] %s 웨이브 스폰 시작 — A=%s B=%s"),
+		*GetNameSafe(this), *TA.GetLocation().ToString(), *TB.GetLocation().ToString());
+	TankMembraneEmittersPendingThisWave = 2;
+
+	FActorSpawnParameters Params;
+	Params.Owner = this;
+	Params.Instigator = this;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+	auto SpawnEmitter = [&](FTransform const& T) -> bool
+	{
+		ATankMembraneEmitterActor* const Spawned = World->SpawnActor<ATankMembraneEmitterActor>(
+			TankMembraneEmitterClass, T.GetLocation(), T.GetRotation().Rotator(), Params);
+		if (!IsValid(Spawned))
+		{
+			return false;
+		}
+		// ConfigureAndStartBurst 는 타이머 기반 다중 볼리이지만, 첫 볼리가 같은 프레임에 발사되며
+		// (FirstVolleyDelaySeconds == 0 일 때) 향후 변동 시에도 자가 파괴 콜백이 안전하도록
+		// Active 목록 등록은 Configure 호출 전에 마친다. 성공 판단은 SpawnActor 결과로만.
+		ActiveTankMembraneEmitters.Add(Spawned);
+		Spawned->ConfigureAndStartBurst(this, T,
+			TankMembraneFanHalfAngleDeg,
+			TankMembraneProjectileSpeedUU,
+			TankMembraneProjectileDamage * TankOutgoingDamageMultiplierRuntime,
+			TankMembraneVolleyCount,
+			TankMembraneVolleyIntervalSeconds,
+			TankMembraneProjectileClass);
+		return true;
+	};
+
+	if (!SpawnEmitter(TA) || !SpawnEmitter(TB))
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[TankMembrane] %s 웨이브 스폰 실패 — World->SpawnActor<ATankMembraneEmitterActor>() 가 nullptr 반환."
+				 " EmitterClass(%s) 의 충돌/배치 옵션 확인."),
+			*GetNameSafe(this), *GetNameSafe(TankMembraneEmitterClass));
+		DestroyActiveTankMembraneEmitters();
+		CompleteTankMembranePatternCycle(World->GetTimeSeconds(), false);
+		return;
+	}
+}
+
+void ATankEnemy::NotifyTankMembraneEmitterFinished(ATankMembraneEmitterActor* Emitter)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+	if (!bTankMembranePatternCycleActive)
+	{
+		return;
+	}
+	if (Emitter)
+	{
+		ActiveTankMembraneEmitters.Remove(Emitter);
+	}
+	TankMembraneEmittersPendingThisWave = FMath::Max(0, TankMembraneEmittersPendingThisWave - 1);
+	if (TankMembraneEmittersPendingThisWave > 0)
+	{
+		return;
+	}
+	if (!bTankMembranePatternCycleActive || bTankMembraneWaitingForSummonNotify)
+	{
+		return;
+	}
+	if (bTankMembraneWaveEnded_Server)
+	{
+		return;
+	}
+	bTankMembraneWaveEnded_Server = true;
+	ScheduleTankMembraneFinishFailSafe_Server();
+	TryFinalizeTankMembranePatternDismissal_Server();
+}
+
+void ATankEnemy::ScheduleTankMembraneFinishFailSafe_Server()
+{
+	UWorld* const World = GetWorld();
+	if (!World || !HasAuthority() || TankMembraneFinishNotifyFailSafeSeconds <= KINDA_SMALL_NUMBER)
+	{
+		return;
+	}
+	ClearTankMembraneFinishNotifyFailSafeTimer();
+	World->GetTimerManager().SetTimer(
+		TankMembraneFinishNotifyFailSafeTimerHandle,
+		this,
+		&ATankEnemy::OnTankMembraneFinishNotifyFailSafe,
+		TankMembraneFinishNotifyFailSafeSeconds,
+		false);
+}
+
+void ATankEnemy::TryFinalizeTankMembranePatternDismissal_Server()
+{
+	if (!HasAuthority() || !bTankMembranePatternCycleActive || bTankMembraneWaitingForSummonNotify)
+	{
+		return;
+	}
+	if (!(bTankMembraneWaveEnded_Server && bTankMembraneFinishNotifySeen_Server))
+	{
+		return;
+	}
+
+	UWorld* const World = GetWorld();
+	const double Now = World ? World->GetTimeSeconds() : 0.0;
+	ClearTankMembraneFinishNotifyFailSafeTimer();
+	bTankMembraneWaveEnded_Server = false;
+	bTankMembraneFinishNotifySeen_Server = false;
+	CompleteTankMembranePatternCycle(Now, true);
+}
+
+void ATankEnemy::OnTankMembraneFinishNotifyFailSafe()
+{
+	if (!HasAuthority() || !bTankMembranePatternCycleActive || !bTankMembraneWaveEnded_Server)
+	{
+		return;
+	}
+	ClearTankMembraneFinishNotifyFailSafeTimer();
+	bTankMembraneWaveEnded_Server = false;
+	bTankMembraneFinishNotifySeen_Server = false;
+	CompleteTankMembranePatternCycle(GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0, true);
+}
+
+void ATankEnemy::CompleteTankMembranePatternCycle(double const Now, bool const bApplyAnimStateHold)
+{
+	TankMembraneEmittersPendingThisWave = 0;
+	NextTankMembranePatternTime = Now + static_cast<double>(TankMembraneCooldownSeconds);
+	bTankMembraneWaitingForSummonNotify = false;
+
+	ClearTankMembraneSummonNotifyFailSafeTimer();
+	ClearTankMembraneFinishNotifyFailSafeTimer();
+	ClearTankMembraneAnimReleaseTimer();
+	bTankMembraneWaveEnded_Server = false;
+	bTankMembraneFinishNotifySeen_Server = false;
+
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	const bool bShouldHold =
+		bApplyAnimStateHold && bEnableTankMembranePattern && TankMembraneAnimStateHoldSeconds > KINDA_SMALL_NUMBER;
+
+	if (bShouldHold)
+	{
+		if (UWorld* const W = GetWorld())
+		{
+			W->GetTimerManager().SetTimer(TankMembraneAnimReleaseTimerHandle, this,
+				&ATankEnemy::FinishTankMembranePatternCycleAnimHold, TankMembraneAnimStateHoldSeconds, false);
+		}
+	}
+	else
+	{
+		bTankMembranePatternCycleActive = false;
+		RefreshIdleChaseLocomotionAmbientFromCurrentDisplayState();
+	}
+
+	if (IsAlive())
+	{
+		SetEnemyState(SelectStateWhileAggroed(), true);
+	}
+}
+
+void ATankEnemy::OnTankMembraneSummonNotifyFailSafe()
+{
+	if (!HasAuthority() || !bTankMembranePatternCycleActive || !bTankMembraneWaitingForSummonNotify)
+	{
+		return;
+	}
+	bTankMembraneWaitingForSummonNotify = false;
+	CompleteTankMembranePatternCycle(GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0, false);
+}
+
+void ATankEnemy::DestroyActiveTankMembraneEmitters()
+{
+	for (TObjectPtr<ATankMembraneEmitterActor>& E : ActiveTankMembraneEmitters)
+	{
+		if (IsValid(E))
+		{
+			E->Destroy();
+		}
+	}
+	ActiveTankMembraneEmitters.Reset();
+}
+
+bool ATankEnemy::IsTankPlacentaDefenseActiveForAnim() const
+{
+	return bTankPlacentaDefenseActive && IsAlive();
+}
+
+float ATankEnemy::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator,
+	AActor* DamageCauser)
+{
+	if (!IsAlive())
+	{
+		return 0.f;
+	}
+
+	if (HasAuthority() && bTankPlacentaDefenseActive && DoesTankHaveAlivePlacentaShell_Server()
+		&& ShouldSuppressTankIncomingDamageFromCauseForPlacenta(EventInstigator, DamageCauser))
+	{
+		return 0.f;
+	}
+
+	const float Applied = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+	if (HasAuthority())
+	{
+		TryTankPlacentaDefenseAfterIncomingDamage_Server();
+	}
+	return Applied;
+}
+
+void ATankEnemy::ApplyHealth(float Damage)
+{
+	if (EnemyState == EEnemyAIState::Dead || Damage <= 0.f)
+	{
+		return;
+	}
+
+	Super::ApplyHealth(Damage);
+	if (HasAuthority())
+	{
+		TryTankPlacentaDefenseAfterIncomingDamage_Server();
+	}
+}
+
+void ATankEnemy::DispatchEnemyAttackCommitted(AActor* Target, float DamageAmount,
+	TSubclassOf<UDamageType> DamageTypeClass)
+{
+	const float ScaledDamage = DamageAmount * TankOutgoingDamageMultiplierRuntime;
+	AEnemyBase::DispatchEnemyAttackCommitted(Target, ScaledDamage, DamageTypeClass);
+}
+
+void ATankEnemy::NotifyTankPlacentaShellBroken_Server(ATankPlacentaShellActor* BrokenShell)
+{
+	if (!HasAuthority() || !bTankPlacentaDefenseActive)
+	{
+		return;
+	}
+	if (BrokenShell && BrokenShell != ActiveTankPlacentaShell)
+	{
+		return;
+	}
+	ActiveTankPlacentaShell = nullptr;
+	FinishTankPlacentaDefense_Server(false);
+}
+
+bool ATankEnemy::DoesTankHaveAlivePlacentaShell_Server() const
+{
+	return IsValid(ActiveTankPlacentaShell) && ActiveTankPlacentaShell->IsTankPlacentaShellAlive();
+}
+
+bool ATankEnemy::ShouldSuppressTankIncomingDamageFromCauseForPlacenta(AController const* EventInstigator,
+	AActor const* DamageCauser) const
+{
+	return IsLikelyPlayerDamageCauser(EventInstigator, DamageCauser);
+}
+
+bool ATankEnemy::IsLikelyPlayerDamageCauser(AController const* EventInstigator, AActor const* DamageCauser)
+{
+	if (EventInstigator && EventInstigator->IsPlayerController())
+	{
+		return true;
+	}
+
+	if (!DamageCauser)
+	{
+		return false;
+	}
+
+	if (const APawn* const InstigatedBy = DamageCauser->GetInstigator())
+	{
+		if (InstigatedBy->IsPlayerControlled())
+		{
+			return true;
+		}
+	}
+
+	for (AActor const* Cursor = DamageCauser; Cursor; Cursor = Cursor->GetOwner())
+	{
+		if (Cursor->IsA(APlayerController::StaticClass()))
+		{
+			return true;
+		}
+		if (Cursor->IsA(AOblivioCharacter::StaticClass()))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+void ATankEnemy::ClearTankPlacentaDefenseTimers_Server()
+{
 	if (UWorld* const W = GetWorld())
 	{
-		UNiagaraFunctionLibrary::SpawnSystemAtLocation(W, TankJumpRingNiagaraSystem, BurstLocationFloor,
-			FRotator::ZeroRotator, FVector::OneVector, true);
+		W->GetTimerManager().ClearTimer(TankPlacentaDurationTimerHandle);
+		W->GetTimerManager().ClearTimer(TankPlacentaHealTimerHandle);
 	}
+}
+
+void ATankEnemy::TryTankPlacentaDefenseAfterIncomingDamage_Server()
+{
+	if (!HasAuthority() || !IsAlive())
+	{
+		return;
+	}
+	if (!bEnableTankPlacentaDefensePattern)
+	{
+		return;
+	}
+	if (bTankPlacentaDefenseConsumed_Server || bTankPlacentaDefenseActive)
+	{
+		return;
+	}
+	if (GetHealthPercent() > TankPlacentaTriggerHpPercent)
+	{
+		return;
+	}
+	StartTankPlacentaDefensePattern_Server();
+}
+
+void ATankEnemy::DestroyTankPlacentaShellIfAny_Server()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (!IsValid(ActiveTankPlacentaShell))
+	{
+		ActiveTankPlacentaShell = nullptr;
+		return;
+	}
+
+	ActiveTankPlacentaShell->UnbindAndDestroy_Server();
+	ActiveTankPlacentaShell = nullptr;
+}
+
+void ATankEnemy::TickTankPlacentaHeal_Server()
+{
+	if (!HasAuthority() || !bTankPlacentaDefenseActive || !IsAlive())
+	{
+		return;
+	}
+	if (TankPlacentaHealTicksRemaining_Server <= 0)
+	{
+		if (UWorld* const W = GetWorld())
+		{
+			W->GetTimerManager().ClearTimer(TankPlacentaHealTimerHandle);
+		}
+		return;
+	}
+
+	if (TankPlacentaHealPerSecondPercentOfMax > KINDA_SMALL_NUMBER)
+	{
+		Heal(MaxHealth * TankPlacentaHealPerSecondPercentOfMax);
+	}
+
+	--TankPlacentaHealTicksRemaining_Server;
+	if (TankPlacentaHealTicksRemaining_Server <= 0 && GetWorld())
+	{
+		GetWorld()->GetTimerManager().ClearTimer(TankPlacentaHealTimerHandle);
+	}
+}
+
+void ATankEnemy::OnTankPlacentaDefenseDurationExpire_Server()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+	FinishTankPlacentaDefense_Server(DoesTankHaveAlivePlacentaShell_Server());
+}
+
+void ATankEnemy::FinishTankPlacentaDefense_Server(bool const bTimedOutWithShellAlive)
+{
+	ClearTankPlacentaDefenseTimers_Server();
+	DestroyTankPlacentaShellIfAny_Server();
+	bTankPlacentaDefenseActive = false;
+
+	if (bTimedOutWithShellAlive && IsAlive())
+	{
+		TankOutgoingDamageMultiplierRuntime *= TankPlacentaTimedOutOutgoingDamageMultiplier;
+	}
+
+	if (IsAlive())
+	{
+		SetEnemyState(SelectStateWhileAggroed(), true);
+	}
+	RefreshIdleChaseLocomotionAmbientFromCurrentDisplayState();
+}
+
+void ATankEnemy::StartTankPlacentaDefensePattern_Server()
+{
+	UWorld* const World = GetWorld();
+	if (!World || !HasAuthority() || !IsAlive())
+	{
+		return;
+	}
+	if (!bEnableTankPlacentaDefensePattern || bTankPlacentaDefenseActive)
+	{
+		return;
+	}
+	if (TankPlacentaShellActorClass == nullptr)
+	{
+		TankPlacentaShellActorClass = ATankPlacentaShellActor::StaticClass();
+	}
+
+	ClearTankPlacentaDefenseTimers_Server();
+	bTankPlacentaDefenseConsumed_Server = true;
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = this;
+	SpawnParams.Instigator = this;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	const FVector SpawnLoc = GetActorLocation();
+	const FRotator SpawnRot = GetActorRotation();
+	ATankPlacentaShellActor* const SpawnedShell =
+		World->SpawnActor<ATankPlacentaShellActor>(TankPlacentaShellActorClass, SpawnLoc, SpawnRot, SpawnParams);
+
+	if (!IsValid(SpawnedShell))
+	{
+		bTankPlacentaDefenseConsumed_Server = false;
+		UE_LOG(LogTemp, Warning, TEXT("[TankPlacenta] %s 패턴 시작 실패 — Shell 스폰 실패."), *GetNameSafe(this));
+		return;
+	}
+
+	ActiveTankPlacentaShell = SpawnedShell;
+	SpawnedShell->BindToTank_Server(this, TankPlacentaShellRadiusCm, TankPlacentaShellMaxHealth);
+
+	bTankPlacentaDefenseActive = true;
+
+	ApplyAggroCombatTransientCleanup();
+	StopEnemyMovement();
+	if (UCharacterMovementComponent* const Move = GetCharacterMovement())
+	{
+		Move->StopMovementImmediately();
+	}
+	SetEnemyState(EEnemyAIState::PlacentaDefense, true);
+
+	TankPlacentaHealTicksRemaining_Server =
+		FMath::Max(1, FMath::FloorToInt(FMath::Max(0.f, TankPlacentaDefenseDurationSeconds)));
+	TickTankPlacentaHeal_Server();
+
+	World->GetTimerManager().SetTimer(TankPlacentaHealTimerHandle, this, &ATankEnemy::TickTankPlacentaHeal_Server, 1.0f,
+		true);
+
+	World->GetTimerManager().SetTimer(TankPlacentaDurationTimerHandle, this,
+		&ATankEnemy::OnTankPlacentaDefenseDurationExpire_Server,
+		FMath::Max(0.1f, TankPlacentaDefenseDurationSeconds), false);
+
+	RefreshIdleChaseLocomotionAmbientFromCurrentDisplayState();
 }
