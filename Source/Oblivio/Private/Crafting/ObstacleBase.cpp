@@ -1,6 +1,8 @@
 ﻿#include "Crafting/ObstacleBase.h"
 #include "Components/StaticMeshComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "Kismet/GameplayStatics.h"
+#include "NiagaraFunctionLibrary.h"
 
 AObstacleBase::AObstacleBase()
 {
@@ -86,3 +88,33 @@ float AObstacleBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEv
 
     return DamageAmount;
 }
+
+void AObstacleBase::HandleDestruction()
+{
+    if (MeshComponent)
+    {
+        MeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        MeshComponent->SetVisibility(false);
+    }
+
+    if (IsValid(DestructionSound))
+    {
+        UGameplayStatics::PlaySoundAtLocation(this, DestructionSound, GetActorLocation());
+    }
+    if (IsValid(DestructionEffect))
+    {
+        UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), DestructionEffect, GetActorLocation(), GetActorRotation());
+
+    }
+    FTimerHandle DestroyTimeHandler;
+    FTimerDelegate TimerDelegate;
+    TimerDelegate.BindLambda([this]()
+        {
+            if (IsValid(this))
+            {
+                this->Destroy();
+            }
+        });
+    GetWorldTimerManager().SetTimer(DestroyTimeHandler, TimerDelegate, 2.0f, false);
+}
+
