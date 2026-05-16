@@ -55,6 +55,10 @@ enum class EEnemyAIState : uint8
 	Heartbeat = 9 UMETA(DisplayName = "Heartbeat"),
 	/** 탱커 점프 착지 공격 등: 심작 직후 몽타주 구간 내비게이션 FSM 표시값. */
 	JumpAttack = 10 UMETA(DisplayName = "JumpAttack"),
+	/** 탱커 양막 스폰 웨이브 중 — ATankEnemy::GetEnemyState, 내부 EnemyState는 보통 Chase 유지. */
+	Membrane = 11 UMETA(DisplayName = "Membrane"),
+	/** 탱커 태반방어(ATankPlacentaShellActor 활성 등) 연출 분기용. */
+	PlacentaDefense = 12 UMETA(DisplayName = "PlacentaDefense"),
 };
 
 /** 이동 저하·경직 등 CC(FSM과 별개). GetCrowdControlState는 빛 둔화/정지도 함께 반영. */
@@ -604,7 +608,8 @@ protected:
 	/** PerformAttack·Anim Notify 공통: OnEnemyAttackCommitted + 레지스트리 알림. DamageType 생략 시 기본 근접 타입. */
 	void DispatchEnemyAttackCommitted(AActor* Target);
 	void DispatchEnemyAttackCommitted(AActor* Target, float DamageAmount);
-	void DispatchEnemyAttackCommitted(AActor* Target, float DamageAmount, TSubclassOf<UDamageType> DamageTypeClass);
+	virtual void DispatchEnemyAttackCommitted(AActor* Target, float DamageAmount,
+		TSubclassOf<UDamageType> DamageTypeClass);
 
 private:
 	enum class ELocomotionAmbientLayer : uint8

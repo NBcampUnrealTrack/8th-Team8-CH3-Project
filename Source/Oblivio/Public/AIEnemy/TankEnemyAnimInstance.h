@@ -16,7 +16,7 @@ class OBLIVIO_API UTankEnemyAnimInstance : public UAnimInstance
 public:
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
 
-	/** 매 틱 갱신. 전이 규칙에서 Get Enemy State 대신 이 핀을 쓰면 Enum 타입이 확정됩니다. */
+	/** 매 틱 갱신. 전이 규칙에서 Get Enemy State 대신 이 핀을 쓰면 Enum 타입이 확정됩니다. 탱커는 JumpAttack / Heartbeat / Membrane 포함. */
 	UPROPERTY(BlueprintReadOnly, Category = "Enemy|Tank|Anim")
 	EEnemyAIState TankAnimEnemyState = EEnemyAIState::Idle;
 
@@ -34,6 +34,14 @@ public:
 	/** true면 점프 착지 패턴 FSM 활성(IsTankJumpAttackFsmActiveForAnim). */
 	UPROPERTY(BlueprintReadOnly, Category = "Enemy|Tank|Anim")
 	bool bTankJumpAttackFsmActive = false;
+
+	/** true면 양막 시전 패턴(IsTankMembraneFsmActiveForAnim). */
+	UPROPERTY(BlueprintReadOnly, Category = "Enemy|Tank|Anim")
+	bool bTankMembraneFsmActive = false;
+
+	/** 태반 방어 패턴 활성(ATankEnemy::IsTankPlacentaDefenseActiveForAnim). */
+	UPROPERTY(BlueprintReadOnly, Category = "Enemy|Tank|Anim")
+	bool bTankPlacentaDefenseFsmActive = false;
 
 	/** BP에서 디버깅용: 근처 본만 심작 몽타주 쓸 때 참고 가능 */
 	UPROPERTY(BlueprintReadOnly, Category = "Enemy|Tank|Anim")
