@@ -5,6 +5,7 @@
 #include "OblivioGameMode.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/PlayerController.h"
 #include "GameFramework/DamageType.h"
 #include "Engine/DamageEvents.h"
 #include "Navigation/PathFollowingComponent.h"
@@ -403,8 +404,92 @@ float AEnemyBase::TakeDamage(float DamageAmount, const FDamageEvent& DamageEvent
 	{
 		Die();
 	}
+	else if (HasAuthority())
+	{
+		NotifyStickyAggroIfPlayerDamagedBeyondRange(AppliedDamage, EventInstigator, DamageCauser);
+	}
 
 	return AppliedDamage;
+}
+
+void AEnemyBase::NotifyStickyAggroIfPlayerDamagedBeyondRange(float /*AppliedDamage*/, AController const* /*EventInstigator*/,
+	AActor const* /*DamageCauser*/)
+{
+}
+
+bool AEnemyBase::IsLikelyPlayerDamageCauser(AController const* EventInstigator, AActor const* DamageCauser)
+{
+	if (EventInstigator && EventInstigator->IsPlayerController())
+	{
+		return true;
+	}
+
+	if (!DamageCauser)
+	{
+		return false;
+	}
+
+	if (const APawn* const InstigatedBy = DamageCauser->GetInstigator())
+	{
+		if (InstigatedBy->IsPlayerControlled())
+		{
+			return true;
+		}
+	}
+
+	for (AActor const* Cursor = DamageCauser; Cursor; Cursor = Cursor->GetOwner())
+	{
+		if (Cursor->IsA(APlayerController::StaticClass()))
+		{
+			return true;
+		}
+		if (Cursor->IsA(AOblivioCharacter::StaticClass()))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+APawn* AEnemyBase::ResolveLikelyPlayerPawnDamageCause(AController const* EventInstigator, AActor const* DamageCauser)
+{
+	if (!IsLikelyPlayerDamageCauser(EventInstigator, DamageCauser))
+	{
+		return nullptr;
+	}
+
+	if (EventInstigator)
+	{
+		if (const APlayerController* const PC = Cast<APlayerController>(EventInstigator))
+		{
+			return PC->GetPawn();
+		}
+	}
+
+	if (DamageCauser)
+	{
+		if (APawn* const Instigated = DamageCauser->GetInstigator(); IsValid(Instigated) && Instigated->IsPlayerControlled())
+		{
+			return Instigated;
+		}
+
+		for (AActor const* Cursor = DamageCauser; Cursor; Cursor = Cursor->GetOwner())
+		{
+			if (AOblivioCharacter* const Obl = Cast<AOblivioCharacter>(const_cast<AActor*>(Cursor)))
+			{
+				return Obl;
+			}
+			if (APawn* const Pawn = Cast<APawn>(const_cast<AActor*>(Cursor)))
+			{
+				if (Pawn->IsPlayerControlled())
+				{
+					return Pawn;
+				}
+			}
+		}
+	}
+
+	return nullptr;
 }
 
 void AEnemyBase::NotifyEnemyDamageApplied(float /*AppliedDamage*/)

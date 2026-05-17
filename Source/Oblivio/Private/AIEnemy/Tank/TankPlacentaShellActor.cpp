@@ -1,12 +1,9 @@
 #include "AIEnemy/Tank/TankPlacentaShellActor.h"
 #include "AIEnemy/TankEnemy.h"
 
+#include "Animation/AnimInstance.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Components/SphereComponent.h"
-#include "Components/StaticMeshComponent.h"
-#include "Engine/StaticMesh.h"
-#include "GameFramework/Character.h"
-#include "UObject/ConstructorHelpers.h"
-
 static FName const TankPlacentaShellAttachSocket = NAME_None;
 
 ATankPlacentaShellActor::ATankPlacentaShellActor()
@@ -24,18 +21,23 @@ ATankPlacentaShellActor::ATankPlacentaShellActor()
 	CollisionSphere->SetGenerateOverlapEvents(false);
 	CollisionSphere->CanCharacterStepUpOn = ECB_No;
 
-	VisualMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("TankPlacentaVisualMesh"));
+	// 이름을 스켈 리그 전환 이전(Subobject: StaticMesh 시절)과 달리해 BP 직렬화 꼬임·빈 Details 완화
+	VisualMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("TankPlacentaShellSkeletalVisual"));
 	VisualMesh->SetupAttachment(CollisionSphere);
 	VisualMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	VisualMesh->SetCastShadow(true);
+	VisualMesh->SetGenerateOverlapEvents(false);
 
-	static ConstructorHelpers::FObjectFinder<UStaticMesh> SphereAsset(TEXT("/Engine/BasicShapes/Sphere.Sphere"));
-	if (SphereAsset.Succeeded())
+	if (DefaultTankPlacentaShellSkeletalMesh)
 	{
-		VisualMesh->SetStaticMesh(SphereAsset.Object);
-		const float R = FMath::Max(10.f, ShellSphereRadiusCm);
-		// 엔진 Sphere 기본 반경 50UU — 스케일로 ShellSphereRadiusCm 근사
-		VisualMesh->SetRelativeScale3D(FVector(R / 50.f));
+		VisualMesh->SetSkeletalMesh(DefaultTankPlacentaShellSkeletalMesh);
+		const float Scale = ShellSphereRadiusCm / FMath::Max(1.f, TankPlacentaShellSkelMeshReferenceRadiusUU);
+		VisualMesh->SetRelativeScale3D(FVector(Scale));
+	}
+
+	if (TankPlacentaShellAnimInstanceClass)
+	{
+		VisualMesh->SetAnimInstanceClass(TankPlacentaShellAnimInstanceClass);
 	}
 }
 
@@ -55,10 +57,10 @@ void ATankPlacentaShellActor::BindToTank_Server(ATankEnemy* const OwnerTank, flo
 	{
 		CollisionSphere->SetSphereRadius(ShellSphereRadiusCm);
 	}
-	if (VisualMesh && VisualMesh->GetStaticMesh())
+	if (VisualMesh && VisualMesh->GetSkeletalMeshAsset())
 	{
-		const float R = ShellSphereRadiusCm;
-		VisualMesh->SetRelativeScale3D(FVector(R / 50.f));
+		const float Scale = ShellSphereRadiusCm / FMath::Max(1.f, TankPlacentaShellSkelMeshReferenceRadiusUU);
+		VisualMesh->SetRelativeScale3D(FVector(Scale));
 	}
 
 	AttachToActor(OwnerTank, FAttachmentTransformRules::SnapToTargetNotIncludingScale,

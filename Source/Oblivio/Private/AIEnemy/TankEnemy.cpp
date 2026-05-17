@@ -1962,41 +1962,37 @@ bool ATankEnemy::DoesTankHaveAlivePlacentaShell_Server() const
 bool ATankEnemy::ShouldSuppressTankIncomingDamageFromCauseForPlacenta(AController const* EventInstigator,
 	AActor const* DamageCauser) const
 {
-	return IsLikelyPlayerDamageCauser(EventInstigator, DamageCauser);
+	return AEnemyBase::IsLikelyPlayerDamageCauser(EventInstigator, DamageCauser);
 }
 
-bool ATankEnemy::IsLikelyPlayerDamageCauser(AController const* EventInstigator, AActor const* DamageCauser)
+void ATankEnemy::NotifyStickyAggroIfPlayerDamagedBeyondRange(float AppliedDamage, AController const* EventInstigator,
+	AActor const* DamageCauser)
 {
-	if (EventInstigator && EventInstigator->IsPlayerController())
+	Super::NotifyStickyAggroIfPlayerDamagedBeyondRange(AppliedDamage, EventInstigator, DamageCauser);
+
+	if (!HasAuthority() || AppliedDamage <= KINDA_SMALL_NUMBER || !IsAlive())
 	{
-		return true;
+		return;
 	}
 
-	if (!DamageCauser)
+	if (!IsLikelyPlayerDamageCauser(EventInstigator, DamageCauser))
 	{
-		return false;
+		return;
 	}
 
-	if (const APawn* const InstigatedBy = DamageCauser->GetInstigator())
+	if (APawn* const SourcePawn = ResolveLikelyPlayerPawnDamageCause(EventInstigator, DamageCauser))
 	{
-		if (InstigatedBy->IsPlayerControlled())
+		if (TargetActor != SourcePawn)
 		{
-			return true;
+			SetTargetActor(SourcePawn);
 		}
 	}
 
-	for (AActor const* Cursor = DamageCauser; Cursor; Cursor = Cursor->GetOwner())
+	if (AggroRadius > 0.0f && !IsAggroDistanceSatisfiedForTarget())
 	{
-		if (Cursor->IsA(APlayerController::StaticClass()))
-		{
-			return true;
-		}
-		if (Cursor->IsA(AOblivioCharacter::StaticClass()))
-		{
-			return true;
-		}
+		bTankStickyAggroUntilDeath = true;
+		UpdateState();
 	}
-	return false;
 }
 
 void ATankEnemy::ClearTankPlacentaDefenseTimers_Server()

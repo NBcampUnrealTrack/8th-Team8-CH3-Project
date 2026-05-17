@@ -331,6 +331,36 @@ void ALuxeaterEnemy::NotifyEnemyDamageApplied(float /*AppliedDamage*/)
 	UpdateHealthPhase();
 }
 
+void ALuxeaterEnemy::NotifyStickyAggroIfPlayerDamagedBeyondRange(float AppliedDamage, AController const* EventInstigator,
+	AActor const* DamageCauser)
+{
+	Super::NotifyStickyAggroIfPlayerDamagedBeyondRange(AppliedDamage, EventInstigator, DamageCauser);
+
+	if (!HasAuthority() || AppliedDamage <= KINDA_SMALL_NUMBER || !IsAlive() || !bStickyAggroOnceTriggered)
+	{
+		return;
+	}
+
+	if (!IsLikelyPlayerDamageCauser(EventInstigator, DamageCauser))
+	{
+		return;
+	}
+
+	if (APawn* const SourcePawn = ResolveLikelyPlayerPawnDamageCause(EventInstigator, DamageCauser))
+	{
+		if (TargetActor != SourcePawn)
+		{
+			SetTargetActor(SourcePawn);
+		}
+	}
+
+	if (AggroRadius > 0.0f && !IsAggroDistanceSatisfiedForTarget())
+	{
+		bAggroLatched = true;
+		UpdateState();
+	}
+}
+
 bool ALuxeaterEnemy::HasValidAggroTarget() const
 {
 	if (bStickyAggroOnceTriggered && bAggroLatched)

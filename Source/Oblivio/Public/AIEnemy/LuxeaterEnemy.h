@@ -77,6 +77,8 @@ protected:
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void UpdateAttack() override;
 	virtual bool HasValidAggroTarget() const override;
+	void NotifyStickyAggroIfPlayerDamagedBeyondRange(float AppliedDamage, AController const* EventInstigator,
+		AActor const* DamageCauser) override;
 
 	void ApplyBuffFromAbsorbStacks();
 	void UpdateHealthPhase();
@@ -201,7 +203,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Luxeater")
 	float LuxuryLightExposureNeverStuns = 1.0e6f;
 
-	/** true면 한 번 어그로 반경에 들어온 뒤 거리 무시하고 영구 추격(보스 기본 동작). */
+	/** true면 반경 진입 또는 반경 밖에서 플레이어 피해 1회 후 거리 무시하고 영구 추격(보스 기본). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Luxeater|Aggro")
 	bool bStickyAggroOnceTriggered = true;
 
