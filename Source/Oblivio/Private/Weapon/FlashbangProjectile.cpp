@@ -1,11 +1,8 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-
-#include "Weapon/Flashbang.h"
+#include "Weapon/FlashbangProjectile.h"
 #include "OblivioComponents/LightAttackComponent.h"
 #include "Kismet/GameplayStatics.h"
 
-AFlashbang::AFlashbang()
+AFlashbangProjectile::AFlashbangProjectile()
 {
 	LightAttackComp = CreateDefaultSubobject<ULightAttackComponent>(TEXT("LightAttackComp"));
 	LightAttackComp->SetupAttachment(RootComponent);
@@ -17,16 +14,16 @@ AFlashbang::AFlashbang()
 	FlashDuration = 0.2f;
 }
 
-void AFlashbang::BeginPlay()
+void AFlashbangProjectile::BeginPlay()
 {
 	Super::BeginPlay();
 	UseWeapon();
 	LightAttackComp->TurnOffLight();
 }
 
-bool AFlashbang::UseWeapon()
+void AFlashbangProjectile::UseWeapon()
 {
-	if (!IsValid(LightAttackComp)) return false;
+	if (!IsValid(LightAttackComp)) return;
 	if (!GetWorld()->GetTimerManager().IsTimerActive(BangTimerHandle)) {
 		UE_LOG(LogTemp, Warning, TEXT("Setting Timer"));
 		GetWorld()->GetTimerManager().SetTimer(
@@ -35,8 +32,8 @@ bool AFlashbang::UseWeapon()
 				FVector SourceLocation = LightAttackComp->GetComponentLocation();
 				FVector LightDirection = LightAttackComp->GetForwardVector();
 				// 단발 섬광 — 빛이 켜져 있는 시간(FlashDuration) 만큼을 노출량으로 한 번에 전달.
-				LightAttackComp->CreateLightAttack(SourceLocation, LightDirection, FlashDuration); 
-			
+				LightAttackComp->CreateLightAttack(SourceLocation, LightDirection, FlashDuration);
+
 				if (IsValid(ExplosionSound))
 				{
 					UGameplayStatics::PlaySoundAtLocation(this, ExplosionSound, GetActorLocation());
@@ -45,19 +42,18 @@ bool AFlashbang::UseWeapon()
 			},
 			BangDelay,
 			false);
-		GetWorld()->GetTimerManager().SetTimer(DestroyTimerHandle, this, &AFlashbang::StopWeapon, BangDelay + FlashDuration, false);
+		GetWorld()->GetTimerManager().SetTimer(DestroyTimerHandle, this, &AFlashbangProjectile::StopWeapon, BangDelay + FlashDuration, false);
 	}
-	return true;
 }
 
-void AFlashbang::StopWeapon()
+void AFlashbangProjectile::StopWeapon()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Stopping light, destroying weapon"));
 	LightAttackComp->TurnOffLight();
 	Destroy();
 }
 
-void AFlashbang::EndPlay(const EEndPlayReason::Type EndPlayReason) {
+void AFlashbangProjectile::EndPlay(const EEndPlayReason::Type EndPlayReason) {
 	Super::EndPlay(EndPlayReason);
 	GetWorld()->GetTimerManager().ClearTimer(BangTimerHandle);
 	GetWorld()->GetTimerManager().ClearTimer(DestroyTimerHandle);

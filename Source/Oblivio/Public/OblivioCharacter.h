@@ -295,15 +295,17 @@ public:
 	// Weapons & Items (무기 및 아이템)
 	//==================================
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
-	TSubclassOf<AWeaponBase> FlashlightWeapon;
+	TSubclassOf<AWeaponBase> FlashlightClass;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
-	TSubclassOf<AThrowableWeapon> FlashbangWeapon;
+	TSubclassOf<AWeaponBase> FlashbangClass;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
-	TSubclassOf<AThrowableWeapon> FlareWeapon;
+	TSubclassOf<AWeaponBase> FlareClass;
 
-	TObjectPtr<AWeaponBase> CurrentWeapon;
+	TObjectPtr<AWeaponBase> FlashlightWeapon;
+	TObjectPtr<AWeaponBase> FlashbangWeapon;
+	TObjectPtr<AWeaponBase> FlareWeapon;
 
 	//손전등 조절
 	UFUNCTION(BlueprintCallable)
@@ -313,20 +315,18 @@ public:
 
 	//투척무기 관련
 	FVector GetAimingLocation();
-	void BeginThrow(TSubclassOf<AThrowableWeapon> Weapon);
 	FPlayerAnimationEvent OnPlayerThrow;
+	TObjectPtr<AWeaponBase> PendingWeaponClass;
+	FVector PendingThrowLocation;
+	bool bIsThrowing;
 	UFUNCTION()
 	void ThrowWeapon();
-	TSubclassOf<AThrowableWeapon> PendingThrowClass;
-	bool bIsThrowing;
 
 	FTimerHandle FlashbangTimerHandle;
 	float FlashbangIntensity = 0.0f;
 	void FadeOutFlashbang();
 
-	//특수 애니메이션
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Animation")
-	UAnimMontage* ThrowMontage;
+	//피격 애니메이션
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Animation")
 	UAnimMontage* HitMontage;
 	void PlayHitAnim();

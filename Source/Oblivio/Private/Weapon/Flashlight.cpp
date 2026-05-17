@@ -10,6 +10,9 @@ AFlashlight::AFlashlight()
 {
 	SphereComp->SetCollisionProfileName("NoCollision");
 
+	LightAttackComp = CreateDefaultSubobject<ULightAttackComponent>(TEXT("LightAttackComp"));
+	LightAttackComp->SetupAttachment(RootComponent);
+
 	AttackInterval = 0.2f;
 	LightAttackComp->bIsConcentrated = true;
 	LightAttackComp->LightIntensityScale = 10000.f;
@@ -24,6 +27,8 @@ AFlashlight::AFlashlight()
 	LightAttackComp->MaxDamageDistance = 500.f;
 	LightAttackComp->DamageAttenuationRate = 2.f;
 	LightAttackComp->BasicLightColor = FColor::White;
+
+	
 }
 
 void AFlashlight::BeginPlay()
@@ -32,9 +37,9 @@ void AFlashlight::BeginPlay()
 	UE_LOG(LogTemp, Warning, TEXT("BeginPlay"));
 }
 
-void AFlashlight::UseWeapon()
+bool AFlashlight::UseWeapon()
 {
-	if (!IsValid(LightAttackComp)) return;
+	if (!IsValid(LightAttackComp)) return false;
 	if (!GetWorld()->GetTimerManager().IsTimerActive(AttackTimerHandle)) {
 		UE_LOG(LogTemp, Warning, TEXT("Setting Timer"));
 
@@ -50,6 +55,7 @@ void AFlashlight::UseWeapon()
 			true);
 		LightAttackComp->CreateLightAttack(GetActorLocation(), GetActorForwardVector(), AttackInterval);
 	}
+	return true;
 }
 
 void AFlashlight::StopWeapon()
