@@ -1,10 +1,10 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+//FlareProjectile.cpp
 
 
-#include "Weapon/Flare.h"
+#include "Weapon/FlareProjectile.h"
 #include "OblivioComponents/LightAttackComponent.h"
 
-AFlare::AFlare()
+AFlareProjectile::AFlareProjectile()
 {
 	LightAttackComp = CreateDefaultSubobject<ULightAttackComponent>(TEXT("LightAttackComp"));
 	LightAttackComp->SetupAttachment(RootComponent);
@@ -16,16 +16,16 @@ AFlare::AFlare()
 	LightAttackComp->BasicLightColor = FColor::Red;
 }
 
-void AFlare::BeginPlay()
+void AFlareProjectile::BeginPlay()
 {
 	Super::BeginPlay();
 	UseWeapon();
 }
 
-bool AFlare::UseWeapon()
+void AFlareProjectile::UseWeapon()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Flare use weapon called"));
-	if (!IsValid(LightAttackComp)) return false;
+	if (!IsValid(LightAttackComp)) return;
 	if (!GetWorld()->GetTimerManager().IsTimerActive(AttackTimerHandle)) {
 		UE_LOG(LogTemp, Warning, TEXT("Setting Timer"));
 		GetWorld()->GetTimerManager().SetTimer(
@@ -37,12 +37,11 @@ bool AFlare::UseWeapon()
 				LightAttackComp->CreateLightAttack(SourceLocation, LightDirection, AttackInterval); },
 			AttackInterval,
 			true);
-		GetWorld()->GetTimerManager().SetTimer(DestroyTimerHandle, this, &AFlare::StopWeapon, LastDuration, false);
+		GetWorld()->GetTimerManager().SetTimer(DestroyTimerHandle, this, &AFlareProjectile::StopWeapon, LastDuration, false);
 	}
-	return true;
 }
 
-void AFlare::StopWeapon()
+void AFlareProjectile::StopWeapon()
 {
 	LightAttackComp->TurnOffLight();
 	if (GetWorld()->GetTimerManager().IsTimerActive(AttackTimerHandle)) {
@@ -51,7 +50,7 @@ void AFlare::StopWeapon()
 	Destroy();
 }
 
-void AFlare::EndPlay(const EEndPlayReason::Type EndPlayReason) {
+void AFlareProjectile::EndPlay(const EEndPlayReason::Type EndPlayReason) {
 	Super::EndPlay(EndPlayReason);
 	GetWorld()->GetTimerManager().ClearTimer(AttackTimerHandle);
 	GetWorld()->GetTimerManager().ClearTimer(DestroyTimerHandle);

@@ -185,13 +185,13 @@ void AOblivioCharacterController::OnFlashbang(const FInputActionValue& Value)
 {
 	if (AOblivioCharacter* ObjChar = Cast<AOblivioCharacter>(GetPawn()))
 		if (IsValid(ObjChar->FlashbangWeapon))
-			ObjChar->BeginThrow(ObjChar->FlashbangWeapon);
+			ObjChar->UseFlashbang();
 }
 void AOblivioCharacterController::OnFlare(const FInputActionValue& Value)
 {
 	if (AOblivioCharacter* ObjChar = Cast<AOblivioCharacter>(GetPawn()))
 		if (IsValid(ObjChar->FlareWeapon))
-			ObjChar->BeginThrow(ObjChar->FlareWeapon);
+			ObjChar->UseFlare();
 }
 
 void AOblivioCharacterController::OnReload(const FInputActionValue& Value)

@@ -1,36 +1,30 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+//FlareProjectile.h
 
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Weapon/ThrowableWeapon.h"
-#include "Flashbang.generated.h"
+#include "Weapon/OblivioProjectile.h"
+#include "FlareProjectile.generated.h"
 
-/**
- * 
- */
+class ULightAttackComponent;
 UCLASS()
-class OBLIVIO_API AFlashbang : public AThrowableWeapon
+class OBLIVIO_API AFlareProjectile : public AOblivioProjectile
 {
 	GENERATED_BODY()
 public:
-	virtual bool UseWeapon() override;
+	virtual void UseWeapon();
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapon)
 	TObjectPtr<ULightAttackComponent> LightAttackComp;
 
-	AFlashbang();
-	virtual void StopWeapon() override;
+	AFlareProjectile();
+	virtual void StopWeapon();
 	virtual void BeginPlay() override;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Weapon)
-	float BangDelay;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
-	USoundBase* ExplosionSound;
-
+	float AttackInterval;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Weapon)
-	float FlashDuration;
-	FTimerHandle BangTimerHandle;
+	float LastDuration;
+	FTimerHandle AttackTimerHandle;
 	FTimerHandle DestroyTimerHandle;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 };

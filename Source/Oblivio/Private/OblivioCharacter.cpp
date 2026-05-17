@@ -575,9 +575,9 @@ void AOblivioCharacter::UpdateWallOcclusionDither()
 
 	FCollisionQueryParams Params(SCENE_QUERY_STAT(WallOcclusionDitherTrace), false, this);
 	Params.AddIgnoredActor(this);
-	if (IsValid(CurrentWeapon))
+	if (IsValid(FlashlightWeapon))
 	{
-		Params.AddIgnoredActor(CurrentWeapon);
+		Params.AddIgnoredActor(FlashlightWeapon);
 	}
 
 	TSet<UPrimitiveComponent*> HitOccludersPrimitives;
@@ -682,25 +682,46 @@ void AOblivioCharacter::BeginPlay()
 		}
 	}
 
-	//시작시 손전등 장착
-	if (IsValid(FlashlightWeapon)) {
-		UE_LOG(LogTemp, Warning, TEXT("Spawning Weapon"));
-		FActorSpawnParameters Params;
-		Params.Owner = this;
-		CurrentWeapon = GetWorld()->SpawnActor<AWeaponBase>(FlashlightWeapon, GetActorTransform(), Params);
-		if (IsValid(CurrentWeapon)) {
-			UE_LOG(LogTemp, Warning, TEXT("Attaching Weapon"));
-			CurrentWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("WeaponSocket"));
-		}
+	//시작시 무기 미리 장착
+	FActorSpawnParameters Params;
+	Params.Owner = this;
 
+	//손전등
+	if (IsValid(FlashlightClass)) {
+		FlashlightWeapon = GetWorld()->SpawnActor<AWeaponBase>(FlashlightClass, GetActorTransform(), Params);
+		if (IsValid(FlashlightWeapon)) {
+			UE_LOG(LogTemp, Warning, TEXT("Attaching Flashlight Weapon"));
+			FlashlightWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("LeftHandSocket"));
+		}
 	}
-	//기존 기본부착 손전등 off
-	FlashlightComponent->SetVisibility(false);
+
+	//섬광탄
+	if (IsValid(FlashbangClass)) {
+		FlashbangWeapon = GetWorld()->SpawnActor<AWeaponBase>(FlashbangClass, GetActorTransform(), Params);
+		if (IsValid(FlashbangWeapon)) {
+			UE_LOG(LogTemp, Warning, TEXT("Attaching Weapon"));
+			FlashbangWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("RightHandSocket"));
+		}
+	}
+
+	//조명탄
+	if (IsValid(FlareClass)) {
+		FlareWeapon = GetWorld()->SpawnActor<AWeaponBase>(FlareClass, GetActorTransform(), Params);
+		if (IsValid(FlareWeapon)) {
+			UE_LOG(LogTemp, Warning, TEXT("Attaching Weapon"));
+			FlareWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("RightHandSocket"));
+		}
+	}
 
 	//AnimNotify 델리게이트 장착
 	OnPlayerFootstep.AddDynamic(this, &AOblivioCharacter::GenerateFootstep);
 	OnPlayerThrow.AddDynamic(this, &AOblivioCharacter::ThrowWeapon);
 	bIsThrowing = false;
+
+	//기존 기본부착 손전등 off
+	FlashlightComponent->SetVisibility(false);
+
+	
 }
 
 void AOblivioCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -720,8 +741,8 @@ void AOblivioCharacter::Tick(float DeltaTime)
 	UpdateWallOcclusionDither();
 	RefreshWallOcclusionFadeMaterialInstances();
 
-	if (IsValid(CurrentWeapon)) {
-		CurrentWeapon->SetActorRotation(GetActorRotation());
+	if (IsValid(FlashlightWeapon)) {
+		FlashlightWeapon->SetActorRotation(GetActorRotation());
 	}
 	UpdateFlashlightEmbedPullback(DeltaTime);
 }
@@ -998,9 +1019,9 @@ void AOblivioCharacter::TogglePause()
 
 void AOblivioCharacter::AdjustFocus(float Value)
 {
-	if (bCanAdjustFocus && CurrentWeapon)
+	if (bCanAdjustFocus && IsValid(FlashlightWeapon))
 	{
-		CurrentWeapon->ChangeWeaponAngle(Value * WheelControlMultiplier);
+		FlashlightWeapon->ChangeWeaponAngle(Value * WheelControlMultiplier);
 	}
 }
 
@@ -1020,9 +1041,10 @@ void AOblivioCharacter::ToggleFlashlight()
 	}
 }
 
+
 void AOblivioCharacter::UpdateFlashlightVisuals()
 {
-	if (!IsValid(CurrentWeapon)) return;
+	if (!IsValid(FlashlightWeapon)) return;
 
 	if (IsValid(FlashlightClickSound))
 	{
@@ -1030,10 +1052,10 @@ void AOblivioCharacter::UpdateFlashlightVisuals()
 	}
 
 	if (bIsFlashlightOn) {	//On
-		CurrentWeapon->UseWeapon();
+		FlashlightWeapon->UseWeapon();
 	}
 	else {	//Off
-		CurrentWeapon->StopWeapon();
+		FlashlightWeapon->StopWeapon();
 	}
 }
 
@@ -1047,10 +1069,10 @@ void AOblivioCharacter::UpdateFlashlightEmbedPullback(float DeltaSeconds)
 	}
 
 	ULightAttackComponent* Lac =
-		IsValid(CurrentWeapon) ? CurrentWeapon->FindComponentByClass<ULightAttackComponent>() : nullptr;
+		IsValid(FlashlightWeapon) ? FlashlightWeapon->FindComponentByClass<ULightAttackComponent>() : nullptr;
 
 	const bool bWeaponOk =
-		IsValid(CurrentWeapon) && CurrentWeapon->IsA(AFlashlight::StaticClass()) && Lac != nullptr
+		IsValid(FlashlightWeapon) && FlashlightWeapon->IsA(AFlashlight::StaticClass()) && Lac != nullptr
 		&& Lac->bIsConcentrated && IsValid(Lac->GetSpotLightComp());
 
 	const bool bFlashOn = bIsFlashlightOn && Battery > 0.0f && !bFlashlightForcedOff;
@@ -1112,9 +1134,9 @@ void AOblivioCharacter::UpdateFlashlightEmbedPullback(float DeltaSeconds)
 	FHitResult Hit;
 	FCollisionQueryParams QP(FName(TEXT("Flash_wall_embed")), /*bTraceComplex=*/false);
 	QP.AddIgnoredActor(this);
-	if (IsValid(CurrentWeapon))
+	if (IsValid(FlashlightWeapon))
 	{
-		QP.AddIgnoredActor(CurrentWeapon.Get());
+		QP.AddIgnoredActor(FlashlightWeapon.Get());
 	}
 
 	const bool bHitWall =
@@ -1257,32 +1279,32 @@ void AOblivioCharacter::ReloadBattery()
 	}
 }
 
-void AOblivioCharacter::BeginThrow(TSubclassOf<AThrowableWeapon> Weapon)
+//섬광탄 시작 함수
+void AOblivioCharacter::UseFlashbang()
 {
-	if (!bIsThrowing) {
-		UE_LOG(LogTemp, Warning, TEXT("AnimateThrow!"));
-		PlayAnimMontage(ThrowMontage);
-		PendingThrowClass = Weapon;
-		bIsThrowing = true;
-	}
+	UE_LOG(LogTemp, Warning, TEXT("UseFlashbang()!!"));
+	bool IsWeaponReady = FlashbangWeapon->UseWeapon();
+	if (IsWeaponReady) PendingWeaponClass = FlashbangWeapon;
 }
 
+//조명탄 시작 함수
+void AOblivioCharacter::UseFlare()
+{
+	UE_LOG(LogTemp, Warning, TEXT("UseFlare()!!"));
+	bool IsWeaponReady = FlareWeapon->UseWeapon();
+	if (IsWeaponReady) PendingWeaponClass = FlareWeapon;
+}
+
+//AnimNotify로 타이밍에 맞게 투사체 스폰 호출
 void AOblivioCharacter::ThrowWeapon() {
-	bIsThrowing = false;
-	if (!IsValid(PendingThrowClass)) {
-		UE_LOG(LogTemp, Warning, TEXT("PendingThrowClass invalid!"));
+	//할당 이상하면 실행 거부
+	if (!IsValid(PendingWeaponClass)) {
+		UE_LOG(LogTemp, Warning, TEXT("No Weapon!!"));
 		return;
 	}
-	FActorSpawnParameters Params;
-	Params.Owner = this;
-	AThrowableWeapon* ThrowingWeapon = GetWorld()->SpawnActor<AThrowableWeapon>(
-		PendingThrowClass,
-		GetActorLocation(),
-		FRotator::ZeroRotator,
-		Params);
-	FVector temp = GetAimingLocation();
-	UE_LOG(LogTemp, Warning, TEXT("Throwing Weapon %s to %f %f!"), *ThrowingWeapon->GetName(), temp.X, temp.Y);
-	if (ThrowingWeapon) ThrowingWeapon->StartThrow(GetAimingLocation());
+	//정상이면 실제 공격 호출
+	PendingWeaponClass->ExecuteWeaponAttack(GetAimingLocation());
+	PendingWeaponClass = nullptr;
 }
 
 FVector AOblivioCharacter::GetAimingLocation() {
