@@ -34,14 +34,14 @@ AFlashlight::AFlashlight()
 void AFlashlight::BeginPlay()
 {
 	Super::BeginPlay();
-	UE_LOG(LogTemp, Warning, TEXT("BeginPlay"));
+	UseWeapon();
 }
 
 bool AFlashlight::UseWeapon()
 {
 	if (!IsValid(LightAttackComp)) return false;
 	if (!GetWorld()->GetTimerManager().IsTimerActive(AttackTimerHandle)) {
-		UE_LOG(LogTemp, Warning, TEXT("Setting Timer"));
+		UE_LOG(LogTemp, Warning, TEXT("Setting Flashlight Timer"));
 
 		GetWorld()->GetTimerManager().SetTimer(
 			AttackTimerHandle,

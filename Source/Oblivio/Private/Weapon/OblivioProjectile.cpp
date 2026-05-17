@@ -97,11 +97,10 @@ void AOblivioProjectile::PlayReflectionSound(UPrimitiveComponent* HitComp, AActo
         ReflectionSoundComp->Play();
     }
 
-    SpinVelocity += FVector(
+    SpinVelocity += FVector(0,
         FMath::RandRange(-ImpactRotationRange, ImpactRotationRange),
-        FMath::RandRange(-ImpactRotationRange, ImpactRotationRange),
-        FMath::RandRange(-ImpactRotationRange, ImpactRotationRange)
-    );
+        FMath::RandRange(-ImpactRotationRange, ImpactRotationRange));//,
+        //FMath::RandRange(-ImpactRotationRange, ImpactRotationRange));
 }
 
 //투사체 발동시 사운드 (폭팔, 점화등)
