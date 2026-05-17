@@ -231,7 +231,7 @@ private:
 	UPROPERTY(ReplicatedUsing = OnRep_HeartbeatChanneling)
 	bool bHeartbeatChanneling = false;
 
-	/** 한 번 AggroRadius 안에 들어오면 Death·타겟 소실 전까지 추격 유지(서버가 잠금, 복제). */
+	/** AggroRadius 진입 또는 플레이어가 반경 밖에서 유효 피해 1회면 Death·타겟 소실 전까지 추격 유지(서버 잠금, 복제). */
 	UPROPERTY(Replicated)
 	bool bTankStickyAggroUntilDeath = false;
 
@@ -605,7 +605,8 @@ private:
 	bool ShouldSuppressTankIncomingDamageFromCauseForPlacenta(AController const* EventInstigator,
 		AActor const* DamageCauser) const;
 
-	static bool IsLikelyPlayerDamageCauser(AController const* EventInstigator, AActor const* DamageCauser);
+	void NotifyStickyAggroIfPlayerDamagedBeyondRange(float AppliedDamage, AController const* EventInstigator,
+		AActor const* DamageCauser) override;
 
 	void StartTankPlacentaDefensePattern_Server();
 

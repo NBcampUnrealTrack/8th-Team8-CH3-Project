@@ -567,6 +567,19 @@ protected:
 	/** 타겟 폰이 있을 때 AggroRadius(수평 옵션)만 검사 — sticky 어그로 잠금 트리거 등에 사용. */
 	bool IsAggroDistanceSatisfiedForTarget() const;
 
+	/** ApplyDamage 근거가 플레이어(PC·플레이어 폰 계열)·인스티게이터인지 단순 휴리스틱. */
+	static bool IsLikelyPlayerDamageCauser(AController const* EventInstigator, AActor const* DamageCauser);
+
+	/**
+	 * IsLikelyPlayerDamageCauser가 참일 때 귀속 플레이어 폰(대개 AOblivioCharacter) 후보 해석.
+	 * 손전등 등 EventInstigator가 비어 있는 경로까지 커버.
+	 */
+	static APawn* ResolveLikelyPlayerPawnDamageCause(AController const* EventInstigator, AActor const* DamageCauser);
+
+	/** TakeDamage 차감 직후(서버)·플레이어가 AggroRadius 밖에서 유효 피해 시 태깅. 탱커/룩세이터 등만 오버라이드 */
+	virtual void NotifyStickyAggroIfPlayerDamagedBeyondRange(float AppliedDamage, AController const* EventInstigator,
+		AActor const* DamageCauser);
+
 	void StopEnemyMovement();
 
 	virtual void RefreshWalkSpeedFromSources();

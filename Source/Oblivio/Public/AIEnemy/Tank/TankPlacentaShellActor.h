@@ -2,13 +2,14 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Animation/AnimInstance.h"
 #include "Engine/DamageEvents.h"
 #include "TankPlacentaShellActor.generated.h"
 
-class AController;
 class ATankEnemy;
+class USkeletalMesh;
+class USkeletalMeshComponent;
 class USphereComponent;
-class UStaticMeshComponent;
 
 /**
  * 태반방어 패턴 보호구 — 플레이어가 깨도록 대상 가능한 구체 체력.
@@ -46,9 +47,25 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tank|Placenta")
 	TObjectPtr<USphereComponent> CollisionSphere;
 
-	/** 비어 있지 않으면 슬롯 0 에 시각용 메시(구체 등). CollisionSphere 에 Attach. */
+	/**
+	 * 비주얼 전용 스켈레탈 메시(CollisionSphere 충돌과 분리).
+	 * BP에서는 Components 목록에서 `Tank Placenta Shell Skeletal Visual` 을 선택해 SK/ Anim Class 설정.
+	 * (구 스태틱 메시 시절 이름과 분리했으므로, 디테일이 비면 BP 재저장 또는 Parent 다시 적용 필요.)
+	 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tank|Placenta|Visual")
+	TObjectPtr<USkeletalMeshComponent> VisualMesh;
+
+	/** C++ 디폴트 또는 BP에서 선택: 비어 있으면 스폰 후 수동 할당 필요. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tank|Placenta|Visual")
-	TObjectPtr<UStaticMeshComponent> VisualMesh;
+	TObjectPtr<USkeletalMesh> DefaultTankPlacentaShellSkeletalMesh;
+
+	/** 에셋에 맞춤: 스켈 메시 작성 시 로컬 바운드가 반경 50UU 구 수준이면 50 유지, 아니면 직경에 맞게 조정 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tank|Placenta|Visual", meta = (ClampMin = "1.0"))
+	float TankPlacentaShellSkelMeshReferenceRadiusUU = 50.f;
+
+	/** 선택: 비주얼 재생용 Anim BP(UAnimBlueprintGeneratedClass 파생 가능). 미지정이면 블프 컴포넌트 디테일에서 지정해도 됨 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tank|Placenta|Visual")
+	TSubclassOf<UAnimInstance> TankPlacentaShellAnimInstanceClass;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tank|Placenta")
 	float ShellMaxHealth = 500.f;

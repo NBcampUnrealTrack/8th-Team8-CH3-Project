@@ -1,4 +1,6 @@
 #include "AIEnemy/Tank/TankMembraneProjectile.h"
+#include "AIEnemy/Tank/TankPlacentaShellActor.h"
+#include "AIEnemy/TankEnemy.h"
 #include "OblivioCharacter.h"
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -60,6 +62,23 @@ void ATankMembraneProjectile::BeginPlay()
 			if (Other && Other != this)
 			{
 				IgnoreOtherMembraneProjectile(Other);
+			}
+		}
+
+		// 탱커 본체·태반 셸(BlockAll…)과 물리 히트하면 비행이 끊기므로 ProjectileMovement 차원에서 무시한다.
+		// 플레이어 등 다른 대상에는 그대로 BlockAll 로 반응.
+		for (TActorIterator<ATankEnemy> TankIt(World); TankIt; ++TankIt)
+		{
+			if (ATankEnemy* const Tank = *TankIt; Tank && CollisionSphere)
+			{
+				CollisionSphere->IgnoreActorWhenMoving(Tank, true);
+			}
+		}
+		for (TActorIterator<ATankPlacentaShellActor> ShellIt(World); ShellIt; ++ShellIt)
+		{
+			if (ATankPlacentaShellActor* const Shell = *ShellIt; Shell && CollisionSphere)
+			{
+				CollisionSphere->IgnoreActorWhenMoving(Shell, true);
 			}
 		}
 	}
@@ -124,8 +143,16 @@ void ATankMembraneProjectile::OnSphereHit(UPrimitiveComponent* HitComp, AActor* 
 		return;
 	}
 
-	// 자기 자신을 발사한 Tank/Instigator 와도 충돌 무효.
-	if (OtherActor && OtherActor == GetInstigator())
+	// 자기 자신을 발사한 Tank/Instigator/Owner 와도 충돌 무효(리플레이케이션·자식 편차 대비 이중 검사 제거 불가).
+	if (OtherActor && (OtherActor == GetInstigator() || OtherActor == GetOwner()))
+	{
+		return;
+	}
+
+	// 태반 셸·탱커 패스스루( IgnoreActor 가 늦게 깔린 프레임 등 안전망 ).
+	if (OtherActor &&
+		(OtherActor->IsA(ATankEnemy::StaticClass()) ||
+			OtherActor->IsA(ATankPlacentaShellActor::StaticClass())))
 	{
 		return;
 	}

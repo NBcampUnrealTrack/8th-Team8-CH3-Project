@@ -9,7 +9,9 @@ class ATankEnemy;
 class ATankMembraneProjectile;
 class UMaterialInstanceDynamic;
 class USoundBase;
+class UMaterialInterface;
 class UStaticMeshComponent;
+class UArrowComponent;
 
 /**
  * 양막 소환 지점에서 일정 간격으로 부채꼴(3발) 직선 투사체를 N회 발사하고 자가 파괴.
@@ -61,8 +63,21 @@ protected:
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_PlayMembraneFirePulse(FVector const& MuzzleLocationWorld);
 
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_ShowProjectileTelegraph(FVector TelegraphOriginWorld, FVector TelegraphBaseForwardNorm,
+		float TelegraphFanHalfDeg, float TelegraphSpawnFwdCm, float TelegraphSpawnUpCm,
+		float TelegraphRangeUU, float TelegraphDurationSec);
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tank|Membrane")
 	TObjectPtr<UStaticMeshComponent> EmitterMesh;
+
+	/**
+	 * 포신·총구 방향. 월드에서 이 컴포넌트의 Forward 가 부채꼴 중앙 발사 축(+ bInvertMuzzleDirectionArrowForward).
+	 * 양막 BP 에서 EmitterMesh 기준 위치·회전만 조정하면 됨(게임 중 숨김).
+	 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tank|Membrane",
+		meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UArrowComponent> MuzzleDirectionArrow;
 
 	// ----------------------------- 발사 튜닝 (양막 BP에서 수정) -----------------------------
 
@@ -96,9 +111,69 @@ protected:
 	float FirstVolleyDelaySeconds = 0.0f;
 
 	// ---------------------------------------------------------------------------------------
+	// Aim — 타겟·포신 회전 미세 조정 (BP 디테일)
+	// ---------------------------------------------------------------------------------------
+
+	/** false면 볼리마다 플레이어/타겟 쪽으로 액터 Yaw 회전 안 함(MuzzleDirectionArrow 기준 각만 사용). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tank|Membrane|Volley|Aim",
+		meta = (ToolTip = "끄면 스폰 시점 회전+MuzzleArrow 각만 적용합니다."))
+	bool bFaceAggroTargetEachVolley = true;
+
+	/**
+	 * true면 기존대로 수평(XY) 평면으로만 회전하여 플레이어 높이(위·아래)는 무시.
+	 * false면 액터 위치에서 타겟까지 3축 방향 전체로 바라본다(FindLookAtRotation).
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tank|Membrane|Volley|Aim",
+		meta = (EditCondition = "bFaceAggroTargetEachVolley",
+			ToolTip = "꺼서 플레이어 허벅지 높이·점프 높이를 맞춥니다."))
+	bool bFlattenAimToHorizontalPlaneWhenFacingAggro = true;
+
+	/**
+	 * MuzzleDirectionArrow 로 구한 발사축에 가산되는 회전(deg). 블프에서 총구가 플레이어를 놓치면 조정.
+	 * Yaw 우측 +, Pitch 위쪽 + 는 FRotator 관례(UE 디테일과 동일).
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tank|Membrane|Volley|Aim")
+	FRotator ProjectileLaunchRotatorOffsetDegrees = FRotator::ZeroRotator;
+
+	/**
+	 * 메쉬 import 축 때문에 ‘입’ 방향이 Arrow Forward 와 180° 반대일 때 체크.
+	 * true 이면 Arrow.GetForwardVector 대신 역방향으로 발사축을 잡는다(스폰 오프셋·부채꼴도 같은 축).
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tank|Membrane|Volley|Aim",
+		meta = (ToolTip =
+			"Arrow 컴포넌트 로컬 Forward(+X)가 실제 총구 밖쪽과 반대이면 체크. 발사·전방 오프셋 축을 Arrow 역방향으로 바꿉니다."))
+	bool bInvertMuzzleDirectionArrowForward = false;
+
+	// ---------------------------------------------------------------------------------------
+	// Telegraph — 부채꼴 3발 각각 예상 직선(실린더 튜브). 같은 볼리에서 투사체 스폰 직후 NetMulticast 표시.
+	// 발사 각·오프셋은 SpawnFanProjectiles 와 동일 벡터. 반투명 머티리얼은 BP 에서 ProjectileTelegraphMaterial 로 지정.
+	// 업그레이드: 같은 파라미터로 Niagara Beam 교체 또는 Decal 레이어만 추가하면 됨.
+	// ---------------------------------------------------------------------------------------
+
+	/** 각 볼리마다 3방향 예측 라인 표시(NetMulticast 클라 포함). 끄면 양방 비활성. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tank|Membrane|Telegraph")
+	bool bShowProjectilePathTelegraph = true;
+
+	/** 스폰 직선 시작(총구 오프셋 적용 후)부터 그릴 거리(cm). 실제 라이프/벽충돌과 무관 · 가독용. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tank|Membrane|Telegraph", meta = (ClampMin = "400.0"))
+	float ProjectileTelegraphRangeUU = 10000.f;
+
+	/** 라인 노출 시간(초). 0 에 가깝게 하면 깜박임이 짧음. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tank|Membrane|Telegraph", meta = (ClampMin = "0.05"))
+	float ProjectileTelegraphVisibleSeconds = 0.5f;
+
+	/** BasicShapes Cylinder 기본 반경(50cm) 대비 타원 반경(cm). 거칠게 굵기 튜닝. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tank|Membrane|Telegraph", meta = (ClampMin = "1.0"))
+	float ProjectileTelegraphTubeRadiusCm = 22.f;
+
+	/** 비어 있으면 Engine BasicShapeMaterial. 반투명 컬러 에미시브 등은 여기 넣거나 BP 디테일 MI. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tank|Membrane|Telegraph")
+	TObjectPtr<UMaterialInterface> ProjectileTelegraphMaterial;
+
+	// ---------------------------------------------------------------------------------------
 	// Muzzle 오프셋 — 투사체 스폰 위치를 양막 액터 원점에서 얼마나 띄울지.
 	// 양막 본체가 바닥/벽에 박혀 있어 투사체가 즉시 충돌→정지하는 문제를 막는다.
-	// Forward(앞)는 부채꼴 직진 방향(=발사 방향), Up(위)는 월드 +Z 방향.
+	// Forward(앞)는 MuzzleDirectionArrow 의 직진 — 없으면 액터 전방. Up(위)는 월드 +Z 방향.
 	// ---------------------------------------------------------------------------------------
 
 	/** 발사 방향(전방)으로 띄울 거리(cm). 부채꼴 3발 각각의 Yaw 방향을 따라 오프셋된다. */
@@ -183,13 +258,27 @@ protected:
 	FTimerHandle PulseDecayTimerHandle;
 	double PulseStartedWorldSeconds = 0.0;
 
-	void FaceAggroTargetHorizontal();
+	/** Telegraph 실린더 3개(부채꼴별 라인 X). ctor 에서 채운다. */
+	UPROPERTY(VisibleAnywhere, Transient, Category = "Tank|Membrane|Telegraph")
+	TArray<TObjectPtr<UStaticMeshComponent>> ProjectileTelegraphTubes;
+
+	FTimerHandle ProjectileTelegraphHideTimerHandle;
+
+	/** 마지막 볼리 후 텔레그래프가 보이도록 Destroy 를 잠시 미룸. */
+	FTimerHandle DeferredDestroyAfterTelegraphTimerHandle;
+
+	void FaceAggroTowardTargetActor();
+	static void AppendLaunchRotOffsetToNormalizedForward(FVector& InOutForward, FRotator const OffsetDegrees);
 	void FireOneVolley();
 	void SpawnFanProjectiles();
-	void NotifyTankAndDestroy();
+	void StopVolleyTimerAndNotifyTankFinished();
+	void DestroyMembraneEmitterNow();
+	UFUNCTION()
+	void OnDeferredDestroyAfterTelegraph_TimerFired();
 
 	UMaterialInstanceDynamic* GetOrCreateEmitterPulseMID();
 	void TickPulseFade();
+	void HideProjectileTelegraphVisuals();
 
 private:
 	void ScheduleNextVolley(float DelaySeconds);
