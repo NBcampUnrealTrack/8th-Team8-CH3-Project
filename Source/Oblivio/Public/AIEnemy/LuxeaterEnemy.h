@@ -70,6 +70,18 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Enemy|Luxeater|Events")
 	FLuxeaterLightAbsorbedSignature OnLightAbsorbed;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Luxeater|UI")
+	FText BossDisplayName = FText::FromString(TEXT("The Luxeater"));
+	
+	UFUNCTION(BlueprintImplementableEvent, Category = "Enemy|Luxeater|UI")
+	void OnShowBossHP(const FText& InBossName, float InCurrentHP, float InMaxHP);
+	
+	UFUNCTION(BlueprintImplementableEvent, Category = "Enemy|Luxater|UI")
+	void OnUpdateBossHP(float InCurrentHP, float InMaxHP);
+	
+	UFUNCTION(BlueprintImplementableEvent, Category = "Enemy|Luxater|UI")
+	void OnHideBossHP();
 
 protected:
 	virtual void BeginPlay() override;
@@ -247,4 +259,10 @@ private:
 	mutable bool bAggroLatched = false;
 	float FloatBaseMeshRelativeZ = 0.0f;
 	float FloatTime = 0.0f;
+	
+	bool bBossHPShown = false;
+	
+	void TryShowBossHUD();
+	void RefreshBossHUD();
+	void HideBossHUD();
 };
