@@ -230,7 +230,7 @@ public:
 	float Battery = 100.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status|Flashlight")
-	float BatteryDepletionRate = 2.0f;
+	float BatteryDepletionRate = 0.5f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status|Flashlight")
 	bool bIsFlashlightOn = true;
@@ -480,6 +480,12 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
 	USoundBase* ObstaclePlaceSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio|UI")
+	USoundBase* PauseOpenSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio|UI")
+	USoundBase* PauseCloseSound;
 
 	// 체력이 이 수치 이하일 때 심장/과호흡 소리가 들림
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio|Health")
