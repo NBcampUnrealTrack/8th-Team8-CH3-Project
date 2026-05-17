@@ -207,6 +207,48 @@ void ALuxeaterEnemy::FadeOutLuxeaterChannelSfxOnCastEnd(TObjectPtr<UAudioCompone
 	Comp = nullptr;
 }
 
+void ALuxeaterEnemy::TryShowBossHUD()
+{
+	if (bBossHPShown)
+	{
+		return;
+	}
+	
+	if (!IsAlive())
+	{
+		return;
+	}
+	
+	if (!HasValidAggroTarget())
+	{
+		return;
+	}
+	
+	bBossHPShown = true;
+	OnShowBossHP(BossDisplayName, CurrentHealth, MaxHealth);
+}
+
+void ALuxeaterEnemy::RefreshBossHUD()
+{
+	if (!bBossHPShown)
+	{
+		return;
+	}
+	
+	OnUpdateBossHP(CurrentHealth, MaxHealth);
+}
+
+void ALuxeaterEnemy::HideBossHUD()
+{
+	if (!bBossHPShown)
+	{
+		return;
+	}
+	
+	bBossHPShown = false;
+	OnHideBossHP();
+}
+
 void ALuxeaterEnemy::BeginPlay()
 {
 	BaseMoveSpeed = MoveSpeed;
@@ -329,6 +371,12 @@ void ALuxeaterEnemy::NotifyBossHealthChanged(float NewCurrentHealth, float NewMa
 void ALuxeaterEnemy::NotifyEnemyDamageApplied(float /*AppliedDamage*/)
 {
 	UpdateHealthPhase();
+	RefreshBossHUD();
+	
+	if (CurrentHealth <= 0.0f)
+	{
+		HideBossHUD();
+	}
 }
 
 void ALuxeaterEnemy::NotifyStickyAggroIfPlayerDamagedBeyondRange(float AppliedDamage, AController const* EventInstigator,
@@ -905,6 +953,8 @@ void ALuxeaterEnemy::TickBossAbilities(float DeltaSeconds)
 		return;
 	}
 
+	TryShowBossHUD();
+	
 	const double Now = World->GetTimeSeconds();
 
 	if (bLaserChargeActive)
