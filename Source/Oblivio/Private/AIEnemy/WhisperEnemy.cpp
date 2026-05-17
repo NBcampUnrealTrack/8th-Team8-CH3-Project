@@ -51,7 +51,7 @@ namespace
 		}
 
 		bool bUsedWeapon = false;
-		if (AWeaponBase* const W = Player->CurrentWeapon.Get())
+		if (AWeaponBase* const W = Player->FlashlightWeapon.Get())
 		{
 			if (ULightAttackComponent* const LAC = W->FindComponentByClass<ULightAttackComponent>())
 			{

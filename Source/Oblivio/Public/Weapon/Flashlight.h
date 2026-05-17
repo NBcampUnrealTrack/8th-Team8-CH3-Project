@@ -16,7 +16,7 @@ class OBLIVIO_API AFlashlight : public AWeaponBase
 public:
 	AFlashlight();
 	virtual void BeginPlay() override;
-	virtual void UseWeapon() override;
+	virtual bool UseWeapon() override;
 	virtual void StopWeapon() override;
 	virtual void ChangeWeaponAngle(float DeltaAngle) override;
 
@@ -28,4 +28,7 @@ protected:
 	float AttackInterval;
 	FTimerHandle AttackTimerHandle;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapon)
+	TObjectPtr<ULightAttackComponent> LightAttackComp;
 };

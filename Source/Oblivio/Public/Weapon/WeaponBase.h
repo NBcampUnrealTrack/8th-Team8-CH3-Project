@@ -8,6 +8,7 @@
 
 class USphereComponent;
 class ULightAttackComponent;
+class UArrowComponent;
 UCLASS()
 class OBLIVIO_API AWeaponBase : public AActor
 {
@@ -25,17 +26,24 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapon)
 	TObjectPtr<UStaticMeshComponent> MeshComp;
-	
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapon)
-	TObjectPtr<ULightAttackComponent> LightAttackComp;
+	TObjectPtr<UArrowComponent> ArrowComp;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Anim)
+	TObjectPtr<UAnimMontage> WeaponAnim;
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	virtual void UseWeapon();
+	virtual bool UseWeapon();
+
+	virtual void ExecuteWeaponAttack(FVector TargetLocation = FVector::ZeroVector);
 
 	virtual void StopWeapon();
 
 	virtual void ChangeWeaponAngle(float DeltaAngle);
+
+	virtual bool PlayWeaponAnim();
 
 };
