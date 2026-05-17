@@ -5,6 +5,8 @@
 #include "Camera/PlayerCameraManager.h" 
 #include "TimerManager.h"
 #include "Sound/SoundBase.h"
+#include "Items/OblivioInventoryComponent.h"
+#include "OblivioGameMode.h"
 
 ADoorBase::ADoorBase()
 {
@@ -28,6 +30,12 @@ void ADoorBase::InteractDoor_Implementation()
 					GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, TEXT("잠겨 있습니다. 열쇠가 필요합니다."));
 				}
 				return;
+			}
+			Player->InventoryComponent->ConsumeItem(EItemType::Key, 1);
+
+			if (AOblivioGameMode* GM = Cast<AOblivioGameMode>(UGameplayStatics::GetGameMode(GetWorld())))
+			{
+				GM->CollectedKeys--;
 			}
 		}
 
