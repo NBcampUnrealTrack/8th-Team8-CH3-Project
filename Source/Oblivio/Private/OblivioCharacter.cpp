@@ -719,26 +719,7 @@ void AOblivioCharacter::Tick(float DeltaTime)
 	UpdateStatus(DeltaTime);
 	UpdateWallOcclusionDither();
 	RefreshWallOcclusionFadeMaterialInstances();
-	//Debug 확인용
-	if (GEngine)
-	{
-		//생존 스탯 (Health, Hunger, Thirst)
-		FString StatusMsg = FString::Printf(TEXT("HP: %.1f | Hunger: %.1f | Thirst: %.1f"), CurrentHealth, Hunger, Thirst);
-		GEngine->AddOnScreenDebugMessage(1, DeltaTime, FColor::Cyan, StatusMsg);
 
-		//배터리 상태 및 손전등 ON/OFF
-		FString BatteryMsg = FString::Printf(TEXT("Battery: %.1f%% (%s) | Focus: %.2f"),
-			Battery, bIsFlashlightOn ? TEXT("ON") : TEXT("OFF"), CurrentFocusAlpha);
-
-		// 배터리가 적으면 빨간색, 충분하면 초록색으로 표시
-		FColor BatteryColor = (Battery < 20.f) ? FColor::Red : FColor::Green;
-		GEngine->AddOnScreenDebugMessage(2, DeltaTime, BatteryColor, BatteryMsg);
-
-		//이동 상태
-		FString MoveMsg = FString::Printf(TEXT("Movement: %s | Speed: %.1f"),
-			bIsRunning ? TEXT("RUNNING") : TEXT("WALKING"), GetVelocity().Size());
-		GEngine->AddOnScreenDebugMessage(3, DeltaTime, FColor::Yellow, MoveMsg);
-	}
 	if (IsValid(CurrentWeapon)) {
 		CurrentWeapon->SetActorRotation(GetActorRotation());
 	}
@@ -1000,23 +981,15 @@ void AOblivioCharacter::SetNearbyItem(AOblivioItemBase* Item)
 
 void AOblivioCharacter::TogglePause()
 {
-	//UI 띄우는 로직 연동
-	UE_LOG(LogTemp, Warning, TEXT("Pause Menu Toggled!"));
-	
 	bIsPauseOpen = !bIsPauseOpen;
-	
-	OnPauseToggle(bIsPauseOpen);
 
-	// 만약 직접 엔진 일시정지 제어 시
-	/*
-	APlayerController* PC = Cast<APlayerController>(GetController());
-	if (PC)
+	USoundBase* PlaySound = bIsPauseOpen ? PauseOpenSound : PauseCloseSound;
+	if (IsValid(PlaySound))
 	{
-		bool bIsPaused = UGameplayStatics::IsGamePaused(GetWorld());
-		UGameplayStatics::SetGamePaused(GetWorld(), !bIsPaused);
-		PC->SetShowMouseCursor(!bIsPaused);
+		UGameplayStatics::PlaySound2D(GetWorld(), PlaySound);
 	}
-	*/
+
+	OnPauseToggle(bIsPauseOpen);
 }
 
 //=====================
@@ -1430,17 +1403,9 @@ void AOblivioCharacter::GenerateFootstep()
 
 	USoundBase* SoundToPlay = bInWater ? WaterFootstepSound : FootstepSound;
 
-	FString SoundStatus = IsValid(SoundToPlay) ? TEXT("정상(사운드 있음)") : TEXT("오류(사운드 비어있음!)");
-	FString DebugMsg = FString::Printf(TEXT("물속인가?: %s | 재생상태: %s"), bInWater ? TEXT("YES") : TEXT("NO"), *SoundStatus);
-
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, IsValid(SoundToPlay) ? FColor::Green : FColor::Red, DebugMsg);
-
 	//발걸음 SFX 출력
 	if (IsValid(SoundToPlay)) {
 		UGameplayStatics::PlaySound2D(GetWorld(), SoundToPlay, SoundMultiplier);
-	}
-	else {
-		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("오류: 사운드 에셋이 비어있습니다! BP 확인 요망!"));
 	}
 
 	//추적용 소리 전파
