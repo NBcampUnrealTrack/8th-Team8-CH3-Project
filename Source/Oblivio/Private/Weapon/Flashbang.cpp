@@ -3,9 +3,13 @@
 
 #include "Weapon/Flashbang.h"
 #include "OblivioComponents/LightAttackComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 AFlashbang::AFlashbang()
 {
+	LightAttackComp = CreateDefaultSubobject<ULightAttackComponent>(TEXT("LightAttackComp"));
+	LightAttackComp->SetupAttachment(RootComponent);
+
 	PrimaryActorTick.bCanEverTick = true;
 	LightAttackComp->Damage = 10000;
 	LightAttackComp->BasicLightColor = FColor::White;
@@ -20,9 +24,9 @@ void AFlashbang::BeginPlay()
 	LightAttackComp->TurnOffLight();
 }
 
-void AFlashbang::UseWeapon()
+bool AFlashbang::UseWeapon()
 {
-	if (!IsValid(LightAttackComp)) return;
+	if (!IsValid(LightAttackComp)) return false;
 	if (!GetWorld()->GetTimerManager().IsTimerActive(BangTimerHandle)) {
 		UE_LOG(LogTemp, Warning, TEXT("Setting Timer"));
 		GetWorld()->GetTimerManager().SetTimer(
@@ -31,11 +35,19 @@ void AFlashbang::UseWeapon()
 				FVector SourceLocation = LightAttackComp->GetComponentLocation();
 				FVector LightDirection = LightAttackComp->GetForwardVector();
 				// 단발 섬광 — 빛이 켜져 있는 시간(FlashDuration) 만큼을 노출량으로 한 번에 전달.
-				LightAttackComp->CreateLightAttack(SourceLocation, LightDirection, FlashDuration); },
+				LightAttackComp->CreateLightAttack(SourceLocation, LightDirection, FlashDuration); 
+			
+				if (IsValid(ExplosionSound))
+				{
+					UGameplayStatics::PlaySoundAtLocation(this, ExplosionSound, GetActorLocation());
+				}
+
+			},
 			BangDelay,
 			false);
 		GetWorld()->GetTimerManager().SetTimer(DestroyTimerHandle, this, &AFlashbang::StopWeapon, BangDelay + FlashDuration, false);
 	}
+	return true;
 }
 
 void AFlashbang::StopWeapon()

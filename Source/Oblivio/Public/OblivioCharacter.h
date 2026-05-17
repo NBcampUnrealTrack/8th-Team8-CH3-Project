@@ -14,6 +14,7 @@
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FPlayerDamagedSignature, float, DamageAmount, float, CurrentHealth, float, MaxHealth);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnNearbyItemChanged, class AOblivioItemBase*, NearbyItem);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPlayerAnimationEvent);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPlayerDied);
 
 class UOblivioCrafting;
 class UOblivioInventoryComponent;
@@ -229,7 +230,7 @@ public:
 	float Battery = 100.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status|Flashlight")
-	float BatteryDepletionRate = 2.0f;
+	float BatteryDepletionRate = 0.5f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status|Flashlight")
 	bool bIsFlashlightOn = true;
@@ -295,15 +296,17 @@ public:
 	// Weapons & Items (무기 및 아이템)
 	//==================================
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
-	TSubclassOf<AWeaponBase> FlashlightWeapon;
+	TSubclassOf<AWeaponBase> FlashlightClass;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
-	TSubclassOf<AThrowableWeapon> FlashbangWeapon;
+	TSubclassOf<AWeaponBase> FlashbangClass;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
-	TSubclassOf<AThrowableWeapon> FlareWeapon;
+	TSubclassOf<AWeaponBase> FlareClass;
 
-	TObjectPtr<AWeaponBase> CurrentWeapon;
+	TObjectPtr<AWeaponBase> FlashlightWeapon;
+	TObjectPtr<AWeaponBase> FlashbangWeapon;
+	TObjectPtr<AWeaponBase> FlareWeapon;
 
 	//손전등 조절
 	UFUNCTION(BlueprintCallable)
@@ -313,18 +316,21 @@ public:
 
 	//투척무기 관련
 	FVector GetAimingLocation();
-	void BeginThrow(TSubclassOf<AThrowableWeapon> Weapon);
 	FPlayerAnimationEvent OnPlayerThrow;
+	TObjectPtr<AWeaponBase> PendingWeaponClass;
+	FVector PendingThrowLocation;
+	bool bIsThrowing;
 	UFUNCTION()
 	void ThrowWeapon();
-	TSubclassOf<AThrowableWeapon> PendingThrowClass;
-	bool bIsThrowing;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Animation")
-	UAnimMontage* ThrowMontage;
 
 	FTimerHandle FlashbangTimerHandle;
 	float FlashbangIntensity = 0.0f;
 	void FadeOutFlashbang();
+
+	//피격 애니메이션
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Animation")
+	UAnimMontage* HitMontage;
+	void PlayHitAnim();
 
 	// =====================================
 	// Movement & Interaction 이동 및 상호작용
@@ -334,6 +340,11 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
 	float RunSpeed = 400.0f;
+
+	float CrouchSpeed = 100.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
+	bool bIsCrouching = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
 	float InteractionDistance = 200.0f;
@@ -346,6 +357,8 @@ public:
 	void Move(const FVector2D& Value);
 	void StartRunning();
 	void StopRunning();
+	void StartCrouching();
+	void StopCrouching();
 	void ToggleFlashlight();
 	void UseFlashbang();
 	void UseFlare();
@@ -393,6 +406,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Feedback")
 	TSubclassOf<class UCameraShakeBase> HitCameraShakeClass;
 
+	UPROPERTY(BlueprintAssignable, Category = "Events")
+	FOnPlayerDied OnPlayerDied;
+
 	//===============================
 	// Fear Effects (공포 효과)
 	//===============================
@@ -412,6 +428,9 @@ public:
 	FPlayerAnimationEvent OnPlayerFootstep;
 	FTimerHandle FootstepTimerHandle;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sound|Animation")
+	TObjectPtr<USoundBase> WaterFootstepSound;
+
 	//===============================
 	//Cheat
 	//=================================
@@ -437,7 +456,45 @@ public:
 
 	/** 물속에 있는지 여부를 반환하는 함수 */
 	UFUNCTION(BlueprintPure, Category = "Status|Flood")
-	bool IsInWater() const { return GetActorLocation().Z < CurrentWaterLevel; }
+	bool IsInWater() const;
+
+	// ================= [사운드 에셋 변수] =================
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+	USoundBase* FlashlightClickSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+	USoundBase* InventoryOpenSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+	USoundBase* InventoryCloseSound;
+
+	// 과호흡/심박수 사운드 (Looping 사운드 권장)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio|Health")
+	USoundBase* LowHealthSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+	USoundBase* CraftingOpenSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+	USoundBase* CraftingCloseSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+	USoundBase* ObstaclePlaceSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio|UI")
+	USoundBase* PauseOpenSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio|UI")
+	USoundBase* PauseCloseSound;
+
+	// 체력이 이 수치 이하일 때 심장/과호흡 소리가 들림
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio|Health")
+	float LowHealthThreshold = 30.0f;
+
+protected:
+	// 사운드를 지속적으로 재생하고 피치(속도)를 조절하기 위한 컴포넌트
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Audio")
+	UAudioComponent* LowHealthAudioComponent;
 
 private:
 	TSet<TWeakObjectPtr<UPrimitiveComponent>> WallOcclusionAppliedPrimitives;

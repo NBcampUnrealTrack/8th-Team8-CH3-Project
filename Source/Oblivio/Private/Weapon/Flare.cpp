@@ -6,6 +6,9 @@
 
 AFlare::AFlare()
 {
+	LightAttackComp = CreateDefaultSubobject<ULightAttackComponent>(TEXT("LightAttackComp"));
+	LightAttackComp->SetupAttachment(RootComponent);
+
 	PrimaryActorTick.bCanEverTick = true;
 	AttackInterval = 0.1f;
 	LastDuration = 5.f;
@@ -19,10 +22,10 @@ void AFlare::BeginPlay()
 	UseWeapon();
 }
 
-void AFlare::UseWeapon()
+bool AFlare::UseWeapon()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Flare use weapon called"));
-	if (!IsValid(LightAttackComp)) return;
+	if (!IsValid(LightAttackComp)) return false;
 	if (!GetWorld()->GetTimerManager().IsTimerActive(AttackTimerHandle)) {
 		UE_LOG(LogTemp, Warning, TEXT("Setting Timer"));
 		GetWorld()->GetTimerManager().SetTimer(
@@ -36,6 +39,7 @@ void AFlare::UseWeapon()
 			true);
 		GetWorld()->GetTimerManager().SetTimer(DestroyTimerHandle, this, &AFlare::StopWeapon, LastDuration, false);
 	}
+	return true;
 }
 
 void AFlare::StopWeapon()

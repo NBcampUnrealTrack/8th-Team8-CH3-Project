@@ -63,6 +63,13 @@ public:
     /** 데미지 처리 (몬스터 공격 대응) */
     virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
 
+    void HandleDestruction();
+    
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Obstacle | Sound")
+    class USoundBase* DestructionSound;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Obstacle | Effects")
+    class UNiagaraSystem* DestructionEffect;
+
     // Getter
     int32 GetWoodCost() const { return WoodCost; }
     int32 GetIronCost() const { return IronCost; }

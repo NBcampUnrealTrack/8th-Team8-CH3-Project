@@ -1,6 +1,8 @@
 ﻿#include "Crafting/ObstacleBase.h"
 #include "Components/StaticMeshComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "Kismet/GameplayStatics.h"
+#include "NiagaraFunctionLibrary.h"
 
 AObstacleBase::AObstacleBase()
 {
@@ -37,7 +39,7 @@ void AObstacleBase::SetGhostMode(bool bIsGhost, bool bCanPlace)
             {
                 // FLinearColor(R, G, B, A)
                 FLinearColor TargetColor = bCanPlace ?
-                    FLinearColor(0.0f, 1.0f, 0.0f, 0.5f) : // 설치 가능/치트 켜짐: 초록색
+                    FLinearColor(1.0f, 1.0f, 1.0f, 0.5f) : // 설치 가능/치트 켜짐: 초록색
                     FLinearColor(1.0f, 0.0f, 0.0f, 0.5f);  // 자원 부족/거리 초과: 빨간색
 
                 DynamicGhostMat->SetVectorParameterValue(FName("TintColor"), TargetColor);
@@ -86,3 +88,33 @@ float AObstacleBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEv
 
     return DamageAmount;
 }
+
+void AObstacleBase::HandleDestruction()
+{
+    if (MeshComponent)
+    {
+        MeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        MeshComponent->SetVisibility(false);
+    }
+
+    if (IsValid(DestructionSound))
+    {
+        UGameplayStatics::PlaySoundAtLocation(this, DestructionSound, GetActorLocation());
+    }
+    if (IsValid(DestructionEffect))
+    {
+        UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), DestructionEffect, GetActorLocation(), GetActorRotation());
+
+    }
+    FTimerHandle DestroyTimeHandler;
+    FTimerDelegate TimerDelegate;
+    TimerDelegate.BindLambda([this]()
+        {
+            if (IsValid(this))
+            {
+                this->Destroy();
+            }
+        });
+    GetWorldTimerManager().SetTimer(DestroyTimeHandler, TimerDelegate, 2.0f, false);
+}
+

@@ -14,8 +14,11 @@ class OBLIVIO_API AFlare : public AThrowableWeapon
 {
 	GENERATED_BODY()
 public:
-	virtual void UseWeapon() override;
+	virtual bool UseWeapon() override;
 protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapon)
+	TObjectPtr<ULightAttackComponent> LightAttackComp;
+
 	AFlare();
 	virtual void StopWeapon() override;
 	virtual void BeginPlay() override;

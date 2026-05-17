@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -14,13 +14,20 @@ class OBLIVIO_API AFlashbang : public AThrowableWeapon
 {
 	GENERATED_BODY()
 public:
-	virtual void UseWeapon() override;
+	virtual bool UseWeapon() override;
 protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapon)
+	TObjectPtr<ULightAttackComponent> LightAttackComp;
+
 	AFlashbang();
 	virtual void StopWeapon() override;
 	virtual void BeginPlay() override;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Weapon)
 	float BangDelay;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+	USoundBase* ExplosionSound;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Weapon)
 	float FlashDuration;
 	FTimerHandle BangTimerHandle;

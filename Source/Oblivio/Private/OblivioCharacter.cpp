@@ -1,4 +1,4 @@
-#include "OblivioCharacter.h"
+﻿#include "OblivioCharacter.h"
 #include "OblivioGameMode.h"
 #include "OblivioGameInstance.h"
 #include "Notify/PlayerFootstep.h"
@@ -11,7 +11,6 @@
 #include "Items/OblivioInventoryComponent.h"
 #include "Crafting/OblivioCrafting.h"
 #include "DoorBase.h"
-#include "Memento/FloodLevelActor.h"
 
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -33,6 +32,9 @@
 #include "Materials/MaterialInterface.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "DrawDebugHelpers.h"
+#include "Animation/AnimInstance.h"
+#include "Components/AudioComponent.h"
+#include "Sound/SoundBase.h"
 
 namespace
 {
@@ -91,6 +93,11 @@ AOblivioCharacter::AOblivioCharacter()
 	InventoryComponent = CreateDefaultSubobject<UOblivioInventoryComponent>(TEXT("InventoryComponent"));
 
 	WheelControlMultiplier = 3.f;
+
+	// [추가] 체력 저하 사운드 전용 오디오 컴포넌트 생성
+	LowHealthAudioComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("LowHealthAudioComponent"));
+	LowHealthAudioComponent->SetupAttachment(RootComponent);
+	LowHealthAudioComponent->bAutoActivate = false;
 }
 
 void AOblivioCharacter::RemoveWallOcclusionVisualFromOccluder(UPrimitiveComponent* Prim)
@@ -568,9 +575,9 @@ void AOblivioCharacter::UpdateWallOcclusionDither()
 
 	FCollisionQueryParams Params(SCENE_QUERY_STAT(WallOcclusionDitherTrace), false, this);
 	Params.AddIgnoredActor(this);
-	if (IsValid(CurrentWeapon))
+	if (IsValid(FlashlightWeapon))
 	{
-		Params.AddIgnoredActor(CurrentWeapon);
+		Params.AddIgnoredActor(FlashlightWeapon);
 	}
 
 	TSet<UPrimitiveComponent*> HitOccludersPrimitives;
@@ -675,25 +682,46 @@ void AOblivioCharacter::BeginPlay()
 		}
 	}
 
-	//시작시 손전등 장착
-	if (IsValid(FlashlightWeapon)) {
-		UE_LOG(LogTemp, Warning, TEXT("Spawning Weapon"));
-		FActorSpawnParameters Params;
-		Params.Owner = this;
-		CurrentWeapon = GetWorld()->SpawnActor<AWeaponBase>(FlashlightWeapon, GetActorTransform(), Params);
-		if (IsValid(CurrentWeapon)) {
-			UE_LOG(LogTemp, Warning, TEXT("Attaching Weapon"));
-			CurrentWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("WeaponSocket"));
-		}
+	//시작시 무기 미리 장착
+	FActorSpawnParameters Params;
+	Params.Owner = this;
 
+	//손전등
+	if (IsValid(FlashlightClass)) {
+		FlashlightWeapon = GetWorld()->SpawnActor<AWeaponBase>(FlashlightClass, GetActorTransform(), Params);
+		if (IsValid(FlashlightWeapon)) {
+			UE_LOG(LogTemp, Warning, TEXT("Attaching Flashlight Weapon"));
+			FlashlightWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("LeftHandSocket"));
+		}
 	}
-	//기존 기본부착 손전등 off
-	FlashlightComponent->SetVisibility(false);
+
+	//섬광탄
+	if (IsValid(FlashbangClass)) {
+		FlashbangWeapon = GetWorld()->SpawnActor<AWeaponBase>(FlashbangClass, GetActorTransform(), Params);
+		if (IsValid(FlashbangWeapon)) {
+			UE_LOG(LogTemp, Warning, TEXT("Attaching Weapon"));
+			FlashbangWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("RightHandSocket"));
+		}
+	}
+
+	//조명탄
+	if (IsValid(FlareClass)) {
+		FlareWeapon = GetWorld()->SpawnActor<AWeaponBase>(FlareClass, GetActorTransform(), Params);
+		if (IsValid(FlareWeapon)) {
+			UE_LOG(LogTemp, Warning, TEXT("Attaching Weapon"));
+			FlareWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("RightHandSocket"));
+		}
+	}
 
 	//AnimNotify 델리게이트 장착
 	OnPlayerFootstep.AddDynamic(this, &AOblivioCharacter::GenerateFootstep);
 	OnPlayerThrow.AddDynamic(this, &AOblivioCharacter::ThrowWeapon);
 	bIsThrowing = false;
+
+	//기존 기본부착 손전등 off
+	FlashlightComponent->SetVisibility(false);
+
+	
 }
 
 void AOblivioCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -712,28 +740,9 @@ void AOblivioCharacter::Tick(float DeltaTime)
 	UpdateStatus(DeltaTime);
 	UpdateWallOcclusionDither();
 	RefreshWallOcclusionFadeMaterialInstances();
-	//Debug 확인용
-	if (GEngine)
-	{
-		//생존 스탯 (Health, Hunger, Thirst)
-		FString StatusMsg = FString::Printf(TEXT("HP: %.1f | Hunger: %.1f | Thirst: %.1f"), CurrentHealth, Hunger, Thirst);
-		GEngine->AddOnScreenDebugMessage(1, DeltaTime, FColor::Cyan, StatusMsg);
 
-		//배터리 상태 및 손전등 ON/OFF
-		FString BatteryMsg = FString::Printf(TEXT("Battery: %.1f%% (%s) | Focus: %.2f"),
-			Battery, bIsFlashlightOn ? TEXT("ON") : TEXT("OFF"), CurrentFocusAlpha);
-
-		// 배터리가 적으면 빨간색, 충분하면 초록색으로 표시
-		FColor BatteryColor = (Battery < 20.f) ? FColor::Red : FColor::Green;
-		GEngine->AddOnScreenDebugMessage(2, DeltaTime, BatteryColor, BatteryMsg);
-
-		//이동 상태
-		FString MoveMsg = FString::Printf(TEXT("Movement: %s | Speed: %.1f"),
-			bIsRunning ? TEXT("RUNNING") : TEXT("WALKING"), GetVelocity().Size());
-		GEngine->AddOnScreenDebugMessage(3, DeltaTime, FColor::Yellow, MoveMsg);
-	}
-	if (IsValid(CurrentWeapon)) {
-		CurrentWeapon->SetActorRotation(GetActorRotation());
+	if (IsValid(FlashlightWeapon)) {
+		FlashlightWeapon->SetActorRotation(GetActorRotation());
 	}
 	UpdateFlashlightEmbedPullback(DeltaTime);
 }
@@ -762,13 +771,20 @@ void AOblivioCharacter::UpdateStatus(float DeltaTime)
 		}
 	}
 
-	// 굶주림·갈증: 둘 중 하나라도 0 이하면 체력 감소(둘 다 채워야 멈춤). 음식만/물만으로는 부족할 수 있음.
 	if (Hunger <= 0.0f || Thirst <= 0.0f)
 	{
-		ApplyHealth(DeltaTime * 1.0f);
+		CurrentHealth = FMath::Clamp(CurrentHealth - (DeltaTime * 1.0f), 0.0f, MaxHealth);
+
+		OnPlayerDamaged.Broadcast(DeltaTime * 1.0f, CurrentHealth, MaxHealth);
+
+		if (CurrentHealth <= 0.0f && !bIsDead)
+		{
+			HandleDeath();
+		}
 	}
 
-	GetCharacterMovement()->MaxWalkSpeed = bIsRunning ? RunSpeed : WalkSpeed;
+	bool bIsInWater = IsInWater();
+	float WaterSpeedMultiplier = bIsInWater ? 0.5f : 1.0f;
 
 	if (bIsStunned)
 	{
@@ -777,36 +793,41 @@ void AOblivioCharacter::UpdateStatus(float DeltaTime)
 	}
 	else
 	{
-		float BaseSpeed = bIsRunning ? RunSpeed : WalkSpeed;
-		GetCharacterMovement()->MaxWalkSpeed = bIsSlowed ? (BaseSpeed * CurrentSlowMultiplier) : BaseSpeed;
-	}
+		float BaseSpeed = WalkSpeed;
+		if (bIsCrouching) BaseSpeed = CrouchSpeed;
+		else if (bIsRunning) BaseSpeed = RunSpeed;
 
-	// [2층 기믹 추가] 수중 상태 확인
-	bool bIsInWater = IsInWater();
-	float WaterSpeedMultiplier = bIsInWater ? 0.5f : 1.0f; // 수중에서는 50% 감속
-
-	if (bIsStunned)
-	{
-		GetCharacterMovement()->MaxWalkSpeed = 0.0f;
-	}
-	else
-	{
-		float BaseSpeed = bIsRunning ? RunSpeed : WalkSpeed;
-
-		//수중Multiplier와 기존 슬로우Multiplier를 모두 적용
 		float FinalSpeed = BaseSpeed * WaterSpeedMultiplier;
 		if (bIsSlowed) FinalSpeed *= CurrentSlowMultiplier;
 
 		GetCharacterMovement()->MaxWalkSpeed = FinalSpeed;
 	}
 
-	// 수중 이동 시 첨벙거리는 소리로 적에게 위치 노출
-	if (bIsInWater && GetVelocity().Size() > 10.f)
+	// [사운드 추가] 체력 저하 시 과호흡/심박수 사운드 재생
+	if (IsValid(LowHealthAudioComponent) && IsValid(LowHealthSound))
 	{
-		if (IsValid(SoundPropagationComp))
+		// 컴포넌트에 사운드가 세팅 안 되어있다면 한 번 세팅
+		if (LowHealthAudioComponent->GetSound() != LowHealthSound)
 		{
-			// 물결 소리 전파
-			SoundPropagationComp->PropagateSound();
+			LowHealthAudioComponent->SetSound(LowHealthSound);
+		}
+
+		// 체력이 임계점 이하이고, 살아있을 때
+		if (CurrentHealth <= LowHealthThreshold && !bIsDead)
+		{
+			if (!LowHealthAudioComponent->IsPlaying())
+			{
+				LowHealthAudioComponent->Play();
+			}
+			LowHealthAudioComponent->SetPitchMultiplier(1.0f);
+		}
+		else
+		{
+			// 체력을 회복했거나 사망했다면 소리 정지
+			if (LowHealthAudioComponent->IsPlaying())
+			{
+				LowHealthAudioComponent->Stop();
+			}
 		}
 	}
 }
@@ -828,11 +849,26 @@ void AOblivioCharacter::Move(const FVector2D& Value)
 void AOblivioCharacter::StartRunning() { bIsRunning = true; }
 void AOblivioCharacter::StopRunning() { bIsRunning = false; }
 
+void AOblivioCharacter::StartCrouching()
+{
+	bIsCrouching = true;
+	bIsRunning = false;
+}
+void AOblivioCharacter::StopCrouching()
+{
+	bIsCrouching = false;
+}
 
 void AOblivioCharacter::ToggleInventory()
 {
 	bIsInventoryOpen = !bIsInventoryOpen;
 	
+	USoundBase* PlaySound = bIsInventoryOpen ? InventoryOpenSound : InventoryCloseSound;
+	if (IsValid(PlaySound))
+	{
+		UGameplayStatics::PlaySound2D(GetWorld(), PlaySound);
+	}
+
 	OnInventoryToggle(bIsInventoryOpen);
 }
 
@@ -843,7 +879,22 @@ void AOblivioCharacter::ToggleCrafting()
 		CraftingComponent->ToggleCraftingMode();
 		bIsCraftingOpen = CraftingComponent->bIsCraftingModeActive;
 		
+		USoundBase* TargetSound = bIsCraftingOpen ? CraftingOpenSound : CraftingCloseSound;
+		if (IsValid(TargetSound))
+		{
+			UGameplayStatics::PlaySound2D(GetWorld(), TargetSound);
+		}
+
 		OnCraftingUIToggle(bIsCraftingOpen);
+	}
+}
+
+void AOblivioCharacter::PlaceObstacle()
+{
+	if (IsValid(ObstaclePlaceSound))
+	{
+		// 설치한 위치(내 발밑)에서 소리 재생
+		UGameplayStatics::PlaySoundAtLocation(this, ObstaclePlaceSound, GetActorLocation());
 	}
 }
 
@@ -910,13 +961,6 @@ void AOblivioCharacter::Interact()
 
 			GM->AddMemento();
 			
-
-			// 홍수 트리거 확인
-			if (TargetActor->ActorHasTag("FloodTrigger"))
-			{
-				GM->TriggerFloodEvent();
-			}
-
 			if (TargetActor == CurrentNearbyItem) SetNearbyItem(nullptr);
 			TargetActor->Destroy();
 			return;
@@ -958,23 +1002,15 @@ void AOblivioCharacter::SetNearbyItem(AOblivioItemBase* Item)
 
 void AOblivioCharacter::TogglePause()
 {
-	//UI 띄우는 로직 연동
-	UE_LOG(LogTemp, Warning, TEXT("Pause Menu Toggled!"));
-	
 	bIsPauseOpen = !bIsPauseOpen;
-	
-	OnPauseToggle(bIsPauseOpen);
 
-	// 만약 직접 엔진 일시정지 제어 시
-	/*
-	APlayerController* PC = Cast<APlayerController>(GetController());
-	if (PC)
+	USoundBase* PlaySound = bIsPauseOpen ? PauseOpenSound : PauseCloseSound;
+	if (IsValid(PlaySound))
 	{
-		bool bIsPaused = UGameplayStatics::IsGamePaused(GetWorld());
-		UGameplayStatics::SetGamePaused(GetWorld(), !bIsPaused);
-		PC->SetShowMouseCursor(!bIsPaused);
+		UGameplayStatics::PlaySound2D(GetWorld(), PlaySound);
 	}
-	*/
+
+	OnPauseToggle(bIsPauseOpen);
 }
 
 //=====================
@@ -983,9 +1019,9 @@ void AOblivioCharacter::TogglePause()
 
 void AOblivioCharacter::AdjustFocus(float Value)
 {
-	if (bCanAdjustFocus && CurrentWeapon)
+	if (bCanAdjustFocus && IsValid(FlashlightWeapon))
 	{
-		CurrentWeapon->ChangeWeaponAngle(Value * WheelControlMultiplier);
+		FlashlightWeapon->ChangeWeaponAngle(Value * WheelControlMultiplier);
 	}
 }
 
@@ -1005,15 +1041,21 @@ void AOblivioCharacter::ToggleFlashlight()
 	}
 }
 
+
 void AOblivioCharacter::UpdateFlashlightVisuals()
 {
-	if (!IsValid(CurrentWeapon)) return;
+	if (!IsValid(FlashlightWeapon)) return;
+
+	if (IsValid(FlashlightClickSound))
+	{
+		UGameplayStatics::PlaySound2D(GetWorld(), FlashlightClickSound);
+	}
 
 	if (bIsFlashlightOn) {	//On
-		CurrentWeapon->UseWeapon();
+		FlashlightWeapon->UseWeapon();
 	}
 	else {	//Off
-		CurrentWeapon->StopWeapon();
+		FlashlightWeapon->StopWeapon();
 	}
 }
 
@@ -1027,10 +1069,10 @@ void AOblivioCharacter::UpdateFlashlightEmbedPullback(float DeltaSeconds)
 	}
 
 	ULightAttackComponent* Lac =
-		IsValid(CurrentWeapon) ? CurrentWeapon->FindComponentByClass<ULightAttackComponent>() : nullptr;
+		IsValid(FlashlightWeapon) ? FlashlightWeapon->FindComponentByClass<ULightAttackComponent>() : nullptr;
 
 	const bool bWeaponOk =
-		IsValid(CurrentWeapon) && CurrentWeapon->IsA(AFlashlight::StaticClass()) && Lac != nullptr
+		IsValid(FlashlightWeapon) && FlashlightWeapon->IsA(AFlashlight::StaticClass()) && Lac != nullptr
 		&& Lac->bIsConcentrated && IsValid(Lac->GetSpotLightComp());
 
 	const bool bFlashOn = bIsFlashlightOn && Battery > 0.0f && !bFlashlightForcedOff;
@@ -1092,9 +1134,9 @@ void AOblivioCharacter::UpdateFlashlightEmbedPullback(float DeltaSeconds)
 	FHitResult Hit;
 	FCollisionQueryParams QP(FName(TEXT("Flash_wall_embed")), /*bTraceComplex=*/false);
 	QP.AddIgnoredActor(this);
-	if (IsValid(CurrentWeapon))
+	if (IsValid(FlashlightWeapon))
 	{
-		QP.AddIgnoredActor(CurrentWeapon.Get());
+		QP.AddIgnoredActor(FlashlightWeapon.Get());
 	}
 
 	const bool bHitWall =
@@ -1237,33 +1279,32 @@ void AOblivioCharacter::ReloadBattery()
 	}
 }
 
-void AOblivioCharacter::BeginThrow(TSubclassOf<AThrowableWeapon> Weapon)
+//섬광탄 시작 함수
+void AOblivioCharacter::UseFlashbang()
 {
-	if (!bIsThrowing) {
-		UE_LOG(LogTemp, Warning, TEXT("AnimateThrow!"));
-		PlayAnimMontage(ThrowMontage);
-		PendingThrowClass = Weapon;
-		bIsThrowing = true;
-	}
-
+	UE_LOG(LogTemp, Warning, TEXT("UseFlashbang()!!"));
+	bool IsWeaponReady = FlashbangWeapon->UseWeapon();
+	if (IsWeaponReady) PendingWeaponClass = FlashbangWeapon;
 }
 
+//조명탄 시작 함수
+void AOblivioCharacter::UseFlare()
+{
+	UE_LOG(LogTemp, Warning, TEXT("UseFlare()!!"));
+	bool IsWeaponReady = FlareWeapon->UseWeapon();
+	if (IsWeaponReady) PendingWeaponClass = FlareWeapon;
+}
+
+//AnimNotify로 타이밍에 맞게 투사체 스폰 호출
 void AOblivioCharacter::ThrowWeapon() {
-	bIsThrowing = false;
-	if (!IsValid(PendingThrowClass)) {
-		UE_LOG(LogTemp, Warning, TEXT("PendingThrowClass invalid!"));
+	//할당 이상하면 실행 거부
+	if (!IsValid(PendingWeaponClass)) {
+		UE_LOG(LogTemp, Warning, TEXT("No Weapon!!"));
 		return;
 	}
-	FActorSpawnParameters Params;
-	Params.Owner = this;
-	AThrowableWeapon* ThrowingWeapon = GetWorld()->SpawnActor<AThrowableWeapon>(
-		PendingThrowClass,
-		GetActorLocation(),
-		FRotator::ZeroRotator,
-		Params);
-	FVector temp = GetAimingLocation();
-	UE_LOG(LogTemp, Warning, TEXT("Throwing Weapon %s to %f %f!"), *ThrowingWeapon->GetName(), temp.X, temp.Y);
-	if (ThrowingWeapon) ThrowingWeapon->StartThrow(GetAimingLocation());
+	//정상이면 실제 공격 호출
+	PendingWeaponClass->ExecuteWeaponAttack(GetAimingLocation());
+	PendingWeaponClass = nullptr;
 }
 
 FVector AOblivioCharacter::GetAimingLocation() {
@@ -1329,6 +1370,9 @@ void AOblivioCharacter::ApplyHealth(float Damage)
 	{
 		HandleDeath();
 	}
+	else {
+		PlayHitAnim();
+	}
 }
 
 float AOblivioCharacter::TakeDamage(float DamageAmount, const FDamageEvent& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
@@ -1340,21 +1384,55 @@ float AOblivioCharacter::TakeDamage(float DamageAmount, const FDamageEvent& Dama
 	return AppliedDamage;
 }
 
+void AOblivioCharacter::PlayHitAnim()
+{
+	UAnimInstance* Anim = GetMesh()->GetAnimInstance();
+
+	if (Anim && !Anim->Montage_IsPlaying(HitMontage)) {
+		PlayAnimMontage(HitMontage);
+	}
+	
+}
+bool AOblivioCharacter::IsInWater() const
+{
+	if (UCapsuleComponent* Capsule = GetCapsuleComponent())
+	{
+		float FeetZ = GetActorLocation().Z - Capsule->GetScaledCapsuleHalfHeight();
+
+		return (FeetZ + 5.0f) < CurrentWaterLevel;
+	}
+	return false;
+}
+
 void AOblivioCharacter::GenerateFootstep()
 {
+	UE_LOG(LogTemp, Warning, TEXT("GenerateFootstep Called"));
 	if (GetWorld()->GetTimerManager().IsTimerActive(FootstepTimerHandle)) {
 		return;
 	}
 	GetWorld()->GetTimerManager().SetTimer(FootstepTimerHandle, 0.2f, false);
-	UE_LOG(LogTemp, Warning, TEXT("GenerateFootstep Called"));
+
+	GetWorld()->GetTimerManager().SetTimer(
+		FootstepTimerHandle,
+		FTimerDelegate::CreateLambda([]() {}),
+		0.2f,
+		false
+	);
+
+	bool bInWater = IsInWater();
+
+	float SoundMultiplier = (bIsCrouching && !bInWater) ? 0.5f : 1.0f;
+
+	USoundBase* SoundToPlay = bInWater ? WaterFootstepSound : FootstepSound;
+
 	//발걸음 SFX 출력
-	if (IsValid(FootstepSound)) {
-		UGameplayStatics::PlaySound2D(GetWorld(), FootstepSound);
+	if (IsValid(SoundToPlay)) {
+		UGameplayStatics::PlaySound2D(GetWorld(), SoundToPlay, SoundMultiplier);
 	}
 
 	//추적용 소리 전파
 	if (IsValid(SoundPropagationComp)) {
-		SoundPropagationComp->PropagateSound();
+		SoundPropagationComp->PropagateSound(SoundMultiplier);
 	}
 }
 
@@ -1362,6 +1440,11 @@ void AOblivioCharacter::HandleDeath()
 {
 	if (bIsDead) return;
 	bIsDead = true;
+
+	if (IsValid(LowHealthAudioComponent) && LowHealthAudioComponent->IsPlaying())
+	{
+		LowHealthAudioComponent->Stop();
+	}
 
 	if (bIsFlashlightOn)
 	{
@@ -1393,11 +1476,7 @@ void AOblivioCharacter::HandleDeath()
 		MeshComp->SetCollisionProfileName(TEXT("Ragdoll"));
 		MeshComp->SetSimulatePhysics(true);
 	}
-	AActor* FloodActor = UGameplayStatics::GetActorOfClass(GetWorld(), AFloodLevelActor::StaticClass());
-	if (FloodActor)
-	{
-		Cast<AFloodLevelActor>(FloodActor)->StopFloodEffects();
-	}
+	OnPlayerDied.Broadcast();
 	if (AOblivioGameMode* GM = Cast<AOblivioGameMode>(UGameplayStatics::GetGameMode(GetWorld())))
 	{
 		GM->GameOver();

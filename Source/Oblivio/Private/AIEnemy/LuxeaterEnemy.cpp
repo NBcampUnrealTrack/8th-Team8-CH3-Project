@@ -399,7 +399,7 @@ void ALuxeaterEnemy::TryComputeMaxHealthFromPlayerFlashlight()
 			DrainRate = FMath::Max(0.001f, Oblivio->BatteryDepletionRate);
 			FocusPenalty = FMath::Lerp(1.0f, 1.5f, Oblivio->CurrentFocusAlpha);
 
-			if (AFlashlight* Flash = Cast<AFlashlight>(Oblivio->CurrentWeapon))
+			if (AFlashlight* Flash = Cast<AFlashlight>(Oblivio->FlashlightWeapon))
 			{
 				Interval = FMath::Max(0.001f, Flash->GetAttackInterval());
 				if (ULightAttackComponent* Lac = Flash->FindComponentByClass<ULightAttackComponent>())
@@ -407,7 +407,7 @@ void ALuxeaterEnemy::TryComputeMaxHealthFromPlayerFlashlight()
 					DmgTick = Lac->Damage;
 				}
 			}
-			else if (AActor* WB = Oblivio->CurrentWeapon.Get())
+			else if (AActor* WB = Oblivio->FlashlightWeapon.Get())
 			{
 				if (ULightAttackComponent* Lac = WB->FindComponentByClass<ULightAttackComponent>())
 				{
