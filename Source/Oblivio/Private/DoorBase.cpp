@@ -73,10 +73,10 @@ void ADoorBase::ExecuteLevelTransition()
 	if (GI && Player)
 	{
 		FString SlotName = "Slot1";
-		Player->CurrentHealth = GI->CurrentHealth;
-		Player->Battery = GI->CurrentBattery;
-		Player->Hunger = GI->CurrentHunger;
-		Player->Thirst = GI->CurrentThirst;
+		GI->CurrentHealth = Player->CurrentHealth;
+		GI->CurrentBattery = Player->Battery;
+		GI->CurrentHunger = Player->Hunger;
+		GI->CurrentThirst = Player->Thirst;
 		GI->CurrentFloor -= 1;
 
 		GI->SaveGameData(SlotName); // 자동 저장
