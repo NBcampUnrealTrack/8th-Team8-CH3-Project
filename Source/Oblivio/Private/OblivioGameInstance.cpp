@@ -19,6 +19,7 @@ void UOblivioGameInstance::SaveGameData(FString SlotName)
 	SaveInstance->SavedFloor = CurrentFloor;
 	SaveInstance->SavedKills = TotalKills;
 	SaveInstance->SavedMementos = TotalMementos;
+	SaveInstance->SavedMementoEyeCollected = bMementoEyeCollected;
 
 	if (SlotName.Len() <= 0)
 	{
@@ -58,6 +59,7 @@ void UOblivioGameInstance::LoadGameData(FString SlotName)
 	CurrentFloor = LoadInstance->SavedFloor;
 	TotalKills = LoadInstance->SavedKills;
 	TotalMementos = LoadInstance->SavedMementos;
+	bMementoEyeCollected = LoadInstance->SavedMementoEyeCollected;
 
 	UE_LOG(LogTemp, Warning, TEXT("Game Loaded Successfully from '%s'."), *SlotName);
 }

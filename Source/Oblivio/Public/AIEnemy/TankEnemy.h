@@ -54,8 +54,12 @@ public:
 
 	virtual void Die() override;
 
-	/** 기본 AggroRadius 진입 시부터는 거리와 무관하게 추격(플레이어가 죽거나 타겟이 없어질 때까지). 심작 AoE 보조 판정 유지. */
+	/** 기본 AggroRadius 진입 시부터 sticky 추격 거리 무시. 조우 판에는 시야(LOS) 포함. 심작 AoE 거리만으로 추격 시작하지 않음. */
 	virtual bool HasValidAggroTarget() const override;
+
+	/** 거리 원통(IsAggroDistanceToTargetInsideCylinderIgnoringLos)+옵션 LOS 통과 시에만 true. 스티키 잠금은 HasValid 에서 분리. */
+	virtual bool IsAggroDistanceSatisfiedForTarget() const override;
+
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	/** ABP 상태 머신 / UTankEnemyAnimInstance: 심작 박동 연출 재생 분기용. heartbeat 비활성이면 항상 false */
@@ -162,6 +166,10 @@ protected:
 
 	virtual bool ShouldSuppressAILocomotion() const override;
 
+	/** 손전등 추적: 스포트→몸 표본까지 벽에 가려지면 추적하지 않음. */
+	virtual bool PassesEnemyAdditionalFlashlightTrackLineOfSight(USpotLightComponent const* Spot,
+		FVector const& EnemyLightSampleWorld) const override;
+
 	/** 어그로 유지 시 FSM — 심작 채널링 중이면 Heartbeat(ABP·블루프린트의 Enemy State 핀과 일치). */
 	virtual EEnemyAIState SelectStateWhileAggroed() const override;
 	virtual bool TryConsumeSpecialFSMUpdate() override;
@@ -217,7 +225,7 @@ private:
 		meta = (AllowPrivateAccess = "true", ClampMin = "0.0", DisplayName = "Heartbeat Fail-Safe Duration (sec)"))
 	float HeartbeatChannelFailSafeSeconds = 12.f;
 
-	/** 심작이 타겟에게 닿는 반경(cm). Chase 중 이 안이면 심작 시도 가능. */
+	/** 탱커 피해야 할 심장 박동/원형 AoE 피해·시도 거리(cm). 추격 거리 AggroRadius 와 무관해야 함 — 조우 거리에는 사용하지 않는다. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Tank|Heartbeat", meta = (AllowPrivateAccess = "true", ClampMin = "1.0",
 		DisplayName = "Heartbeat AoE Radius (cm)"))
 	float HeartbeatAoERadius = 1400.f;
@@ -234,6 +242,21 @@ private:
 	/** AggroRadius 진입 또는 플레이어가 반경 밖에서 유효 피해 1회면 Death·타겟 소실 전까지 추격 유지(서버 잠금, 복제). */
 	UPROPERTY(Replicated)
 	bool bTankStickyAggroUntilDeath = false;
+
+	/** 거리 원통 충족 후에 어그로/조우 가능하려면 눈-플레이어 사이 라인 트레이스에 지형이 있는지 차단해야 함(true). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Tank|Perception",
+		meta = (AllowPrivateAccess = "true"))
+	bool bTankRequireLineOfSightForAggroCylinder = true;
+
+	/** TrackLight(FSM 손전등 추적)·빛 샘플 판정 시 스포트→몸 표본 사이 Visibility 로 벽 차단 여부 검사 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Tank|Perception",
+		meta = (AllowPrivateAccess = "true"))
+	bool bTankRequireLineOfSightForFlashlightTracking = true;
+
+	/** Visibility 채널 라인 트레이스: 차단판정 시 목표 캡슐보다 최소 여유 거리 필요(부동 소수)·cm≈UU */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Tank|Perception",
+		meta = (AllowPrivateAccess = "true", ClampMin = "1.0"))
+	float TankThreatLosClearanceUU = 45.f;
 
 	/** 복제로 채널링 끝날 때 심장 숨김만(표시는 애님 Show 노티). */
 	UFUNCTION()
@@ -252,6 +275,11 @@ private:
 
 	/** 어그로·쿨·범위 OK 시 심작 개시. Tick 전후·여러 경로에서 호출, 가드 동일 */
 	void MaybeTryTankHeartbeatAoE();
+
+	bool IsTankLosBlockedTowardsActor(const AActor* Target) const;
+
+	/** Visibility 기반: TraceStart→TraceEnd 사이에 차단 지오메트리가 있으면 true. */
+	bool IsTankVisibilityLosBlockedBetween(FVector const& TraceStartWorld, FVector const& TraceEndWorld) const;
 
 	void UpdateHeartbeatAoERangeIndicatorVisual();
 

@@ -152,6 +152,20 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Enemy|Target")
 	AActor* GetTargetActor() const { return TargetActor; }
 
+	/**
+	 * 조우 레벨 가드 등: Aggro 원통 거리만(LOS 무시). HasValidAggroTarget 보다 관대해서
+	 * 점프·심작 중 시야가 잠깐 막혀 조우 플래그가 착지로 밀리는 것을 줄인다.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Enemy|Target|Perception")
+	bool IsAggroCylinderSatisfiedIgnoringLineOfSight() const;
+
+	/**
+	 * TankEncounterBarrier 등 외부 액터용: HasValidAggroTarget(LOS 포함) 이거나,
+	 * 원통 거리만 만족할 때도 조우를 인정(공중/시야 일시 차단 시 착지까지 미루지 않음).
+	 */
+	UFUNCTION(BlueprintPure, Category = "Enemy|Target|Perception")
+	bool IsEncounterAggroGateSatisfiedForBarrier() const;
+
 	UFUNCTION(BlueprintPure, Category = "Enemy|Combat")
 	float GetAttackDamage() const { return AttackDamage; }
 
@@ -564,8 +578,14 @@ protected:
 	/** AggroRadius 내(또는 0이면 무한)일 때 true. 보스 등은 “한 번 들어오면 영구 추격”용으로 오버라이드 가능. */
 	virtual bool HasValidAggroTarget() const;
 
-	/** 타겟 폰이 있을 때 AggroRadius(수평 옵션)만 검사 — sticky 어그로 잠금 트리거 등에 사용. */
-	bool IsAggroDistanceSatisfiedForTarget() const;
+	/**
+	 * Aggro 원통(반경)·수평 옵션만 검사(Los 무시).
+	 * 파생 클래스에서 LOS 등을 포함한 통합 판단은 IsAggroDistanceSatisfiedForTarget 를 오버라이드한다.
+	 */
+	virtual bool IsAggroDistanceToTargetInsideCylinderIgnoringLos() const;
+
+	/** 기본값은 원통 거리 검사만. 탱커 등은 LOS 를 덧대어 오버라이드 가능. */
+	virtual bool IsAggroDistanceSatisfiedForTarget() const;
 
 	/** ApplyDamage 근거가 플레이어(PC·플레이어 폰 계열)·인스티게이터인지 단순 휴리스틱. */
 	static bool IsLikelyPlayerDamageCauser(AController const* EventInstigator, AActor const* DamageCauser);
@@ -708,6 +728,13 @@ private:
 
 	void ClearLightTrackState();
 	bool TryComputeFlashlightTrackGoal(FVector& OutGoal);
+
+	/**
+	 * 손전등 TrackLight 목표를 확정하기 전 추가 검사(기본 항상 통과).
+	 * 탱커 등은 EnemyLightSampleWorld (보통 LightTrackConeTestZ 기준 몸 표본점)까지 LOS 가리키는지 검사.
+	 */
+	virtual bool PassesEnemyAdditionalFlashlightTrackLineOfSight(USpotLightComponent const* Spot,
+		FVector const& EnemyLightSampleWorld) const;
 
 	/** 플레이어(또는 타겟) 손전등 USpotLight. 없으면 nullptr. */
 	USpotLightComponent* ResolveFlashlightSpotForTracking() const;

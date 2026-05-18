@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/EngineTypes.h"
+#include "Camera/CameraShakeBase.h"
 #include "Items/OblivioItemBase.h"
 #include "Weapon/WeaponBase.h"
 #include "Weapon/ThrowableWeapon.h"
@@ -56,6 +57,21 @@ protected:
 	FVector GetWallOcclusionTraceStartWorld() const;
 	/** Occluder 레이 끝점·로컬 MID 초점을 논리 카메라 쪽으로 살짝 당겨, 정면 벽을 볼 때 세그먼트가 벽을 스킵하지 않게 함. */
 	FVector BiasWallOcclusionTraceEndTowardsTraceStartWorld(FVector SampleWorldHint) const;
+
+	/** AOblivioItemBase:Memento 픽업 시 당직표 등 연출 처리 */
+	void ApplyDutyReadMomentEffects(const class AOblivioItemBase* ItemSrc);
+
+	UPROPERTY()
+	bool bForcedWorldLookActive = false;
+
+	UPROPERTY()
+	float ForcedLookEndTimeSeconds = 0.f;
+
+	UPROPERTY()
+	FVector ForcedLookWorldTarget = FVector::ZeroVector;
+
+	UPROPERTY()
+	float ForcedLookInterpSpeed = 14.f;
 
 public:
 	//===========================
@@ -377,7 +393,15 @@ public:
 	void PlaceObstacle();
 	UFUNCTION(BlueprintCallable, Category = "Interaction")
 	void Interact();
-	
+
+	/** 마우스 커서 기반 회전 대신 해당 월드 지점을 보도록 잠금(탑다운은 Pitch는 컨트롤러에서 0으로 처리). Duration 후 자동 해제. */
+	UFUNCTION(BlueprintCallable, Category = "Feedback")
+	void ApplyForcedWorldLookTowards(FVector WorldLookTarget, float DurationSeconds, float RotationInterpSpeed = 14.f);
+
+	/** 플레이어 컨트롤러(AOblivioCharacterController)가 호출한다. 활성 상태면 현재 회전 타깃(FindLookAt)을 넣어 true. 만료 시 false. */
+	bool TryConsumeForcedWorldLookRotation(FRotator& OutTargetRotWorld);
+	float GetForcedLookInterpSpeed() const { return ForcedLookInterpSpeed; }
+
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void TogglePause();
 	

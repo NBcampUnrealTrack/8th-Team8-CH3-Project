@@ -6,17 +6,18 @@
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimSequence.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/SpotLightComponent.h"
 #include "Components/PointLightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/CollisionProfile.h"
 #include "Engine/OverlapResult.h"
+#include "Engine/World.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Pawn.h"
 #include "DrawDebugHelpers.h"
 #include "Kismet/GameplayStatics.h"
 #include "Materials/MaterialInterface.h"
-#include "Engine/World.h"
 #include "Net/UnrealNetwork.h"
 #include "TimerManager.h"
 #include "UObject/ConstructorHelpers.h"
@@ -343,23 +344,84 @@ bool ATankEnemy::HasValidAggroTarget() const
 	{
 		return false;
 	}
-
 	if (bTankStickyAggroUntilDeath)
 	{
 		return true;
 	}
 
-	if (Super::HasValidAggroTarget())
+	// 거리 원통 + LOS 는 AEnemyBase::HasValidAggroTarget 의 가상 IsAggroDistanceSatisfied 분기만 사용하고,
+	// HeartbeatAoERadius 로 추격 시작하지 않는다.
+	return Super::HasValidAggroTarget();
+}
+
+bool ATankEnemy::IsAggroDistanceSatisfiedForTarget() const
+{
+	if (!IsAggroDistanceToTargetInsideCylinderIgnoringLos())
+	{
+		return false;
+	}
+	if (!bTankRequireLineOfSightForAggroCylinder || !IsValid(TargetActor))
 	{
 		return true;
 	}
+	return !IsTankLosBlockedTowardsActor(TargetActor);
+}
 
-	if (!bUseHeartbeatAoEAttack)
+bool ATankEnemy::IsTankVisibilityLosBlockedBetween(FVector const& TraceStartWorld, FVector const& TraceEndWorld) const
+{
+	UWorld const* World = GetWorld();
+	if (!World)
 	{
 		return false;
 	}
 
-	return IsTargetInHeartbeatAoERange();
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(TankThreatLosBetweenPlayer), false, this);
+	FHitResult Hit;
+	bool const bHitBlocking = World->LineTraceSingleByChannel(
+		Hit, TraceStartWorld, TraceEndWorld, ECC_Visibility, Params);
+	if (!bHitBlocking)
+	{
+		return false;
+	}
+
+	float const DistToGoal = FVector::Dist(TraceStartWorld, TraceEndWorld);
+	float const Margin = FMath::Max(10.f, TankThreatLosClearanceUU);
+
+	return Hit.Distance < DistToGoal - Margin;
+}
+
+bool ATankEnemy::IsTankLosBlockedTowardsActor(const AActor* Target) const
+{
+	if (!IsValid(Target))
+	{
+		return false;
+	}
+
+	FVector ViewLoc;
+	FRotator DummyRot;
+	GetActorEyesViewPoint(ViewLoc, DummyRot);
+
+	FVector Goal = Target->GetActorLocation();
+	if (APawn const* const PawnT = Cast<APawn>(Target))
+	{
+		if (UCapsuleComponent const* const Caps = PawnT->FindComponentByClass<UCapsuleComponent>())
+		{
+			Goal = Caps->GetComponentLocation();
+		}
+	}
+
+	return IsTankVisibilityLosBlockedBetween(ViewLoc, Goal);
+}
+
+bool ATankEnemy::PassesEnemyAdditionalFlashlightTrackLineOfSight(USpotLightComponent const* Spot,
+	FVector const& EnemyLightSampleWorld) const
+{
+	if (!bTankRequireLineOfSightForFlashlightTracking || !Spot)
+	{
+		return true;
+	}
+	FVector Origin = Spot->GetComponentLocation();
+	return !IsTankVisibilityLosBlockedBetween(Origin, EnemyLightSampleWorld);
 }
 
 EEnemyAIState ATankEnemy::SelectStateWhileAggroed() const
@@ -471,6 +533,11 @@ void ATankEnemy::ApplyHeartbeatDamageFromAnimNotify()
 		return;
 	}
 	if (!IsTargetInHeartbeatDamageRange())
+	{
+		return;
+	}
+	if (bTankRequireLineOfSightForAggroCylinder && TargetActor &&
+		IsTankLosBlockedTowardsActor(TargetActor))
 	{
 		return;
 	}
@@ -663,7 +730,17 @@ void ATankEnemy::MaybeTryTankHeartbeatAoE()
 		return;
 	}
 
-	if (!HasValidAggroTarget() || !IsValid(TargetActor))
+	if (!IsValid(TargetActor))
+	{
+		return;
+	}
+
+	if (!IsTargetInHeartbeatAoERange())
+	{
+		return;
+	}
+
+	if (bTankRequireLineOfSightForAggroCylinder && IsTankLosBlockedTowardsActor(TargetActor))
 	{
 		return;
 	}
