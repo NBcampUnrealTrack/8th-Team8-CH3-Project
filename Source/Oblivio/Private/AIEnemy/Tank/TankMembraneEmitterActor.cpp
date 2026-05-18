@@ -1,4 +1,4 @@
-#include "AIEnemy/Tank/TankMembraneEmitterActor.h"
+﻿#include "AIEnemy/Tank/TankMembraneEmitterActor.h"
 #include "AIEnemy/TankEnemy.h"
 #include "AIEnemy/Tank/TankMembraneProjectile.h"
 #include "Components/ArrowComponent.h"
@@ -17,7 +17,7 @@
 ATankMembraneEmitterActor::ATankMembraneEmitterActor()
 {
 	PrimaryActorTick.bCanEverTick = false;
-	SetReplicates(true);
+	bReplicates = true;
 
 	EmitterMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("EmitterMesh"));
 	SetRootComponent(EmitterMesh);
@@ -36,7 +36,7 @@ ATankMembraneEmitterActor::ATankMembraneEmitterActor()
 	MuzzleDirectionArrow->SetupAttachment(EmitterMesh);
 	MuzzleDirectionArrow->bHiddenInGame = true;
 	MuzzleDirectionArrow->SetUsingAbsoluteRotation(false);
-	MuzzleDirectionArrow->SetIsVisualizationComponent(true);
+	//MuzzleDirectionArrow->SetIsVisualizationComponent(true);
 	MuzzleDirectionArrow->bIsEditorOnly = false;
 	MuzzleDirectionArrow->SetArrowColor(FLinearColor(0.15f, 0.85f, 0.2f));
 	MuzzleDirectionArrow->SetArrowLength(80.f);
