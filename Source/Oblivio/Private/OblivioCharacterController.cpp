@@ -96,6 +96,23 @@ void AOblivioCharacterController::PlayerTick(float DeltaTime)
 
 void AOblivioCharacterController::UpdateMouseRotation(float DeltaTime)
 {
+	if (AOblivioCharacter* ObjChar = Cast<AOblivioCharacter>(GetPawn()))
+	{
+		FRotator TargetRotForced;
+		if (ObjChar->TryConsumeForcedWorldLookRotation(TargetRotForced))
+		{
+			TargetRotForced.Pitch = 0.f;
+			TargetRotForced.Roll = 0.f;
+
+			FRotator const CurrentRot = ObjChar->GetActorRotation();
+			float const RotationSpeed = ObjChar->GetForcedLookInterpSpeed();
+
+			FRotator const SmoothRot = FMath::RInterpTo(CurrentRot, TargetRotForced, DeltaTime, RotationSpeed);
+			ObjChar->SetActorRotation(SmoothRot);
+			return;
+		}
+	}
+
 	if (APawn* MyPawn = GetPawn())
 	{
 		FVector WorldLocation, WorldDirection;

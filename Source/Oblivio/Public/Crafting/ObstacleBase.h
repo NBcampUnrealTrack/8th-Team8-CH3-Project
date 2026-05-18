@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
@@ -75,5 +75,7 @@ public:
     int32 GetIronCost() const { return IronCost; }
     float GetBatteryCost() const { return BatteryCostPercent; }
     float GetCurrentHealth() const { return CurrentHealth; }
+    /** 고스트 미리보기·파괴 완료가 아니면 플레이 게임플레이용 설치 상태 */
+    EObstacleState GetObstacleState() const { return CurrentState; }
 
 };

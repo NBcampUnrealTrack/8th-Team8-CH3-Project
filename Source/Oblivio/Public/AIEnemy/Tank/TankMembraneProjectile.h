@@ -9,7 +9,7 @@ class UProjectileMovementComponent;
 class USphereComponent;
 class UStaticMeshComponent;
 
-/** 양막 패턴 투사체 — 직선 비행, 서버에서만 플레이어 ApplyHealth. */
+/** 양막 패턴 투사체 — 직선 비행. 서버: 플레이어만 맞으며 데미지 후 소멸, 그 외 액터는 충돌 무시 관통. */
 UCLASS(Blueprintable)
 class OBLIVIO_API ATankMembraneProjectile : public AActor
 {
@@ -52,6 +52,9 @@ protected:
 	UFUNCTION()
 	void OnSphereHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp,
 		FVector NormalImpulse, const FHitResult& Hit);
+
+	/** 플레이어 외 충돌 시 IgnoreActorWhenMoving 만 적용하고 비행 유지. 서버만. */
+	void ProceedThroughPassthroughHit(AActor* OtherActor);
 
 	bool bFlightInitialized = false;
 	double SpawnWorldSeconds = 0.0;

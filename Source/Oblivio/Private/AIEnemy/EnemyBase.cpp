@@ -622,7 +622,7 @@ void AEnemyBase::FindDefaultTarget()
 	TargetActor = UGameplayStatics::GetPlayerPawn(this, 0);
 }
 
-bool AEnemyBase::IsAggroDistanceSatisfiedForTarget() const
+bool AEnemyBase::IsAggroDistanceToTargetInsideCylinderIgnoringLos() const
 {
 	if (!IsValid(TargetActor))
 	{
@@ -641,6 +641,21 @@ bool AEnemyBase::IsAggroDistanceSatisfiedForTarget() const
 		: FVector::DistSquared(A, B);
 
 	return DistSq <= FMath::Square(AggroRadius);
+}
+
+bool AEnemyBase::IsAggroCylinderSatisfiedIgnoringLineOfSight() const
+{
+	return IsAggroDistanceToTargetInsideCylinderIgnoringLos();
+}
+
+bool AEnemyBase::IsEncounterAggroGateSatisfiedForBarrier() const
+{
+	return HasValidAggroTarget() || IsAggroDistanceToTargetInsideCylinderIgnoringLos();
+}
+
+bool AEnemyBase::IsAggroDistanceSatisfiedForTarget() const
+{
+	return IsAggroDistanceToTargetInsideCylinderIgnoringLos();
 }
 
 // 유효 폰 + AggroRadius(0이면 거리 무시). 수평 전용이면 Z 무시.
@@ -793,6 +808,12 @@ bool AEnemyBase::PassesLightTrackFrontFaceTest(const FVector& LightWorldLocation
 	return FVector::DotProduct(GetActorForwardVector(), ToLight) >= LightTrackFrontFaceMinDot;
 }
 
+bool AEnemyBase::PassesEnemyAdditionalFlashlightTrackLineOfSight(
+	USpotLightComponent const* /*Spot*/, FVector const& /*EnemyLightSampleWorld*/) const
+{
+	return true;
+}
+
 bool AEnemyBase::TryComputeFlashlightTrackGoal(FVector& OutGoal)
 {
 	USpotLightComponent* const Spot = ResolveFlashlightSpotForTracking();
@@ -817,6 +838,10 @@ bool AEnemyBase::TryComputeFlashlightTrackGoal(FVector& OutGoal)
 	if (Dist < KINDA_SMALL_NUMBER)
 	{
 		if (!PassesLightTrackFrontFaceTest(Origin))
+		{
+			return false;
+		}
+		if (!PassesEnemyAdditionalFlashlightTrackLineOfSight(Spot, TestPoint))
 		{
 			return false;
 		}
@@ -855,6 +880,11 @@ bool AEnemyBase::TryComputeFlashlightTrackGoal(FVector& OutGoal)
 	}
 
 	if (!PassesLightTrackFrontFaceTest(Origin))
+	{
+		return false;
+	}
+
+	if (!PassesEnemyAdditionalFlashlightTrackLineOfSight(Spot, TestPoint))
 	{
 		return false;
 	}

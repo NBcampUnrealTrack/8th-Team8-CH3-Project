@@ -1,5 +1,6 @@
 #include "AIEnemy/WallTrackingEyeActor.h"
 
+#include "OblivioGameInstance.h"
 #include "Components/ArrowComponent.h"
 #include "Components/AudioComponent.h"
 #include "Components/SceneComponent.h"
@@ -73,7 +74,7 @@ void AWallTrackingEyeActor::ApplyEyeGlowSettings()
 		return;
 	}
 
-	EyeGlowSpot->SetVisibility(bEnableEyeGlow);
+	EyeGlowSpot->SetVisibility(GetEffectiveEyeGlowVisible());
 
 	const float Inner = FMath::Min(EyeGlowInnerConeDegrees, EyeGlowOuterConeDegrees);
 	const float Outer = FMath::Max(EyeGlowInnerConeDegrees, EyeGlowOuterConeDegrees);
@@ -97,12 +98,73 @@ void AWallTrackingEyeActor::BeginPlay()
 {
 	Super::BeginPlay();
 	SetActorTickEnabled(true);
+	ApplyEyeGlowSettings();
 
 	if (IsValid(LookPivot))
 	{
 		LastLookPivotQuatForAudio = LookPivot->GetComponentQuat();
 		bEyeAudioBaselineSet = true;
 	}
+}
+
+bool AWallTrackingEyeActor::QueryMementoEyeUnlockedFromGameInstance() const
+{
+	UWorld* const W = GetWorld();
+	if (!W || !W->IsGameWorld())
+	{
+		return false;
+	}
+	if (const UOblivioGameInstance* GI = Cast<UOblivioGameInstance>(W->GetGameInstance()))
+	{
+		return GI->bMementoEyeCollected;
+	}
+	return false;
+}
+
+bool AWallTrackingEyeActor::UsesMementoEyeGate() const
+{
+	if (bIdleUntilMementoEyeItem)
+	{
+		return true;
+	}
+	static const FName MementoGatedTag(TEXT("MementoGatedEye"));
+	if (ActorHasTag(MementoGatedTag))
+	{
+		return true;
+	}
+	if (MementoGateApplyOnFloor <= 0)
+	{
+		return false;
+	}
+	UWorld* const W = GetWorld();
+	if (!W || !W->IsGameWorld())
+	{
+		return false;
+	}
+	const UOblivioGameInstance* GI = Cast<UOblivioGameInstance>(W->GetGameInstance());
+	if (!GI)
+	{
+		return false;
+	}
+	return GI->CurrentFloor == MementoGateApplyOnFloor;
+}
+
+bool AWallTrackingEyeActor::GetEffectiveEyeGlowVisible() const
+{
+	if (!UsesMementoEyeGate())
+	{
+		return bEnableEyeGlow;
+	}
+	return bEnableEyeGlow && QueryMementoEyeUnlockedFromGameInstance();
+}
+
+bool AWallTrackingEyeActor::ShouldRunPlayerTracking() const
+{
+	if (!UsesMementoEyeGate())
+	{
+		return true;
+	}
+	return QueryMementoEyeUnlockedFromGameInstance();
 }
 
 bool AWallTrackingEyeActor::ShouldEmitDebugLog()
@@ -137,6 +199,10 @@ void AWallTrackingEyeActor::EmitDebugLog(const TCHAR* Reason, const FString& Mes
 void AWallTrackingEyeActor::Tick(const float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	if (UsesMementoEyeGate())
+	{
+		ApplyEyeGlowSettings();
+	}
 	UpdateLookAt(DeltaSeconds);
 }
 
@@ -180,6 +246,11 @@ void AWallTrackingEyeActor::UpdateLookAt(const float DeltaSeconds)
 			UE_LOG(LogWallTrackingEye, Warning,
 			       TEXT("[%s] Skip — LookPivot or LookDirectionArrow invalid"), *GetName());
 		}
+		return;
+	}
+
+	if (!ShouldRunPlayerTracking())
+	{
 		return;
 	}
 

@@ -35,6 +35,7 @@
 #include "Animation/AnimInstance.h"
 #include "Components/AudioComponent.h"
 #include "Sound/SoundBase.h"
+#include "GameFramework/PlayerController.h"
 
 namespace
 {
@@ -55,6 +56,21 @@ namespace
 			return Existing->Get();
 		}
 		return nullptr;
+	}
+
+	/** 눈알 게이트 해제용으로 동일하게 인식할 조건(ItemID 또는 액터 태그). */
+	static bool Obliv_ItemUnlocksMementoEyeGate(const AOblivioItemBase* Item)
+	{
+		if (!IsValid(Item))
+		{
+			return false;
+		}
+		static const FName Key(TEXT("MementoEye"));
+		if (Item->ItemID == Key)
+		{
+			return true;
+		}
+		return Item->ActorHasTag(Key);
 	}
 }
 
@@ -957,10 +973,19 @@ void AOblivioCharacter::Interact()
 			if (AOblivioItemBase* PickedItem = Cast<AOblivioItemBase>(TargetActor))
 			{
 				PickedItem->OnInteract(this);
+				ApplyDutyReadMomentEffects(PickedItem);
+
+				if (UOblivioGameInstance* GI = Cast<UOblivioGameInstance>(GetGameInstance()))
+				{
+					if (Obliv_ItemUnlocksMementoEyeGate(PickedItem))
+					{
+						GI->bMementoEyeCollected = true;
+					}
+				}
 			}
 
 			GM->AddMemento();
-			
+
 			if (TargetActor == CurrentNearbyItem) SetNearbyItem(nullptr);
 			TargetActor->Destroy();
 			return;
@@ -980,6 +1005,13 @@ void AOblivioCharacter::Interact()
 
 		if (InventoryComponent && InventoryComponent->AddItem(PickedItem))
 		{
+			if (UOblivioGameInstance* GI = Cast<UOblivioGameInstance>(GetGameInstance()))
+			{
+				if (Obliv_ItemUnlocksMementoEyeGate(PickedItem))
+				{
+					GI->bMementoEyeCollected = true;
+				}
+			}
 			if (PickedItem->ActorHasTag("Key") && GM)
 			{
 				GM->CollectedKeys++;
@@ -993,6 +1025,91 @@ void AOblivioCharacter::Interact()
 			UE_LOG(LogTemp, Warning, TEXT("3. Item Added to Inventory and Destroyed!"));
 			return;
 		}
+	}
+}
+
+void AOblivioCharacter::ApplyForcedWorldLookTowards(FVector WorldLookTarget, float DurationSeconds,
+	float RotationInterpSpeed)
+{
+	if (!GetWorld())
+	{
+		return;
+	}
+
+	ForcedLookWorldTarget = WorldLookTarget;
+	ForcedLookEndTimeSeconds =
+		GetWorld()->GetTimeSeconds() + FMath::Max(0.05f, DurationSeconds);
+	ForcedLookInterpSpeed = FMath::Max(1.f, RotationInterpSpeed);
+	bForcedWorldLookActive = true;
+}
+
+bool AOblivioCharacter::TryConsumeForcedWorldLookRotation(FRotator& OutTargetRotWorld)
+{
+	if (!bForcedWorldLookActive || !GetWorld())
+	{
+		return false;
+	}
+
+	const float Now = GetWorld()->GetTimeSeconds();
+	if (Now >= ForcedLookEndTimeSeconds)
+	{
+		bForcedWorldLookActive = false;
+		return false;
+	}
+
+	OutTargetRotWorld =
+		UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), ForcedLookWorldTarget);
+	return true;
+}
+
+void AOblivioCharacter::ApplyDutyReadMomentEffects(const AOblivioItemBase* ItemSrc)
+{
+	if (!IsLocallyControlled() || !IsValid(ItemSrc) || !ItemSrc->bApplyDutyReadMomentOnPickup)
+	{
+		return;
+	}
+
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		if (ItemSrc->bDutyReadPlayDynamicForceFeedback && ItemSrc->DutyReadForceFeedbackDuration > KINDA_SMALL_NUMBER)
+		{
+			(void)PC->PlayDynamicForceFeedback(FMath::Clamp(ItemSrc->DutyReadForceFeedbackIntensity, 0.f, 1.f),
+				ItemSrc->DutyReadForceFeedbackDuration,
+				true,
+				false,
+				true,
+				false,
+				EDynamicForceFeedbackAction::Start,
+				0);
+		}
+	}
+
+	if (IsValid(ItemSrc->DutyReadBangSound))
+	{
+		UGameplayStatics::PlaySound2D(this, ItemSrc->DutyReadBangSound);
+	}
+
+	if (!ItemSrc->bDutyReadForceLookTowardsObservation || !GetWorld())
+	{
+		return;
+	}
+
+	const AActor* Resolved = ItemSrc->DutyReadObservationLookActor.Get();
+	if (!Resolved && !ItemSrc->DutyReadObservationActorTag.IsNone())
+	{
+		TArray<AActor*> TaggedActors;
+		UGameplayStatics::GetAllActorsWithTag(GetWorld(), ItemSrc->DutyReadObservationActorTag,
+			TaggedActors);
+		if (TaggedActors.Num() > 0 && IsValid(TaggedActors[0]))
+		{
+			Resolved = TaggedActors[0];
+		}
+	}
+
+	if (Resolved && IsValid(Resolved))
+	{
+		ApplyForcedWorldLookTowards(Resolved->GetActorLocation(), ItemSrc->DutyReadForcedLookDuration,
+			ItemSrc->DutyReadForcedLookInterpSpeed);
 	}
 }
 

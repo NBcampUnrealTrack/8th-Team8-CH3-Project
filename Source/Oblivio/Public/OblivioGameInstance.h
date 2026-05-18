@@ -23,6 +23,7 @@ public:
 		CurrentBattery = 100.f;
 		CurrentHunger = 100.f;
 		CurrentThirst = 100.f;
+		bMementoEyeCollected = false;
 	}
 
 	//세이브/로드 함수
@@ -58,6 +59,10 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Persistence")
 	int32 CurrentFloor = 9;
+
+	/** `ItemID == MementoEye` 메멘토 획득 시 true — 7층 추적 눈알 등 게이트용. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Persistence|Memento")
+	bool bMementoEyeCollected = false;
 
 	//레벨 이름 저장하는 맵
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Game Data")

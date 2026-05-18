@@ -53,7 +53,21 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UAudioComponent> EyeRotateAudio;
 
-	/** 끄면 붉은 스팟 비활성(기본 꺼짐 — 필요한 블루프린트에서만 켜기). */
+	/**
+	 * true면 평소 추적·안광 끔 → MementoEye 메멘토 획득 후에만 동작. GameInstance bMementoEyeCollected 연동.
+	 * 비워 두면 아래 태그·층 번호로 켤 수 있음.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Eye|Memento Eye")
+	bool bIdleUntilMementoEyeItem = false;
+
+	/**
+	 * 0이면 미사용. 양수면 GameInstance CurrentFloor 와 같을 때만 메멘토 게이트 적용.
+	 * (7층 맵을 바로 PIE 하면 CurrentFloor 가 9인 경우가 많아 불일치할 수 있음 → 태그 MementoGatedEye 또는 bIdleUntilMementoEyeItem 권장.)
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Eye|Memento Eye", meta = (ClampMin = "0"))
+	int32 MementoGateApplyOnFloor = 0;
+
+	/** 끄면 붉은 스팟 비활성(게이트 해제 후 이 값이 실제 안광 여부를 결정). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Eye Glow")
 	bool bEnableEyeGlow = false;
 
@@ -150,6 +164,13 @@ private:
 	bool ShouldEmitDebugLog();
 	void EmitDebugLog(const TCHAR* Reason, const FString& Message);
 	void ApplyEyeGlowSettings();
+
+	/** bIdleUntilMementoEyeItem 일 때 GI 플래그. */
+	bool QueryMementoEyeUnlockedFromGameInstance() const;
+	/** 체크박스·태그 MementoGatedEye·MementoGateApplyOnFloor 중 하나라도 만족하면 메멘토까지 눈알 정지. */
+	bool UsesMementoEyeGate() const;
+	bool GetEffectiveEyeGlowVisible() const;
+	bool ShouldRunPlayerTracking() const;
 
 	float LastDebugLogTime = -1000.f;
 
