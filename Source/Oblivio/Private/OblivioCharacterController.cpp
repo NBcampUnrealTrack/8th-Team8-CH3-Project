@@ -1,5 +1,6 @@
-#include "OblivioCharacterController.h"
+﻿#include "OblivioCharacterController.h"
 #include "OblivioCharacter.h"
+#include "OblivioGameUserSettings.h"
 #include "Crafting/OblivioCrafting.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
@@ -110,8 +111,17 @@ void AOblivioCharacterController::UpdateMouseRotation(float DeltaTime)
 
 			// 회전 속도
 			float RotationSpeed = 5.0f;
+			float SensitivityMultiplier = 1.0f; //마우스 감도 기본 배율
 
-			FRotator SmoothRot = FMath::RInterpTo(CurrentRot, TargetRot, DeltaTime, RotationSpeed);
+			if (UOblivioGameUserSettings* Settings = UOblivioGameUserSettings::GetOblivioGameUserSettings())
+			{
+				SensitivityMultiplier = Settings->GetMouseSensitivity();
+			}
+
+			// 설정된 감도에 따라 캐릭터가 커서를 향해 도는 속도가 빨라지거나 느려집니다.
+			float FinalRotationSpeed = RotationSpeed * SensitivityMultiplier;
+
+			FRotator SmoothRot = FMath::RInterpTo(CurrentRot, TargetRot, DeltaTime, FinalRotationSpeed);
 
 			MyPawn->SetActorRotation(SmoothRot);
 		}

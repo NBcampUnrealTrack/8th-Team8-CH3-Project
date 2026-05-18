@@ -985,6 +985,9 @@ void AOblivioCharacter::Interact()
 				GM->CollectedKeys++;
 				UE_LOG(LogTemp, Warning, TEXT("Key Added to Inventory! Current: %d / %d"), GM->CollectedKeys, GM->RequiredKeys);
 			}
+			//인벤토리 추가 UI
+			// (주의: PickedItem->GetItemName(), GetItemIcon() 함수는 ItemBase에 선언된 실제 함수/변수명에 맞춰 수정해 주세요)
+			OnItemAcquiredEvent.Broadcast(PickedItem->ItemName, PickedItem->ItemIcon);
 			if (TargetActor == CurrentNearbyItem) SetNearbyItem(nullptr);
 			PickedItem->Destroy();
 			UE_LOG(LogTemp, Warning, TEXT("3. Item Added to Inventory and Destroyed!"));

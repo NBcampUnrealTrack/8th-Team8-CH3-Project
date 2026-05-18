@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/EngineTypes.h"
+#include "Items/OblivioItemBase.h"
 #include "Weapon/WeaponBase.h"
 #include "Weapon/ThrowableWeapon.h"
 #include "GameFramework/Character.h"
@@ -15,6 +16,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FPlayerDamagedSignature, float, D
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnNearbyItemChanged, class AOblivioItemBase*, NearbyItem);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPlayerAnimationEvent);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPlayerDied);
+
+//UI용 델리게이트
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnItemAcquired, const FText&, ItemName, class UTexture2D*, ItemIcon);
 
 class UOblivioCrafting;
 class UOblivioInventoryComponent;
@@ -351,6 +355,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Events")
 	FOnNearbyItemChanged OnNearbyItemChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "Oblivio|Events")
+	FOnItemAcquired OnItemAcquiredEvent;
 
 	void SetNearbyItem(class AOblivioItemBase* Item);
 	// 컨트롤러 바인딩 함수들
