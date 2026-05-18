@@ -10,7 +10,7 @@ class USoundBase;
 
 /**
  * AWhisperEnemy - "속삭이는 자"
- * - 원거리 DoT 추적: WhisperFightMinDistance ~ WhisperRange 도넛에서 초당 WhisperDotDamagePerSecond
+ * - 원거리 DoT 추적: WhisperFightMinDistance ~ WhisperRange 도넛에서 초당 WhisperDotDamagePerSecond (기본적으로 시야 채널로 벽 차단 시 미적용).
  * - Chase·Attack 동안 WhisperFightMinDistance 안으로 붙지 않음(외곽 호흡 거리 조절).
  * - 손전등 콘 안에서는 회피 이동(AvoidFlashlightCone). 빛 CC는 슬로우만, 경직은 무시.
  */
@@ -49,6 +49,14 @@ protected:
 	/** Whisper DoT 적용 거리(cm, 수평). 최대 간격 한계. WhisperFightMinDistance 보다 반드시 큼. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Whisper", meta = (ClampMin = "50.0"))
 	float WhisperRange = 550.0f;
+
+	/** true면 속삭임 DoT·원거리 판정에 적→플레이어 ECC_Visibility 라인 검사. 차단 물체가 목표 근처가 아니면 피해·루프 없음. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Whisper|Sight")
+	bool bRequireLineOfSightForWhisperDot = true;
+
+	/** 막히는 표면이 목표 캡슐까지 이 거리(cm) 안에 있으면 시야 성공으로 본다(부동 소수·모서리). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Whisper|Sight", meta = (ClampMin = "0.0"))
+	float WhisperDotLosClearanceCm = 35.f;
 
 	/** 손전등 위험 콘 회피 시 이동 기준 속도(cm/s). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Whisper|Avoid", meta = (ClampMin = "0.0"))
@@ -98,6 +106,8 @@ protected:
 
 private:
 	bool IsWithinWhisperRange() const;
+	/** 목표에게 시야 채널 차단 없이 속삭임을 줄 수 있는가(bRequire 미사용이면 항상 true). */
+	bool HasWhisperDotLineOfSightToTarget() const;
 	bool PassesWhisperCombatEngagementBaseline() const;
 
 	bool IsPointInsideFlashlightDanger(const FVector& Point) const;

@@ -28,8 +28,8 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = BossEffect)
 	TObjectPtr<UMaterialInstance> FloorMaterial;
 
-	
-
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = BossEffect)
+	TObjectPtr<UAudioComponent> FloorAudioComp;
 
 	//이펙트 변화
 	UPROPERTY()
