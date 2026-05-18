@@ -98,6 +98,44 @@ void AOblivioCharacterController::UpdateMouseRotation(float DeltaTime)
 {
 	if (APawn* MyPawn = GetPawn())
 	{
+		FVector WorldLocation, WorldDirection;
+		//마우스 커서의 위치를 월드 레이(Ray) 데이터로 변환.
+		if (DeprojectMousePositionToWorld(WorldLocation, WorldDirection))
+		{
+			FVector PawnLoc = MyPawn->GetActorLocation();
+
+			//조준선 방향의 Z축이 0이 아닐 때만 계산 (분모가 0이 되는 버그 방지)
+			if (!FMath::IsNearlyZero(WorldDirection.Z))
+			{
+				//캐릭터 Z축 높이를 기준으로 평면과의 교차 거리(T) 및 가상 충돌 지점 계산
+				float T = (PawnLoc.Z - WorldLocation.Z) / WorldDirection.Z;
+				FVector VirtualImpactPoint = WorldLocation + (WorldDirection * T);
+
+				//목표 회전값
+				FRotator TargetRot = UKismetMathLibrary::FindLookAtRotation(PawnLoc, VirtualImpactPoint);
+				TargetRot.Pitch = 0.f; //위아래로 기울지 않도록 고정
+				TargetRot.Roll = 0.f;
+
+				//현재 회전값
+				FRotator CurrentRot = MyPawn->GetActorRotation();
+
+				//회전 속도
+				float RotationSpeed = 5.0f;
+				float SensitivityMultiplier = 1.0f; //마우스 감도 기본 배율
+
+				if (UOblivioGameUserSettings* Settings = UOblivioGameUserSettings::GetOblivioGameUserSettings())
+				{
+					SensitivityMultiplier = Settings->GetMouseSensitivity();
+				}
+
+				float FinalRotationSpeed = RotationSpeed * SensitivityMultiplier;
+
+				FRotator SmoothRot = FMath::RInterpTo(CurrentRot, TargetRot, DeltaTime, FinalRotationSpeed);
+
+				MyPawn->SetActorRotation(SmoothRot);
+			}
+		}
+		/*
 		FHitResult Hit;
 		if (GetHitResultUnderCursor(ECC_Visibility, false, Hit))
 		{
@@ -125,6 +163,7 @@ void AOblivioCharacterController::UpdateMouseRotation(float DeltaTime)
 
 			MyPawn->SetActorRotation(SmoothRot);
 		}
+		*/
 	}
 }
 
