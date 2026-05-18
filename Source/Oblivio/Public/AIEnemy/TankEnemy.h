@@ -151,6 +151,18 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tank|JumpAttack|Visual")
 	TObjectPtr<UStaticMeshComponent> JumpLandingAoERangeIndicatorMesh;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Tank|UI")
+	FText BossDisplayName = FText::FromString(TEXT("The Great Bloated Fetus"));
+	
+	UFUNCTION(BlueprintImplementableEvent, Category = "Enemy|Tank|UI")
+	void OnShowBossHP(const FText& InBossName, float InCurrentHP, float InMaxHP);
+	
+	UFUNCTION(BlueprintImplementableEvent, Category = "Enemy|Tank|UI")
+	void OnUpdateBossHP(float InCurrentHP, float InMaxHP);
+	
+	UFUNCTION(BlueprintImplementableEvent, Category = "Enemy|Tank|UI")
+	void OnHideBossHP();
 
 protected:
 	virtual void BeginPlay() override;
@@ -199,7 +211,6 @@ protected:
 	/** PIE/게임: 근접 AttackRange·심작 Heartbeat AoE 구 시각화(Aggro 디버그와 별개). Shipping 빌드 제외. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Tank|Debug", meta = (DisplayName = "Debug Draw Combat Ranges"))
 	bool bDebugDrawCombatRanges = true;
-
 private:
 	/**
 	 * true면 추격(Chase) 중에 Heartbeat AoE(범위·쿨)를 시도. 근접 Attack은 베이스 FSM 그대로(PerformAttack / 근접 노티).
@@ -644,4 +655,9 @@ private:
 
 	void DestroyTankPlacentaShellIfAny_Server();
 
+	bool bBossHPShown = false;
+	
+	void TryShowBossHUD();
+	void RefreshBossHUD();
+	void HideBossHUD();
 };
