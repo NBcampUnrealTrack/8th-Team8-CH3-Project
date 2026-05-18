@@ -20,7 +20,7 @@ void UOblivioDutySheetWidget::NativeConstruct()
 	}
 }
 
-void UOblivioDutySheetWidget::HandleStashKeyPressed()
+void UOblivioDutySheetWidget::HandleStashKeyPressed_Implementation()
 {
 	APlayerController* const PC = GetOwningPlayer();
 

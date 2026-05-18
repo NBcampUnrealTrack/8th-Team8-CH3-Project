@@ -16,7 +16,7 @@
 //   · Duration<=0 이면 타이머 없이 유지 → ClearCCSlow / ClearCCStun 으로 해제
 //
 // NavMesh가 있어야 MoveToActor / MoveToLocation 동작. 레벨에 Nav Mesh Bounds 권장.
-// 비어그로 Idle: PatrolPoints 없을 때 IdleWander로 주변 배회(옵션).
+// 비어그로 Idle: PatrolPoints 없을 때 IdleWander로 주변 배회(옵션, bEnableWandering·bEnableIdleWander).
 // =============================================================================
 
 #include "OblivioComponents/CombatInterface.h"
@@ -316,6 +316,21 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy|Combat", meta = (ClampMin = "0.1"))
 	float AttackCooldown = 1.0f;
 
+	/**
+	 * 근접 PerformAttack(스윙) 발동 직후부터 이 시간(초) 동안 어그로 FSM에서 Attack을 유지한다.
+	 * 플레이어가 공격 거리 경계를 드나들 때 Chase로 빠지며 몽타주·스윙 애니가 끊기는 것을 줄인다.
+	 * 0이면 AttackCooldown 길이로 잠근다. 스윙 길이가 쿨보다 길면 이 값을 애니 길이에 맞게 키운다.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy|Combat", meta = (ClampMin = "0.0"))
+	float MeleeAttackStateLockDurationSeconds = 0.0f;
+
+	/**
+	 * PerformAttack 발동 후 이 시간(초) 동안 어그로 FSM을 무조건 Chase로 고정한다.
+	 * 같은 구간 안에 근접을 연속 발동하지 않게 한다. 0이면 비활성.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy|Combat", meta = (ClampMin = "0.0"))
+	float MeleePostAttackForcedChaseDurationSeconds = 1.0f;
+
 	/** 근타격 AnimNotify 커밋 허용 = AttackRange + Slack(cm). 이동/블렌드 애니에 노티가 박힐 때 허공·원거리 판정 방지 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Combat", meta = (ClampMin = "0.0", AllowPrivateAccess = "true"))
 	float MeleeCommitRangeSlackCm = 85.f;
@@ -415,6 +430,13 @@ protected:
 	/** 순찰 지점(빈 액터 등 배치 후 끌어다 놓기). 비어 있으면 Patrol 상태 미사용. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|FSM")
 	TArray<TObjectPtr<AActor>> PatrolPoints;
+
+	/**
+	 * false면 비어그로일 때 순찰(Patrol)과 Idle Nav 배회를 하지 않는다(제자리).
+	 * Search·Investigate 등은 그대로. bEnableIdleWander는 이 값이 true일 때만 적용된다.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Idle")
+	bool bEnableWandering = true;
 
 	/** 어그로 밖·Idle이고 Patrol 지점이 없을 때 주변 Nav로 배회. 끄면 제자리 정지(기존 동작). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Idle")
@@ -575,6 +597,13 @@ protected:
 	virtual bool IsTargetInAttackRange() const;
 	/** 어그로가 있을 때 FSM 상태(기본: 근접이면 Attack 아니면 Chase). 탱커 심작 중엔 Heartbeat. */
 	virtual EEnemyAIState SelectStateWhileAggroed() const;
+
+	/** 사망·비어그로·스턴 등으로 근접 스윙·공격후 Chase 타이머 해제 */
+	void ClearMeleeAttackSwingStateLock();
+	/** UpdateAttack 에서 PerformAttack 직전: 스윙이 끝날 때까지 Attack 유지 */
+	void RefreshMeleeAttackSwingStateLock(float WorldTimeSeconds);
+	/** PerformAttack 직전: 한동안 무조건 Chase (연속 근접 방지) */
+	void RefreshMeleePostAttackForcedChase(float WorldTimeSeconds);
 	/** AggroRadius 내(또는 0이면 무한)일 때 true. 보스 등은 “한 번 들어오면 영구 추격”용으로 오버라이드 가능. */
 	virtual bool HasValidAggroTarget() const;
 
@@ -670,6 +699,10 @@ private:
 	bool bIdleChaseLocomotionAmbientSuppressFinished = false;
 
 	float LastAttackTime = -BIG_NUMBER;
+	/** RefreshMeleeAttackSwingStateLock 참조: 이 시각까지 SelectStateWhileAggroed 가 Attack 우선 유지 */
+	float MeleeAttackSwingStateLockEndWorldTime = -BIG_NUMBER;
+	/** RefreshMeleePostAttackForcedChase: 이 시각까지 SelectStateWhileAggroed 가 Chase 우선(MeleeAttackSwing 보다 우선) */
+	float MeleePostAttackForcedChaseEndWorldTime = -BIG_NUMBER;
 
 	bool bCCSlowActive = false;
 	float CCSlowSpeedMultiplier = 1.0f;
