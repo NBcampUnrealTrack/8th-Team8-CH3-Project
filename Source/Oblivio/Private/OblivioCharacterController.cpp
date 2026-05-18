@@ -137,7 +137,7 @@ void AOblivioCharacterController::UpdateMouseRotation(float DeltaTime)
 				FRotator CurrentRot = MyPawn->GetActorRotation();
 
 				//회전 속도
-				float RotationSpeed = 40.0f;
+				float RotationSpeed = 20.0f;
 				float SensitivityMultiplier = 1.0f; //마우스 감도 기본 배율
 
 				if (UOblivioGameUserSettings* Settings = UOblivioGameUserSettings::GetOblivioGameUserSettings())
