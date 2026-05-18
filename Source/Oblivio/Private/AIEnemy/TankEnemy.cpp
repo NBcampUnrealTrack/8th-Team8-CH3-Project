@@ -662,6 +662,8 @@ void ATankEnemy::Tick(float DeltaSeconds)
 		}
 		TryTankPlacentaDefenseAfterIncomingDamage_Server();
 	}
+	
+	TryShowBossHUD();
 
 	// ALuxeaterEnemy: TickBossAbilities 가 Super::Tick 보다 먼저 — 심작은 FSM/이동보다 앞에서도 한 번 시도
 	if (bUseHeartbeatAoEAttack)
@@ -2117,6 +2119,48 @@ void ATankEnemy::DestroyTankPlacentaShellIfAny_Server()
 
 	ActiveTankPlacentaShell->UnbindAndDestroy_Server();
 	ActiveTankPlacentaShell = nullptr;
+}
+
+void ATankEnemy::TryShowBossHUD()
+{
+	if (bBossHPShown)
+	{
+		return;
+	}
+	
+	if (!IsAlive())
+	{
+		return;
+	}
+	
+	if (!HasValidAggroTarget())
+	{
+		return;
+	}
+	
+	bBossHPShown = true;
+	OnShowBossHP(BossDisplayName, CurrentHealth, MaxHealth);
+}
+
+void ATankEnemy::RefreshBossHUD()
+{
+	if (!bBossHPShown)
+	{
+		return;
+	}
+	
+	OnUpdateBossHP(CurrentHealth, MaxHealth);
+}
+
+void ATankEnemy::HideBossHUD()
+{
+	if (!bBossHPShown)
+	{
+		return;            
+	}
+	
+	bBossHPShown = false;
+	OnHideBossHP();
 }
 
 void ATankEnemy::TickTankPlacentaHeal_Server()

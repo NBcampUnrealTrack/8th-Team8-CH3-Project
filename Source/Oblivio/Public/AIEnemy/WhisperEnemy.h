@@ -10,9 +10,9 @@ class USoundBase;
 
 /**
  * AWhisperEnemy - "속삭이는 자"
- * - 원거리 DoT 추적: WhisperFightMinDistance ~ WhisperRange 도넛에서 초당 WhisperDotDamagePerSecond (기본적으로 시야 채널로 벽 차단 시 미적용).
+ * - 원거리 DoT 추적: WhisperFightMinDistance ~ WhisperRange 도넛에서 초당 WhisperDotDamagePerSecond (LOS: WorldStatic+Visibility… InvisibleWall 은 후자만 무시 가능).
  * - Chase·Attack 동안 WhisperFightMinDistance 안으로 붙지 않음(외곽 호흡 거리 조절).
- * - 손전등 콘 안에서는 회피 이동(AvoidFlashlightCone). 빛 CC는 슬로우만, 경직은 무시.
+ * - 손전등 콘 안 + LOS 일 때 회피 이동(AvoidFlashlightCone). 빛 CC는 슬로우만, 경직은 무시.
  */
 UCLASS(Blueprintable)
 class OBLIVIO_API AWhisperEnemy : public AEnemyBase
@@ -50,13 +50,17 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Whisper", meta = (ClampMin = "50.0"))
 	float WhisperRange = 550.0f;
 
-	/** true면 속삭임 DoT·원거리 판정에 적→플레이어 ECC_Visibility 라인 검사. 차단 물체가 목표 근처가 아니면 피해·루프 없음. */
+	/** true면 속삭임 DoT·원거리 판정에 적→플레이어 LOS. WorldStatic(+Visibility): InvisibleWall 프로필은 Visibility 무시라 전자 필수. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Whisper|Sight")
 	bool bRequireLineOfSightForWhisperDot = true;
 
-	/** 막히는 표면이 목표 캡슐까지 이 거리(cm) 안에 있으면 시야 성공으로 본다(부동 소수·모서리). */
+	/** 막히는 표면이 목표 캡슐까지 이 거리(cm) 안에 있으면 시야 성공으로 본다. DoT·손전등 회피 LOS 공통 사용. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Whisper|Sight", meta = (ClampMin = "0.0"))
 	float WhisperDotLosClearanceCm = 35.f;
+
+	/** true면 손전등 회피/감속: 콘 기하 + 라이트 원점→적 위치 WorldStatic/Visibility 차단 검사(InvisibleWall 대응). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Whisper|Avoid")
+	bool bRequireLineOfSightForFlashlightAvoid = true;
 
 	/** 손전등 위험 콘 회피 시 이동 기준 속도(cm/s). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Whisper|Avoid", meta = (ClampMin = "0.0"))
@@ -106,6 +110,12 @@ protected:
 
 private:
 	bool IsWithinWhisperRange() const;
+	/**
+	 * TraceStart→TraceEnd 사이에 Visibility·WorldStatic 으로 막는 지오메트리가 있으면 true.
+	 * 타겟·본인 액터는 무시(Eye→플레이어, 스포트→적 등).
+	 */
+	bool DoesGeometryBlockLosBetween(FVector const& TraceStart, FVector const& TraceEnd,
+		float ClearanceCm) const;
 	/** 목표에게 시야 채널 차단 없이 속삭임을 줄 수 있는가(bRequire 미사용이면 항상 true). */
 	bool HasWhisperDotLineOfSightToTarget() const;
 	bool PassesWhisperCombatEngagementBaseline() const;
