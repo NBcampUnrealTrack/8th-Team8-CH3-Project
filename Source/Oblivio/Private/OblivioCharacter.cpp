@@ -653,6 +653,18 @@ void AOblivioCharacter::UpdateWallOcclusionDither()
 
 void AOblivioCharacter::BeginPlay()
 {
+	//8층부터는 현재 스탯을 인스턴스에 저장된 것으로 대체
+	if (UOblivioGameInstance* GI = Cast<UOblivioGameInstance>(GetGameInstance()))
+	{
+		if (GI->CurrentFloor < 9)
+		{
+			CurrentHealth = GI->CurrentHealth;
+			Battery = GI->CurrentBattery;
+			Hunger = GI->CurrentHunger;
+			Thirst = GI->CurrentThirst;
+		}
+	}
+
 	Super::BeginPlay();
 
 	if (CameraBoom)
@@ -669,18 +681,6 @@ void AOblivioCharacter::BeginPlay()
 	}
 
 	UpdateFlashlightVisuals();
-
-	//8층부터는 현재 스탯을 인스턴스에 저장된 것으로 대체
-	if (UOblivioGameInstance* GI = Cast<UOblivioGameInstance>(GetGameInstance()))
-	{
-		if (GI->CurrentFloor < 9)
-		{
-			CurrentHealth = GI->CurrentHealth;
-			Battery = GI->CurrentBattery;
-			Hunger = GI->CurrentHunger;
-			Thirst = GI->CurrentThirst;
-		}
-	}
 
 	//시작시 무기 미리 장착
 	FActorSpawnParameters Params;
