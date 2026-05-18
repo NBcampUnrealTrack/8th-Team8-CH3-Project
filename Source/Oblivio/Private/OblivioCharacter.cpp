@@ -696,8 +696,6 @@ void AOblivioCharacter::BeginPlay()
 		}
 	}
 
-	UpdateFlashlightVisuals();
-
 	//시작시 무기 미리 장착
 	FActorSpawnParameters Params;
 	Params.Owner = this;
@@ -737,7 +735,7 @@ void AOblivioCharacter::BeginPlay()
 	//기존 기본부착 손전등 off
 	FlashlightComponent->SetVisibility(false);
 
-	
+	UpdateFlashlightVisuals();
 }
 
 void AOblivioCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -1170,7 +1168,10 @@ void AOblivioCharacter::UpdateFlashlightVisuals()
 	{
 		UGameplayStatics::PlaySound2D(GetWorld(), FlashlightClickSound);
 	}
-
+	if (Battery <= 0.f)
+	{
+		bIsFlashlightOn = false;
+	}
 	if (bIsFlashlightOn) {	//On
 		FlashlightWeapon->UseWeapon();
 	}
@@ -1397,6 +1398,8 @@ void AOblivioCharacter::ReloadBattery()
 		// 배터리 아이템이 없을 때의 경고 메시지
 		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("No Battery in Inventory!"));
 	}
+	
+	OnShowNoBatteryNotice();
 }
 
 //섬광탄 시작 함수

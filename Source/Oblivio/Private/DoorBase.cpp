@@ -7,6 +7,7 @@
 #include "Sound/SoundBase.h"
 #include "Items/OblivioInventoryComponent.h"
 #include "OblivioGameMode.h"
+#include "Blueprint/UserWidget.h"
 
 ADoorBase::ADoorBase()
 {
@@ -42,6 +43,15 @@ void ADoorBase::InteractDoor_Implementation()
 		APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
 		if (PC && PC->PlayerCameraManager)
 		{
+			if (LoadingScreenClass)
+			{
+				UUserWidget* LoadingWidget = CreateWidget<UUserWidget>(PC, LoadingScreenClass);
+				if (LoadingWidget)
+				{
+					LoadingWidget->AddToViewport(999);
+				}
+			}
+			
 			PC->PlayerCameraManager->StartCameraFade(0.0f, 1.0f, FadeDuration, FLinearColor::Black, false, true);
 
 			if (APawn* PlayerPawn = PC->GetPawn())
@@ -73,10 +83,10 @@ void ADoorBase::ExecuteLevelTransition()
 	if (GI && Player)
 	{
 		FString SlotName = "Slot1";
-		Player->CurrentHealth = GI->CurrentHealth;
-		Player->Battery = GI->CurrentBattery;
-		Player->Hunger = GI->CurrentHunger;
-		Player->Thirst = GI->CurrentThirst;
+		GI->CurrentHealth = Player->CurrentHealth;
+		GI->CurrentBattery = Player->Battery;
+		GI->CurrentHunger = Player->Hunger;
+		GI->CurrentThirst = Player->Thirst;
 		GI->CurrentFloor -= 1;
 
 		GI->SaveGameData(SlotName); // 자동 저장
