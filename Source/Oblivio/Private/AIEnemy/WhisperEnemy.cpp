@@ -2,12 +2,16 @@
 
 #include "AIController.h"
 #include "Components/AudioComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "Components/SpotLightComponent.h"
+#include "CollisionQueryParams.h"
 #include "DrawDebugHelpers.h"
 #include "Engine/Engine.h"
 #include "GameFramework/DamageType.h"
+#include "GameFramework/Pawn.h"
 #include "Kismet/GameplayStatics.h"
 #include "Sound/SoundBase.h"
+#include "WorldCollision.h"
 #include "OblivioCharacter.h"
 #include "OblivioComponents/LightAttackComponent.h"
 #include "Weapon/WeaponBase.h"
@@ -159,8 +163,8 @@ float AWhisperEnemy::GetLocomotionBaseSpeed() const
 
 bool AWhisperEnemy::IsTargetInAttackRange() const
 {
-	// EnemyBase 기본은 3D AttackRange; 위스퍼 DoT·도넛과 동일한 수평 도넛으로 FSM 갱신.
-	return IsWithinWhisperRange();
+	// EnemyBase 기본은 3D AttackRange; 위스퍼 DoT·도넛과 동일한 수평 도넛 + (옵션) 시야로 FSM 갱신.
+	return IsWithinWhisperRange() && HasWhisperDotLineOfSightToTarget();
 }
 
 bool AWhisperEnemy::IsMeleeCommitNotifyHitValid(AActor const* HitTarget) const
@@ -169,7 +173,7 @@ bool AWhisperEnemy::IsMeleeCommitNotifyHitValid(AActor const* HitTarget) const
 	{
 		return false;
 	}
-	return IsWithinWhisperRange();
+	return IsWithinWhisperRange() && HasWhisperDotLineOfSightToTarget();
 }
 
 void AWhisperEnemy::PerformAttack_Implementation(AActor* /*Target*/)
@@ -267,12 +271,53 @@ bool AWhisperEnemy::PassesWhisperCombatEngagementBaseline() const
 		return false;
 	}
 
-	if (IsSelfInsideFlashlightDanger() || !IsWithinWhisperRange())
+	if (IsSelfInsideFlashlightDanger() || !IsWithinWhisperRange() || !HasWhisperDotLineOfSightToTarget())
 	{
 		return false;
 	}
 
 	return true;
+}
+
+bool AWhisperEnemy::HasWhisperDotLineOfSightToTarget() const
+{
+	if (!bRequireLineOfSightForWhisperDot)
+	{
+		return true;
+	}
+
+	UWorld const* const World = GetWorld();
+	if (!World || !IsValid(TargetActor))
+	{
+		return false;
+	}
+
+	FVector TraceStart;
+	FRotator UnusedRot;
+	GetActorEyesViewPoint(TraceStart, UnusedRot);
+
+	FVector TraceEnd = TargetActor->GetActorLocation();
+	if (APawn const* const PawnT = Cast<APawn>(TargetActor))
+	{
+		if (UCapsuleComponent const* const Caps = PawnT->FindComponentByClass<UCapsuleComponent>())
+		{
+			TraceEnd = Caps->GetComponentLocation();
+		}
+	}
+
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(WhisperDotLos), false, this);
+	Params.AddIgnoredActor(TargetActor);
+
+	FHitResult Hit;
+	const bool bHit = World->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, ECC_Visibility, Params);
+	if (!bHit)
+	{
+		return true;
+	}
+
+	const float DistToGoal = FVector::Dist(TraceStart, TraceEnd);
+	const float Margin = FMath::Max(10.f, WhisperDotLosClearanceCm);
+	return Hit.Distance >= DistToGoal - Margin;
 }
 
 bool AWhisperEnemy::IsPointInsideFlashlightDanger(const FVector& Point) const

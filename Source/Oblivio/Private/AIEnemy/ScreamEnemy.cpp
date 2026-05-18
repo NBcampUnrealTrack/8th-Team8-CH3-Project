@@ -462,6 +462,12 @@ void AScreamEnemy::EndCooldown()
 
 void AScreamEnemy::TickGhostWander(float DeltaSeconds)
 {
+	if (!bEnableWandering)
+	{
+		StopEnemyMovement();
+		return;
+	}
+
 	GhostWanderRetargetCooldown -= DeltaSeconds;
 
 	// 1) 타겟이 가까우면 천천히 압박(벽 무시 부유 추적).

@@ -107,7 +107,7 @@ void AEnemyBase::BeginPlay()
 		bHadAggroLastTick = true;
 		SetEnemyState(SelectStateWhileAggroed());
 	}
-	else if (!PatrolPoints.IsEmpty())
+	else if (bEnableWandering && !PatrolPoints.IsEmpty())
 	{
 		bHadAggroLastTick = false;
 		SetEnemyState(EEnemyAIState::Patrol);
@@ -119,7 +119,7 @@ void AEnemyBase::BeginPlay()
 	}
 
 	// 스폰 시 기본 상태가 이미 Idle이면 SetEnemyState가 no-op → 배회 쿨 초기화
-	if (EnemyState == EEnemyAIState::Idle && bEnableIdleWander)
+	if (EnemyState == EEnemyAIState::Idle && bEnableWandering && bEnableIdleWander)
 	{
 		IdleWanderRetargetCooldown = FMath::FRandRange(0.5f, 2.0f);
 	}
@@ -315,6 +315,7 @@ void AEnemyBase::ApplyCCStun(float Duration)
 	}
 
 	bCCStunned = true;
+	ClearMeleeAttackSwingStateLock();
 	StopEnemyMovement();
 	RefreshWalkSpeedFromSources();
 	UE_LOG(LogTemp, Warning, TEXT("ApplyCCStun Called"));	//CombatComponent호출 체크
@@ -666,7 +667,45 @@ bool AEnemyBase::HasValidAggroTarget() const
 
 EEnemyAIState AEnemyBase::SelectStateWhileAggroed() const
 {
+	if (const UWorld* World = GetWorld())
+	{
+		const float Now = World->GetTimeSeconds();
+		if (Now < MeleePostAttackForcedChaseEndWorldTime)
+		{
+			return EEnemyAIState::Chase;
+		}
+		if (Now < MeleeAttackSwingStateLockEndWorldTime)
+		{
+			return EEnemyAIState::Attack;
+		}
+	}
+
 	return IsTargetInAttackRange() ? EEnemyAIState::Attack : EEnemyAIState::Chase;
+}
+
+void AEnemyBase::ClearMeleeAttackSwingStateLock()
+{
+	MeleeAttackSwingStateLockEndWorldTime = -BIG_NUMBER;
+	MeleePostAttackForcedChaseEndWorldTime = -BIG_NUMBER;
+}
+
+void AEnemyBase::RefreshMeleeAttackSwingStateLock(float WorldTimeSeconds)
+{
+	const float LockDur = (MeleeAttackStateLockDurationSeconds > KINDA_SMALL_NUMBER)
+		? MeleeAttackStateLockDurationSeconds
+		: AttackCooldown;
+	MeleeAttackSwingStateLockEndWorldTime = WorldTimeSeconds + FMath::Max(0.05f, LockDur);
+}
+
+void AEnemyBase::RefreshMeleePostAttackForcedChase(float WorldTimeSeconds)
+{
+	if (MeleePostAttackForcedChaseDurationSeconds > KINDA_SMALL_NUMBER)
+	{
+		MeleePostAttackForcedChaseEndWorldTime =
+			WorldTimeSeconds + FMath::Max(MeleePostAttackForcedChaseDurationSeconds, KINDA_SMALL_NUMBER);
+		return;
+	}
+	MeleePostAttackForcedChaseEndWorldTime = -BIG_NUMBER;
 }
 
 bool AEnemyBase::TryConsumeSpecialFSMUpdate()
@@ -710,6 +749,8 @@ void AEnemyBase::UpdateState()
 		return;
 	}
 
+	ClearMeleeAttackSwingStateLock();
+
 	if (EnemyState == EEnemyAIState::TrackLight)
 	{
 		return;
@@ -748,7 +789,7 @@ void AEnemyBase::UpdateState()
 		return;
 	}
 
-	if (!PatrolPoints.IsEmpty())
+	if (bEnableWandering && !PatrolPoints.IsEmpty())
 	{
 		SetEnemyState(EEnemyAIState::Patrol);
 		return;
@@ -1290,6 +1331,8 @@ void AEnemyBase::UpdateAttack()
 	}
 
 	LastAttackTime = CurrentTime;
+	RefreshMeleeAttackSwingStateLock(CurrentTime);
+	RefreshMeleePostAttackForcedChase(CurrentTime);
 	PerformAttack(TargetActor);
 }
 
@@ -1375,6 +1418,12 @@ void AEnemyBase::UpdatePatrol(float DeltaSeconds)
 		return;
 	}
 
+	if (!bEnableWandering)
+	{
+		StopEnemyMovement();
+		return;
+	}
+
 	for (int32 Guard = 0; Guard < PatrolPoints.Num(); ++Guard)
 	{
 		AActor* const Point = PatrolPoints[CurrentPatrolIndex];
@@ -1408,7 +1457,7 @@ void AEnemyBase::UpdateIdle(float DeltaSeconds)
 		return;
 	}
 
-	if (!bEnableIdleWander)
+	if (!bEnableWandering || !bEnableIdleWander)
 	{
 		StopEnemyMovement();
 		return;
@@ -1532,6 +1581,7 @@ void AEnemyBase::Die()
 	}
 
 	ClearLightTrackState();
+	ClearMeleeAttackSwingStateLock();
 	CurrentHealth = 0.0f;
 	SetEnemyState(EEnemyAIState::Dead);
 	StopEnemyMovement();
@@ -1581,7 +1631,7 @@ void AEnemyBase::SetEnemyState(EEnemyAIState NewState, bool bForce)
 	// BP에 낮은 MoveSpeed가 저장된 적이 Chase 상태로 바뀌어도 이전 MaxWalkSpeed에 묶여 멈추는 문제를 방지.
 	RefreshWalkSpeedFromSources();
 
-	if (NewState == EEnemyAIState::Idle && bEnableIdleWander)
+	if (NewState == EEnemyAIState::Idle && bEnableWandering && bEnableIdleWander)
 	{
 		IdleWanderRetargetCooldown = FMath::FRandRange(0.3f, 1.5f);
 	}

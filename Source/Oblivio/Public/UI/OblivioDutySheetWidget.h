@@ -15,8 +15,10 @@ class OBLIVIO_API UOblivioDutySheetWidget : public UUserWidget
 public:
 	UOblivioDutySheetWidget(const FObjectInitializer& ObjectInitializer);
 
-	UFUNCTION(BlueprintCallable, Category = "Duty|Input")
+	/** E키 등에서 호출. 블루프린트에서 오버라이드해 디스패처 등 연출 후 Parent 로 닫기 처리. */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Duty|Input")
 	void HandleStashKeyPressed();
+	virtual void HandleStashKeyPressed_Implementation();
 
 protected:
 	virtual void NativeConstruct() override;
