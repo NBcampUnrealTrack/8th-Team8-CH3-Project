@@ -5,6 +5,7 @@
 #include "DoorBase.generated.h"
 
 class USoundBase;
+class UUserWidget;
 
 UCLASS()
 class OBLIVIO_API ADoorBase : public AActor
@@ -37,6 +38,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Level Transition")
 	float FadeDuration = 1.5f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Level Transition")
+	TSubclassOf<UUserWidget> LoadingScreenClass;
 
 	FTimerHandle TransitionTimerHandle;
 
