@@ -38,6 +38,9 @@ class OBLIVIO_API AOblivioCharacter : public ACharacter, public ICombatInterface
 
 public:
 	AOblivioCharacter();
+	
+	UFUNCTION(BlueprintImplementableEvent, Category = "UI")
+	void OnShowNoBatteryNotice();
 
 protected:
 	virtual void BeginPlay() override;
