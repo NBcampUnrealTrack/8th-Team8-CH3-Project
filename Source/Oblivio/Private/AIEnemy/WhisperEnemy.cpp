@@ -279,6 +279,42 @@ bool AWhisperEnemy::PassesWhisperCombatEngagementBaseline() const
 	return true;
 }
 
+bool AWhisperEnemy::DoesGeometryBlockLosBetween(FVector const& TraceStart, FVector const& TraceEnd,
+	float const ClearanceCm) const
+{
+	UWorld const* const World = GetWorld();
+	if (!World)
+	{
+		return false;
+	}
+
+	const float DistToGoal = FVector::Dist(TraceStart, TraceEnd);
+	if (DistToGoal <= KINDA_SMALL_NUMBER)
+	{
+		return false;
+	}
+
+	const float Margin = FMath::Max(10.f, ClearanceCm);
+
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(WhisperGeomLos), false, this);
+	if (IsValid(TargetActor))
+	{
+		Params.AddIgnoredActor(TargetActor);
+	}
+
+	auto const IsBlockedEarlyOnChannel = [&](ECollisionChannel const Channel) -> bool
+	{
+		FHitResult Hit;
+		if (!World->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, Channel, Params))
+		{
+			return false;
+		}
+		return Hit.Distance < DistToGoal - Margin;
+	};
+
+	return IsBlockedEarlyOnChannel(ECC_WorldStatic) || IsBlockedEarlyOnChannel(ECC_Visibility);
+}
+
 bool AWhisperEnemy::HasWhisperDotLineOfSightToTarget() const
 {
 	if (!bRequireLineOfSightForWhisperDot)
@@ -305,19 +341,7 @@ bool AWhisperEnemy::HasWhisperDotLineOfSightToTarget() const
 		}
 	}
 
-	FCollisionQueryParams Params(SCENE_QUERY_STAT(WhisperDotLos), false, this);
-	Params.AddIgnoredActor(TargetActor);
-
-	FHitResult Hit;
-	const bool bHit = World->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, ECC_Visibility, Params);
-	if (!bHit)
-	{
-		return true;
-	}
-
-	const float DistToGoal = FVector::Dist(TraceStart, TraceEnd);
-	const float Margin = FMath::Max(10.f, WhisperDotLosClearanceCm);
-	return Hit.Distance >= DistToGoal - Margin;
+	return !DoesGeometryBlockLosBetween(TraceStart, TraceEnd, WhisperDotLosClearanceCm);
 }
 
 bool AWhisperEnemy::IsPointInsideFlashlightDanger(const FVector& Point) const
@@ -356,7 +380,15 @@ bool AWhisperEnemy::IsPointInsideFlashlightDanger(const FVector& Point) const
 
 	const bool bDistOk = Dist <= MaxDist;
 	const bool bAngleOk = bOmni || DotVal >= CosCone - KINDA_SMALL_NUMBER;
-	const bool bResult = bDistOk && bAngleOk;
+	bool bResult = bDistOk && bAngleOk;
+
+	if (bResult && bRequireLineOfSightForFlashlightAvoid)
+	{
+		if (DoesGeometryBlockLosBetween(Cone.Origin, Point, WhisperDotLosClearanceCm))
+		{
+			bResult = false;
+		}
+	}
 
 #if !UE_BUILD_SHIPPING
 	if (bDebugDrawFlashlightDanger && GetWorld())
