@@ -16,7 +16,7 @@ AOblivioProjectile::AOblivioProjectile()
 	SphereComp = CreateDefaultSubobject<USphereComponent>(TEXT("SphereComp"));
 	RootComponent = SphereComp;
     SphereComp->SetCollisionProfileName("BlockAllDynamic");
-    SphereComp->SetSimulatePhysics(true);
+    SphereComp->SetSimulatePhysics(false);
 
 	MeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComp"));
 	MeshComp->SetupAttachment(RootComponent);
@@ -26,9 +26,9 @@ AOblivioProjectile::AOblivioProjectile()
 	ProjectileComp->SetUpdatedComponent(RootComponent);
     //튕김 현상 적용
     ProjectileComp->bShouldBounce = true;
-    ProjectileComp->Bounciness = 0.6f;
-    ProjectileComp->Friction = 0.2f;
-    ProjectileComp->BounceVelocityStopSimulatingThreshold = 2000.f;
+    ProjectileComp->Bounciness = 0.4f;
+    ProjectileComp->Friction = 1.f;
+    ProjectileComp->BounceVelocityStopSimulatingThreshold = 250.f;
 
 	TriggerSoundComp = CreateDefaultSubobject<UAudioComponent>(TEXT("TriggerSoundComp"));
 	TriggerSoundComp->SetupAttachment(RootComponent);
@@ -41,7 +41,7 @@ AOblivioProjectile::AOblivioProjectile()
     SoundPropagationComp = CreateDefaultSubobject<USoundPropagationComponent>(TEXT("SoundPropagationComp"));
 
     PrimaryActorTick.bCanEverTick = true;
-    SpeedPerDistance = 0.001f;
+    SpeedPerDistance = 2.f;
 }
 
 // Called when the game starts or when spawned
@@ -93,7 +93,7 @@ void AOblivioProjectile::PlayReflectionSound(UPrimitiveComponent* HitComp, AActo
         SoundPropagationComp->PropagateSound();
     }
     if (IsValid(ReflectionSoundComp) && IsValid(ReflectionSoundComp->Sound)) {
-        UE_LOG(LogTemp, Warning, TEXT("PlaingReflectionSound!"));
+        UE_LOG(LogTemp, Warning, TEXT("PlayingReflectionSound!"));
         ReflectionSoundComp->Play();
     }
 

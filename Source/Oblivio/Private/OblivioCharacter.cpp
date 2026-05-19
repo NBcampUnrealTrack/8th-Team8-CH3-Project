@@ -1411,14 +1411,28 @@ void AOblivioCharacter::ReloadBattery()
 //섬광탄 시작 함수
 void AOblivioCharacter::UseFlashbang()
 {
-	UE_LOG(LogTemp, Warning, TEXT("UseFlashbang()!!"));
-	bool IsWeaponReady = FlashbangWeapon->UseWeapon();
-	if (IsWeaponReady) PendingWeaponClass = FlashbangWeapon;
+	//다른 투척 호출중이면 실행 거부
+	if (IsValid(PendingWeaponClass)) return;
+
+	//배터리 있으면 실행
+	if (InventoryComponent && InventoryComponent->HasItem("battery"))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UseFlashbang()!!"));
+		bool IsWeaponReady = FlashbangWeapon->UseWeapon();
+		if (IsWeaponReady) PendingWeaponClass = FlashbangWeapon;
+	}
+	else {
+		UE_LOG(LogTemp, Warning, TEXT("Cannot use flashbang! no battery!"));
+	}
+	
 }
 
 //조명탄 시작 함수
 void AOblivioCharacter::UseFlare()
 {
+	//다른 투척 호출중이면 실행 거부
+	if (IsValid(PendingWeaponClass)) return;
+
 	UE_LOG(LogTemp, Warning, TEXT("UseFlare()!!"));
 	bool IsWeaponReady = FlareWeapon->UseWeapon();
 	if (IsWeaponReady) PendingWeaponClass = FlareWeapon;
@@ -1431,8 +1445,25 @@ void AOblivioCharacter::ThrowWeapon() {
 		UE_LOG(LogTemp, Warning, TEXT("No Weapon!!"));
 		return;
 	}
-	//정상이면 실제 공격 호출
-	PendingWeaponClass->ExecuteWeaponAttack(GetAimingLocation());
+
+	//섬광탄
+	if (PendingWeaponClass == FlashbangWeapon) {
+		if (InventoryComponent && InventoryComponent->ConsumeItem(EItemType::Battery, 1))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Throwing flashbang!"));
+			PendingWeaponClass->ExecuteWeaponAttack(GetAimingLocation());
+		}
+		else {
+			UE_LOG(LogTemp, Warning, TEXT("Cannot spawn flashbang! no battery!"));
+		}
+	}
+	//유리병
+	else if (PendingWeaponClass == FlareWeapon) {
+		UE_LOG(LogTemp, Warning, TEXT("Throwing Flare"));
+		PendingWeaponClass->ExecuteWeaponAttack(GetAimingLocation());
+	}
+
+
 	PendingWeaponClass = nullptr;
 }
 
