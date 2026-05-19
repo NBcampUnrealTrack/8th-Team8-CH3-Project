@@ -388,7 +388,6 @@ public:
 	void AddNearbyItem(class AOblivioItemBase* Item);
 	void RemoveNearbyItem(class AOblivioItemBase* Item);
 
-	//void SetNearbyItem(class AOblivioItemBase* Item);
 	// 컨트롤러 바인딩 함수들
 	void Move(const FVector2D& Value);
 	void StartRunning();

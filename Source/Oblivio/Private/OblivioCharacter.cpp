@@ -1011,7 +1011,6 @@ void AOblivioCharacter::Interact()
 				GM->CollectedKeys++;
 			}
 			//인벤토리 추가 UI
-			// (주의: PickedItem->GetItemName(), GetItemIcon() 함수는 ItemBase에 선언된 실제 함수/변수명에 맞춰 수정해 주세요)
 			OnItemAcquiredEvent.Broadcast(PickedItem->ItemName, PickedItem->ItemIcon);
 			RemoveNearbyItem(PickedItem);
 			PickedItem->Destroy();
@@ -1129,13 +1128,6 @@ void AOblivioCharacter::RemoveNearbyItem(AOblivioItemBase* Item)
 		OnNearbyItemChanged.Broadcast(nullptr);
 	}
 }
-//
-//void AOblivioCharacter::SetNearbyItem(AOblivioItemBase* Item)
-//{
-//	CurrentNearbyItem = Item;
-//	// UI 바인딩 필요 press e
-//	OnNearbyItemChanged.Broadcast(CurrentNearbyItem);
-//}
 
 void AOblivioCharacter::TogglePause()
 {
