@@ -22,6 +22,7 @@
 #include "Components/AudioComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Materials/MaterialInterface.h"
+#include "NiagaraComponent.h"
 #include "Sound/SoundBase.h"
 #include "UObject/ConstructorHelpers.h"
 
@@ -71,6 +72,13 @@ AEnemyBase::AEnemyBase()
 		{
 			MeleeAttackRangeIndicatorMesh->SetStaticMesh(CylinderAsset.Object);
 		}
+	}
+
+	HitBurnNiagaraComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("HitBurnNiagara"));
+	if (HitBurnNiagaraComponent)
+	{
+		HitBurnNiagaraComponent->SetupAttachment(GetMesh());
+		HitBurnNiagaraComponent->bAutoActivate = false;
 	}
 }
 
@@ -122,6 +130,25 @@ void AEnemyBase::BeginPlay()
 	if (EnemyState == EEnemyAIState::Idle && bEnableWandering && bEnableIdleWander)
 	{
 		IdleWanderRetargetCooldown = FMath::FRandRange(0.5f, 2.0f);
+	}
+
+	if (HitBurnNiagaraComponent)
+	{
+		if (USkeletalMeshComponent* const Skel = GetMesh())
+		{
+			if (!HitBurnNiagaraAttachSocketName.IsNone()
+				&& Skel->DoesSocketExist(HitBurnNiagaraAttachSocketName))
+			{
+				HitBurnNiagaraComponent->AttachToComponent(
+					Skel,
+					FAttachmentTransformRules::SnapToTargetIncludingScale,
+					HitBurnNiagaraAttachSocketName);
+			}
+		}
+		if (HitBurnNiagaraSystem)
+		{
+			HitBurnNiagaraComponent->SetAsset(HitBurnNiagaraSystem);
+		}
 	}
 
 	UpdateIdleChaseLocomotionAmbientForFsmState(GetEnemyState());
@@ -493,8 +520,33 @@ APawn* AEnemyBase::ResolveLikelyPlayerPawnDamageCause(AController const* EventIn
 	return nullptr;
 }
 
-void AEnemyBase::NotifyEnemyDamageApplied(float /*AppliedDamage*/)
+void AEnemyBase::NotifyEnemyDamageApplied(float AppliedDamage)
 {
+	if (AppliedDamage > KINDA_SMALL_NUMBER)
+	{
+		PlayHitBurnNiagaraEffect();
+	}
+}
+
+void AEnemyBase::PlayHitBurnNiagaraEffect()
+{
+	if (!bPlayHitBurnNiagaraOnDamage || !IsAlive() || !HitBurnNiagaraComponent)
+	{
+		return;
+	}
+
+	UNiagaraSystem* Fx = HitBurnNiagaraSystem;
+	if (!Fx)
+	{
+		Fx = HitBurnNiagaraComponent->GetAsset();
+	}
+	if (!Fx)
+	{
+		return;
+	}
+
+	HitBurnNiagaraComponent->SetAsset(Fx);
+	HitBurnNiagaraComponent->Activate(true);
 }
 
 // 손전등 피격 — LightStunBuildupSeconds 누적 후 경직 발동.
@@ -1589,6 +1641,11 @@ void AEnemyBase::Die()
 	if (MeleeAttackRangeIndicatorMesh)
 	{
 		MeleeAttackRangeIndicatorMesh->SetVisibility(false);
+	}
+
+	if (HitBurnNiagaraComponent)
+	{
+		HitBurnNiagaraComponent->DeactivateImmediate();
 	}
 
 	GetWorldTimerManager().ClearTimer(CCSlowTimerHandle);

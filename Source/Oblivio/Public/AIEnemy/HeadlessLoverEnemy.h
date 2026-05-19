@@ -4,8 +4,7 @@
 // AHeadlessLoverEnemy — "머리없는 연인"
 //
 // 특성:
-//   - 빛 면역: 머리가 없어 OnLightHit는 1초 경직(CC)만 적용, HP 차감/사망 없음.
-//   - 불사: Die()는 no-op — CurrentHealth를 1로 클램프해 사망 판정 차단.
+//   - 빛 면역(사망): ULightDamageType 으로 Die() 가 호출되면 체력 1 유지. 그 외 데미지는 사망 가능.
 //   - 암전 능력: 3분(BlackoutCooldown)마다 플레이어 후레시를 5초(BlackoutDuration) 강제 OFF.
 //     플레이어 거리·범위 무관하게 발동한다.
 //   - 공포 공격: Anim Notify 의 Commit 타이밍에 플레이어 이동 방향을 MovementInversionDuration초 반전.
@@ -26,10 +25,10 @@ public:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
-	/** 빛 피격 시 HP 변화 없이 1초 경직만 적용. */
+	/** OnLightHit 경직(CC) — 베이스 위임. */
 	virtual void OnLightHit(float Intensity, float Duration) override;
 
-	/** 불사 — HP가 0 이하가 돼도 사망하지 않는다. */
+	/** ULightDamageType 으로는 사망하지 않음(체력 1 유지). 그 외 데미지는 Super::Die(). */
 	virtual void Die() override;
 
 	/** 헤드리스 공포 타격: 노티 타이밍에 이동 반전 + 브로드캐스트. */

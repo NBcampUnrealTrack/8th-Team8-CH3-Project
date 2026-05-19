@@ -34,6 +34,8 @@ class UAudioComponent;
 class USoundBase;
 class UStaticMeshComponent;
 class UMaterialInterface;
+class UNiagaraComponent;
+class UNiagaraSystem;
 
 /** 적 행동 상태(FSM). Stunned는 bCCStunned 플래그를 ABP에서 읽기 위한 래핑 상태. */
 UENUM(BlueprintType)
@@ -312,6 +314,22 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy|Combat|Visual")
 	TObjectPtr<UStaticMeshComponent> MeleeAttackRangeIndicatorMesh;
+
+	/** 피격 연출용 Niagara(불타는 이펙트 등). 스켈레탈 메쉬에 부착 — BP/클래스 디폴트에서 System 할당. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy|Combat|Visual|Hit FX")
+	TObjectPtr<UNiagaraComponent> HitBurnNiagaraComponent;
+
+	/** 비어 있으면 HitBurnNiagaraComponent 디테일에 지정한 Asset 사용. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Combat|Visual|Hit FX")
+	TObjectPtr<UNiagaraSystem> HitBurnNiagaraSystem;
+
+	/** false면 피격 시 Niagara 재생 안 함. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Combat|Visual|Hit FX")
+	bool bPlayHitBurnNiagaraOnDamage = true;
+
+	/** 지정 시 해당 소켓에 부착. None이면 메쉬 루트. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Combat|Visual|Hit FX")
+	FName HitBurnNiagaraAttachSocketName = NAME_None;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy|Combat", meta = (ClampMin = "0.1"))
 	float AttackCooldown = 1.0f;
@@ -593,6 +611,10 @@ protected:
 
 	/** TakeDamage로 CurrentHealth를 차감한 직후(사망 처리 전). 보스 페이즈 갱신 등에 사용. */
 	virtual void NotifyEnemyDamageApplied(float AppliedDamage);
+
+	/** NotifyEnemyDamageApplied 에서 호출 — HitBurn Niagara 재생(파생/BP 오버라이드 가능). */
+	UFUNCTION(BlueprintCallable, Category = "Enemy|Combat|Visual|Hit FX")
+	virtual void PlayHitBurnNiagaraEffect();
 	/** 근접 판단. 기본은 3D AttackRange 안. Whisper 등은 수평/도넛 기준 오버라이드. */
 	virtual bool IsTargetInAttackRange() const;
 	/** 어그로가 있을 때 FSM 상태(기본: 근접이면 Attack 아니면 Chase). 탱커 심작 중엔 Heartbeat. */
