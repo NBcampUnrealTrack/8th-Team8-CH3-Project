@@ -224,7 +224,7 @@ void ULightAttackComponent::CreateLightAttack(FVector SourceLocation, FVector Li
 			float AttenuationRatio = Denom <= KINDA_SMALL_NUMBER
 										 ? 0.f
 										 : 1.f - FMath::Clamp((Distance - MaxDamageDistance) / Denom, 0.f, 1.f);
-			FinalDamage = Damage * AttenuationRatio * DamageAttenuationRate;
+			FinalDamage = Damage * AttenuationRatio;
 		}
 
         //적 캡슐 반경 접점 계산

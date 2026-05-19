@@ -32,5 +32,4 @@ protected:
 	FTimerHandle BangTimerHandle;
 	FTimerHandle DestroyTimerHandle;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-	
 };
