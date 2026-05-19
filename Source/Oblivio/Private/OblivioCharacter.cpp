@@ -775,7 +775,13 @@ void AOblivioCharacter::UpdateStatus(float DeltaTime)
 		float FocusPenalty = FMath::Lerp(1.0f, 1.5f, CurrentFocusAlpha);
 		if (!bCheatInfiniteBattery)
 		{
+			float OldBattery = Battery;
 			Battery = FMath::Max(0.0f, Battery - (DeltaTime * BatteryDepletionRate * FocusPenalty));
+			if (OldBattery != Battery)
+			{
+				OnBatteryChanged.Broadcast(Battery, 100.0f);
+			}
+		
 		}
 
 		if (Battery <= 0.0f)
@@ -1382,7 +1388,7 @@ void AOblivioCharacter::ReloadBattery()
 	if (InventoryComponent && InventoryComponent->ConsumeItem(EItemType::Battery, 1))
 	{
 		Battery = 100.0f;
-
+		OnBatteryChanged.Broadcast(Battery, 100.0f);
 		if (!bIsFlashlightOn)
 		{
 			bIsFlashlightOn = true;

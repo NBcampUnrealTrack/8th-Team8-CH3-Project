@@ -16,6 +16,7 @@
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FPlayerDamagedSignature, float, DamageAmount, float, CurrentHealth, float, MaxHealth);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnNearbyItemChanged, class AOblivioItemBase*, NearbyItem);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPlayerAnimationEvent);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnBatteryChanged, float, CurrentBattery, float, MaxBattery);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPlayerDied);
 
 //UI용 델리게이트
@@ -377,6 +378,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Oblivio|Events")
 	FOnItemAcquired OnItemAcquiredEvent;
+
+	UPROPERTY(BlueprintAssignable, Category = "Events")
+	FOnBatteryChanged OnBatteryChanged;
 
 	void SetNearbyItem(class AOblivioItemBase* Item);
 	// 컨트롤러 바인딩 함수들
