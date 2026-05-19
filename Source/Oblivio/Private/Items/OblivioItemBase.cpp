@@ -42,21 +42,13 @@ void AOblivioItemBase::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent,
         AOblivioCharacter* Player = Cast<AOblivioCharacter>(OtherActor);
         if (Player)
         {
-            Player->SetNearbyItem(this);
-            //ItemMesh->SetRenderCustomDepth(true);
-            //ItemMesh->SetCustomDepthStencilValue(255);
+            Player->AddNearbyItem(this);
 
-            // if (Player->InventoryComponent->AddItem(this)) 
-            // {
-            //     Destroy();
-            // }
 
             if (LootNiagaraComponent)
             {
                 LootNiagaraComponent->Activate();
             }
-            // 현재는 로그로 확인
-            UE_LOG(LogTemp, Warning, TEXT("Overlap with Player! Item: %s"), *ItemName.ToString());
         }
     }
 }
@@ -65,13 +57,12 @@ void AOblivioItemBase::OnSphereEndOverlap(UPrimitiveComponent* OverlappedCompone
     if (AOblivioCharacter* Player = Cast<AOblivioCharacter>(OtherActor))
     {
         // 캐릭터에게서 아이템 정보 제거 (UI 끄기 신호)
-        Player->SetNearbyItem(nullptr);
+        Player->RemoveNearbyItem(this);
         //ItemMesh->SetRenderCustomDepth(false);
         if (LootNiagaraComponent)
         {
             LootNiagaraComponent->Deactivate();
         }
-        UE_LOG(LogTemp, Warning, TEXT("Overlap Ended with Player! Item: %s"), *ItemName.ToString());
     }
 }
 

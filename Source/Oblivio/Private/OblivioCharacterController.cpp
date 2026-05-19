@@ -3,6 +3,7 @@
 #include "OblivioGameUserSettings.h"
 #include "Crafting/OblivioCrafting.h"
 #include "EnhancedInputComponent.h"
+#include "Items/OblivioInventoryComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Engine/LocalPlayer.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -27,6 +28,8 @@ AOblivioCharacterController::AOblivioCharacterController()
 	, PlaceObstacleAction(nullptr)
 	, InteractAction(nullptr)
 	, PauseAction(nullptr)
+	, QuickEatFoodAction(nullptr)
+	, QuickDrinkWaterAction(nullptr)
 	, CraftingMappingContext(nullptr)
 	, SelectObstacleAction(nullptr)
 
@@ -75,6 +78,8 @@ void AOblivioCharacterController::SetupInputComponent()
 		EIC->BindAction(CraftingAction, ETriggerEvent::Started, this, &AOblivioCharacterController::OnCraftingToggle);
 		EIC->BindAction(RotateAction, ETriggerEvent::Started, this, &AOblivioCharacterController::OnRotatePreview);
 		EIC->BindAction(PlaceObstacleAction, ETriggerEvent::Started, this, &AOblivioCharacterController::OnPlaceObstacle);
+		EIC->BindAction(QuickEatFoodAction, ETriggerEvent::Started, this, &AOblivioCharacterController::OnQuickEatFood);
+		EIC->BindAction(QuickDrinkWaterAction, ETriggerEvent::Started, this, &AOblivioCharacterController::OnQuickDrinkWater);
 		//EIC->BindAction(SelectObstacleAction, ETriggerEvent::Started, this, &AOblivioCharacterController::OnSelectObstacle);
 		EIC->BindAction(SelectObstacleAction, ETriggerEvent::Triggered, this, &AOblivioCharacterController::OnSelectObstacle);
 		EIC->BindAction(InteractAction, ETriggerEvent::Started, this, &AOblivioCharacterController::OnInteract);
@@ -275,36 +280,51 @@ void AOblivioCharacterController::OnRotatePreview(const FInputActionValue& Value
 		}
 	}
 }
+void AOblivioCharacterController::OnQuickEatFood(const FInputActionValue& Value)
+{
+	if (AOblivioCharacter* ObjChar = Cast<AOblivioCharacter>(GetPawn()))
+	{
+		if (auto* InvComp = ObjChar->FindComponentByClass<UOblivioInventoryComponent>())
+		{
+			InvComp->ConsumeItemByQuickSlot(EItemType::Food);
+		}
+	}
+}
 
+void AOblivioCharacterController::OnQuickDrinkWater(const FInputActionValue& Value)
+{
+	if (AOblivioCharacter* ObjChar = Cast<AOblivioCharacter>(GetPawn()))
+	{
+		if (auto* InvComp = ObjChar->FindComponentByClass<UOblivioInventoryComponent>())
+		{
+			InvComp->ConsumeItemByQuickSlot(EItemType::Water);
+		}
+	}
+}
 void AOblivioCharacterController::OnSelectObstacle(const FInputActionValue& Value)
 {
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::White, TEXT("Number Key Pressed"));
-	
-	// 입력값(1~7)을 받아 크래프팅 컴포넌트로 전달
+	// GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::White, TEXT("Number Key Pressed"));
+
 	float Magnitude = Value.Get<float>();
 	int32 SelectedIndex = FMath::RoundToInt(Magnitude);
 
-	if (CurrentSelectedIndex == SelectedIndex) return;
-	CurrentSelectedIndex = SelectedIndex;
-	
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::White,
-		FString::Printf(TEXT("Raw: %f | Int: %d"), Magnitude, SelectedIndex));
 	if (SelectedIndex <= 0)
 	{
-		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Orange, TEXT("Warning: Input is 0. Check IMC Scalar settings!"));
 		SelectedIndex = 1;
 	}
-
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White,
-		FString::Printf(TEXT("Input Value: %f -> Index: %d"), Magnitude, SelectedIndex));
-
 	if (AOblivioCharacter* ObjChar = Cast<AOblivioCharacter>(GetPawn()))
 	{
-		if (auto* CraftingComp = ObjChar->FindComponentByClass<UOblivioCrafting>())
+		// 오직 크래프팅 창이 열려 있을 때만 작동하도록 제한
+		if (ObjChar->bIsCraftingOpen && ObjChar->CraftingComponent)
 		{
-			CraftingComp->SelectObstacle(SelectedIndex);
+			if (CurrentSelectedIndex == SelectedIndex) return;
+			CurrentSelectedIndex = SelectedIndex;
 
-			CurrentSelectedIndex = 0;
+			if (auto* CraftingComp = ObjChar->FindComponentByClass<UOblivioCrafting>())
+			{
+				CraftingComp->SelectObstacle(SelectedIndex);
+				CurrentSelectedIndex = 0;
+			}
 		}
 	}
 }

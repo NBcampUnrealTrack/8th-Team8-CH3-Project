@@ -1,4 +1,4 @@
-#include "Items/OblivioInventoryComponent.h"
+﻿#include "Items/OblivioInventoryComponent.h"
 #include "Items/OblivioItemBase.h"
 #include "OblivioCharacter.h"
 #include "OblivioGameInstance.h"
@@ -256,4 +256,60 @@ void UOblivioInventoryComponent::SyncInventoryToGameInstance()
 			GI->CurrentThirst = Player->Thirst;
 		}
 	}
+}
+bool UOblivioInventoryComponent::ConsumeItemByQuickSlot(EItemType Type)
+{
+	AOblivioCharacter* Player = Cast<AOblivioCharacter>(GetOwner());
+	if (!Player || Player->bIsDead) return false;
+
+	// 인벤토리 슬롯을 순회하며 매칭되는 아이템 타입 찾기
+	for (int32 i = 0; i < InventorySlots.Num(); ++i)
+	{
+		FInventorySlot& Slot = InventorySlots[i];
+
+		if (Slot.Quantity > 0 && Slot.ItemType == Type)
+		{
+			// 기본 회전/회복 수치 설정
+			float RestoreValue = 30.0f;
+			if (Slot.ItemClass)
+			{
+				if (const AOblivioItemBase* CDO = Slot.ItemClass.GetDefaultObject())
+				{
+					RestoreValue = CDO->RestoreValue;
+				}
+			}
+
+			// 타입별 캐릭터 상태 수치 가산
+			if (Type == EItemType::Food)
+			{
+				Player->Hunger = FMath::Min(100.0f, Player->Hunger + RestoreValue);
+				if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Green, FString::Printf(TEXT("Quick Use: %s (Hunger +%.1f)"), *Slot.ItemName.ToString(), RestoreValue));
+			}
+			else if (Type == EItemType::Water)
+			{
+				Player->Thirst = FMath::Min(100.0f, Player->Thirst + RestoreValue);
+				if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Cyan, FString::Printf(TEXT("Quick Use: %s (Thirst +%.1f)"), *Slot.ItemName.ToString(), RestoreValue));
+			}
+
+			// 수량 차감 및 빈 슬롯 처리
+			Slot.Quantity--;
+			if (Slot.Quantity <= 0)
+			{
+				Slot = FInventorySlot(); // 슬롯 초기화
+			}
+
+			// UI 갱신 및 데이터 인스턴스 동기화 자동 저장
+			OnInventoryUpdated.Broadcast();
+			SyncInventoryToGameInstance();
+			return true;
+		}
+	}
+
+	// 아이템이 없을 때 피드백 메시지
+	if (GEngine)
+	{
+		FString TypeStr = (Type == EItemType::Food) ? TEXT("Food") : TEXT("Water");
+		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, FString::Printf(TEXT("No %s in Inventory!"), *TypeStr));
+	}
+	return false;
 }
