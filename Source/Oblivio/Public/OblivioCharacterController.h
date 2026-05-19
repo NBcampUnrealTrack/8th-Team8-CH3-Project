@@ -73,6 +73,12 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Input")
 	class UInputAction* PauseAction;
 
+	UPROPERTY(EditAnywhere, Category = "Input")
+	class UInputAction* QuickEatFoodAction;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	class UInputAction* QuickDrinkWaterAction;
+
 	// --- 입력 처리 함수 ---
 	void OnMove(const FInputActionValue& Value);
 	void OnLook(const FInputActionValue& Value);
@@ -93,7 +99,8 @@ protected:
 	void OnPlaceObstacle(const FInputActionValue& Value);
 	void OnInteract(const FInputActionValue& Value);
 	void OnPauseToggle(const FInputActionValue& Value);
-
+	void OnQuickEatFood(const FInputActionValue& Value);
+	void OnQuickDrinkWater(const FInputActionValue& Value);
 	void UpdateMouseRotation(float DeltaTime);
 
 	//크래프팅 전용
