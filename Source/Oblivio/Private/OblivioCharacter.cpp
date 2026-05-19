@@ -923,14 +923,17 @@ void AOblivioCharacter::Interact()
 	// 상호작용할 대상(TargetActor) 하나만 확실하게 정하기
 	AActor* TargetActor = nullptr;
 
-	// 우선순위 1: 발밑에 가까이 있는 아이템 (Overlap)
-	if (CurrentNearbyItem)
+	if (NearbyItemsList.Num() > 0)
 	{
-		TargetActor = CurrentNearbyItem;
+		auto It = NearbyItemsList.CreateIterator();
+		if (It && IsValid(*It))
+		{
+			TargetActor = *It;
+		}
 	}
-	else
+
+	if (!TargetActor)
 	{
-		// 우선순위 2: 크로스헤어로 쳐다보는 대상 (LineTrace)
 		FHitResult HitResult;
 		FVector Start = GetActorLocation();
 		FVector End = Start + (GetActorForwardVector() * InteractionDistance);
@@ -938,27 +941,14 @@ void AOblivioCharacter::Interact()
 		Params.AddIgnoredActor(this);
 
 		FCollisionShape SphereShape = FCollisionShape::MakeSphere(40.0f);
-
-		bool bHit = GetWorld()->SweepSingleByChannel(
-			HitResult,
-			Start,
-			End,
-			FQuat::Identity,
-			ECC_Visibility,
-			SphereShape,
-			Params
-		);
+		bool bHit = GetWorld()->SweepSingleByChannel(HitResult, Start, End, FQuat::Identity, ECC_Visibility, SphereShape, Params);
 
 		if (bHit)
 		{
 			TargetActor = HitResult.GetActor();
-			UE_LOG(LogTemp, Warning, TEXT("1. Hit Something: %s"), *TargetActor->GetName());
 		}
 	}
-
-	// 상호작용할 대상이 아무것도 없으면 그대로 종료
 	if (!TargetActor) return;
-
 
 	// 문(Door) 상호작용
 	if (ADoorBase* HitDoor = Cast<ADoorBase>(TargetActor))
@@ -986,11 +976,11 @@ void AOblivioCharacter::Interact()
 						GI->bMementoEyeCollected = true;
 					}
 				}
+
+				RemoveNearbyItem(PickedItem);
 			}
 
 			GM->AddMemento();
-
-			if (TargetActor == CurrentNearbyItem) SetNearbyItem(nullptr);
 			TargetActor->Destroy();
 			return;
 		}
@@ -1002,7 +992,7 @@ void AOblivioCharacter::Interact()
 	}
 
 
-	// 4. 일반 아이템 (인벤토리 추가)
+	// 일반 아이템 (인벤토리 추가)
 	if (AOblivioItemBase* PickedItem = Cast<AOblivioItemBase>(TargetActor))
 	{
 		PickedItem->OnInteract(this);
@@ -1019,14 +1009,11 @@ void AOblivioCharacter::Interact()
 			if (PickedItem->ActorHasTag("Key") && GM)
 			{
 				GM->CollectedKeys++;
-				UE_LOG(LogTemp, Warning, TEXT("Key Added to Inventory! Current: %d / %d"), GM->CollectedKeys, GM->RequiredKeys);
 			}
 			//인벤토리 추가 UI
-			// (주의: PickedItem->GetItemName(), GetItemIcon() 함수는 ItemBase에 선언된 실제 함수/변수명에 맞춰 수정해 주세요)
 			OnItemAcquiredEvent.Broadcast(PickedItem->ItemName, PickedItem->ItemIcon);
-			if (TargetActor == CurrentNearbyItem) SetNearbyItem(nullptr);
+			RemoveNearbyItem(PickedItem);
 			PickedItem->Destroy();
-			UE_LOG(LogTemp, Warning, TEXT("3. Item Added to Inventory and Destroyed!"));
 			return;
 		}
 	}
@@ -1116,12 +1103,30 @@ void AOblivioCharacter::ApplyDutyReadMomentEffects(const AOblivioItemBase* ItemS
 			ItemSrc->DutyReadForcedLookInterpSpeed);
 	}
 }
-
-void AOblivioCharacter::SetNearbyItem(AOblivioItemBase* Item)
+void AOblivioCharacter::AddNearbyItem(AOblivioItemBase* Item)
 {
-	CurrentNearbyItem = Item;
-	// UI 바인딩 필요 press e
-	OnNearbyItemChanged.Broadcast(CurrentNearbyItem);
+	if (IsValid(Item))
+	{
+		NearbyItemsList.Add(Item);
+
+		OnNearbyItemChanged.Broadcast(Item);
+	}
+}
+
+void AOblivioCharacter::RemoveNearbyItem(AOblivioItemBase* Item)
+{
+	NearbyItemsList.Remove(Item);
+
+	if (NearbyItemsList.Num() > 0)
+	{
+		auto It = NearbyItemsList.CreateConstIterator();
+		OnNearbyItemChanged.Broadcast(*It);
+	}
+	else
+	{
+		// 발밑에 더이상 아이템이 없으면 UI 정리
+		OnNearbyItemChanged.Broadcast(nullptr);
+	}
 }
 
 void AOblivioCharacter::TogglePause()
