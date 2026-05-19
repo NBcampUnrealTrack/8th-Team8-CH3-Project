@@ -8,7 +8,7 @@
 // =============================================================================
 // AHeadlessLoverEnemy 구현
 // BeginPlay : BlackoutCooldown 주기 타이머 시작
-// Die       : no-op (불사) — CurrentHealth를 1로 클램프해 사망 차단
+// Die       : ULightDamageType 만 사망 차단(체력 1). 그 외 → Super::Die()
 // OnLightHit: HP/사망 없이 1초 경직만
 // PerformAttack 베이스는 빈 구현 → 근공격은 Anim Notify 에서 CommitAttackFromAnimNotify.
 // TriggerBlackoutPulse: 타이머 콜백 — 범위 무관하게 플레이어 후레시 강제 OFF
@@ -53,19 +53,20 @@ void AHeadlessLoverEnemy::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 }
 
-// 빛 피격: HP 피해는 Die() 오버라이드로 이미 차단되어 있으므로
-// 경직 누적/발동 로직은 EnemyBase::OnLightHit에 위임한다.
-// (LightStunBuildupSeconds, LightStunDuration 모두 베이스에서 처리)
+// 빛 피해로 Die() 가 호출된 경우만 사망 차단. 경직은 EnemyBase::OnLightHit.
 void AHeadlessLoverEnemy::OnLightHit(float Intensity, float Duration)
 {
 	Super::OnLightHit(Intensity, Duration);
 }
 
-// 불사 — HP가 0 이하가 돼도 사망하지 않는다.
-// TakeDamage는 기존 경로로 흐르되(CombatComp CC 판정 등), Die 호출 시점에서 차단한다.
 void AHeadlessLoverEnemy::Die()
 {
-	CurrentHealth = FMath::Max(CurrentHealth, 1.0f);
+	if (WasLastDamageFromLight())
+	{
+		CurrentHealth = FMath::Max(CurrentHealth, 1.0f);
+		return;
+	}
+	Super::Die();
 }
 
 // 근공격 공포 효과는 Anim Notify 의 CommitAttack 경로와 동기화.
