@@ -51,5 +51,5 @@ public:
     virtual void OnPlaced() override;
 
     /** 주변 몬스터에게 디버프 적용 */
-    void ApplyFireEffect();
+    void ApplyFireEffect(float DeltaTime);
 };
