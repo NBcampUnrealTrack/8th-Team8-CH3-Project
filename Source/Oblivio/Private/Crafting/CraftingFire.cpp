@@ -61,7 +61,7 @@ void ACraftingFire::Tick(float DeltaTime)
     if (bIsActive)
     {
         RemainingTime -= DeltaTime;
-        ApplyFireEffect();
+        ApplyFireEffect(DeltaTime);
 
         float FlickerIntensity = BaseLightIntensity + FMath::RandRange(-500.0f, 500.0f);
         FireLight->SetIntensity(FlickerIntensity);
@@ -76,7 +76,7 @@ void ACraftingFire::Tick(float DeltaTime)
     }
 }
 
-void ACraftingFire::ApplyFireEffect()
+void ACraftingFire::ApplyFireEffect(float DeltaTime)
 {
     TArray<AActor*> OverlappingActors;
     EffectRange->GetOverlappingActors(OverlappingActors);
@@ -88,14 +88,14 @@ void ACraftingFire::ApplyFireEffect()
         {
             if (Player->CurrentHealth < Player->MaxHealth)
             {
-                Player->CurrentHealth = Player->MaxHealth;
+                Player->CurrentHealth = FMath::Clamp(Player->CurrentHealth + (10.0f * DeltaTime), 0.0f, Player->MaxHealth);
                 Player->OnPlayerDamaged.Broadcast(0.0f, Player->CurrentHealth, Player->MaxHealth);
             }
 
             // 2. 배터리가 깎여있을 때만 회복
             if (Player->Battery < 100.0f)
             {
-                Player->Battery = 100.0f;
+                Player->Battery = FMath::Clamp(Player->Battery + (10.0f * DeltaTime), 0.0f, 100.0f);
                 Player->OnBatteryChanged.Broadcast(Player->Battery, 100.0f);
             }
 
@@ -107,7 +107,7 @@ void ACraftingFire::ApplyFireEffect()
         }
         else if (AEnemyBase* Enemy = Cast<AEnemyBase>(Actor))
         {
-            Enemy->ApplyCCStun(2.0f); // 스턴 적용
+            Enemy->ApplyCCStun(5.0f); // 스턴 적용
         }
 
     }

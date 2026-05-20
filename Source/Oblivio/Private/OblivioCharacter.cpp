@@ -1573,8 +1573,6 @@ bool AOblivioCharacter::IsInWater() const
 
 	if (bHit && HitResult.GetActor())
 	{
-		// 디버그 메시지로 확인
-		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Yellow, FString::Printf(TEXT("Hit Actor: %s"), *HitResult.GetActor()->GetName()));
 
 		return HitResult.GetActor()->ActorHasTag(FName("Water"));
 	}
