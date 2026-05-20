@@ -5,6 +5,8 @@
 #include "OblivioCharacter.h"
 #include "AIEnemy/EnemyBase.h"
 #include "OblivioComponents/CombatInterface.h"
+#include "Kismet/GameplayStatics.h"
+#include "Combat/LightDamageType.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "NiagaraSystem.h"
@@ -26,7 +28,9 @@ ACraftingFire::ACraftingFire()
 
     EffectRange = CreateDefaultSubobject<USphereComponent>(TEXT("EffectRange"));
     EffectRange->SetupAttachment(RootComponent);
-    EffectRange->SetSphereRadius(400.0f);
+    EffectRange->SetSphereRadius(4000.0f);
+
+    FireLight->SetAttenuationRadius(400.0f);
 
     // 기본 비용 설정
     WoodCost = 2;
@@ -107,7 +111,9 @@ void ACraftingFire::ApplyFireEffect(float DeltaTime)
         }
         else if (AEnemyBase* Enemy = Cast<AEnemyBase>(Actor))
         {
-            Enemy->ApplyCCStun(5.0f); // 스턴 적용
+            float FireDamage = 10.0f * DeltaTime;
+            UGameplayStatics::ApplyDamage(Enemy, FireDamage, nullptr, this, ULightDamageType::StaticClass());
+            Enemy->ApplyCCStun(3.0f); // 스턴 적용
         }
 
     }
