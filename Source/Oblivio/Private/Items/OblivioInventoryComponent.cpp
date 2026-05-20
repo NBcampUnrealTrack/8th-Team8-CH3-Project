@@ -97,7 +97,7 @@ void UOblivioInventoryComponent::UseItem(int32 SlotIndex)
 	if (Player)
 	{
 		float HungerRestore = 30.0f;
-		float ThirstRestore = 20.0f;
+		float ThirstRestore = 50.0f;
 		if (Slot.ItemClass)
 		{
 			const AOblivioItemBase* CDO = Slot.ItemClass.GetDefaultObject();
@@ -270,7 +270,7 @@ bool UOblivioInventoryComponent::ConsumeItemByQuickSlot(EItemType Type)
 		if (Slot.Quantity > 0 && Slot.ItemType == Type)
 		{
 			// 기본 회전/회복 수치 설정
-			float RestoreValue = 30.0f;
+			float RestoreValue = (Type == EItemType::Water) ? 50.0f : 30.0f;
 			if (Slot.ItemClass)
 			{
 				if (const AOblivioItemBase* CDO = Slot.ItemClass.GetDefaultObject())

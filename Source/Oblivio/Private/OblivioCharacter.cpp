@@ -765,9 +765,41 @@ void AOblivioCharacter::UpdateStatus(float DeltaTime)
 {
 	if (bIsDead) return;
 
-	float DepleteRate = bIsRunning ? 2.0f : 1.0f;
-	Hunger = FMath::Max(0.0f, Hunger - (DeltaTime * 0.3f * DepleteRate));
-	Thirst = FMath::Max(0.0f, Thirst - (DeltaTime * 0.4f * DepleteRate));
+	if (Hunger >= 80.0f)
+	{
+		float ExchangeAmount = 5.0f * DeltaTime;
+		Hunger -= ExchangeAmount;
+		CurrentHealth = FMath::Clamp(CurrentHealth + ExchangeAmount, 0.0f, MaxHealth);
+	}
+	else if (Hunger > 0.0f)
+	{
+		Hunger -= 0.3f * DeltaTime;
+	}
+
+	Hunger = FMath::Max(0.0f, Hunger);
+
+	if (Hunger <= 0.0f)
+	{
+		CurrentHealth = FMath::Clamp(CurrentHealth - (1.0f * DeltaTime), 0.0f, MaxHealth);
+	}
+
+	if (bIsRunning)
+	{
+		// 달릴 때: 초당 10씩 감소
+		Thirst -= 10.0f * DeltaTime;
+		Thirst = FMath::Max(0.0f, Thirst);
+
+		if (Thirst <= 0.0f)
+		{
+			// 스태미나가 다 닳으면 걷기 상태로 강제 전환
+			StopRunning();
+		}
+	}
+	else
+	{
+		// 달리지 않을 때: 초당 5씩 게이지가 서서히 다시 차오름
+		Thirst = FMath::Clamp(Thirst + (5.0f * DeltaTime), 0.0f, 100.0f);
+	}
 
 	// 배터리 처리
 	if (bIsFlashlightOn && Battery > 0.0f)
@@ -791,17 +823,13 @@ void AOblivioCharacter::UpdateStatus(float DeltaTime)
 		}
 	}
 
-	if (Hunger <= 0.0f || Thirst <= 0.0f)
+	OnPlayerDamaged.Broadcast(0.0f, CurrentHealth, MaxHealth);
+
+	if (CurrentHealth <= 0.0f && !bIsDead)
 	{
-		CurrentHealth = FMath::Clamp(CurrentHealth - (DeltaTime * 1.0f), 0.0f, MaxHealth);
-
-		OnPlayerDamaged.Broadcast(DeltaTime * 1.0f, CurrentHealth, MaxHealth);
-
-		if (CurrentHealth <= 0.0f && !bIsDead)
-		{
-			HandleDeath();
-		}
+		HandleDeath();
 	}
+
 
 	bool bIsInWater = IsInWater();
 	float WaterSpeedMultiplier = bIsInWater ? 0.5f : 1.0f;
