@@ -1560,12 +1560,25 @@ void AOblivioCharacter::PlayHitAnim()
 }
 bool AOblivioCharacter::IsInWater() const
 {
-	if (UCapsuleComponent* Capsule = GetCapsuleComponent())
-	{
-		float FeetZ = GetActorLocation().Z - Capsule->GetScaledCapsuleHalfHeight();
+	FVector Start = GetActorLocation() + FVector(0.0f, 0.0f, 100.0f);
+	FVector End = GetActorLocation() - FVector(0.0f, 0.0f, 150.0f);
 
-		return (FeetZ + 5.0f) < CurrentWaterLevel;
+	FHitResult HitResult;
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
+
+	bool bHit = GetWorld()->LineTraceSingleByChannel(
+		HitResult, Start, End, ECC_Visibility, Params
+	);
+
+	if (bHit && HitResult.GetActor())
+	{
+		// 디버그 메시지로 확인
+		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Yellow, FString::Printf(TEXT("Hit Actor: %s"), *HitResult.GetActor()->GetName()));
+
+		return HitResult.GetActor()->ActorHasTag(FName("Water"));
 	}
+
 	return false;
 }
 
