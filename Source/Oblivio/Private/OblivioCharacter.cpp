@@ -1,7 +1,9 @@
 ﻿#include "OblivioCharacter.h"
 #include "AIEnemy/StagingEnemy.h"
-#include "OblivioGameMode.h"
+#include "Cinematic/StagingCinematicTypes.h"
+#include "OblivioCharacterAnimInstance.h"
 #include "OblivioGameInstance.h"
+#include "OblivioGameMode.h"
 #include "Notify/PlayerFootstep.h"
 #include "Notify/PlayerThrow.h"
 #include "OblivioComponents/SoundPropagationComponent.h"
@@ -25,6 +27,11 @@
 #include "EnhancedInputSubsystems.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/MeshComponent.h"
+#include "LevelSequence.h"
+#include "LevelSequencePlayer.h"
+#include "LevelSequenceActor.h"
+#include "MovieSceneSequencePlaybackSettings.h"
+#include "Animation/AnimInstance.h"
 #include "Components/PrimitiveComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/SceneComponent.h"
@@ -684,6 +691,32 @@ void AOblivioCharacter::BeginPlay()
 
 	Super::BeginPlay();
 
+#if OBLIVIO_STAGING_GRAB_CINEMATIC_ENABLED
+	if (USkeletalMeshComponent* SkelMesh = GetMesh())
+	{
+		const UClass* AnimClass = SkelMesh->GetAnimInstance()
+			? SkelMesh->GetAnimInstance()->GetClass()
+			: SkelMesh->AnimClass.Get();
+		if (AnimClass && !AnimClass->IsChildOf(UOblivioCharacterAnimInstance::StaticClass()))
+		{
+			const FString Msg = FString::Printf(
+				TEXT("Player AnimInstance should be OblivioCharacterAnimInstance, got %s — ABP Parent Class 확인"),
+				*GetNameSafe(AnimClass));
+			UE_LOG(LogTemp, Warning, TEXT("[PlayerABP] %s"), *Msg);
+			if (GEngine && bDebugPlayerCinematicAnim)
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 8.f, FColor::Red,
+					FString::Printf(TEXT("[PlayerABP] %s"), *Msg));
+			}
+		}
+		else if (bDebugPlayerCinematicAnim && GEngine && AnimClass)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 4.f, FColor::Green,
+				FString::Printf(TEXT("[PlayerABP] AnimInstance OK: %s"), *GetNameSafe(AnimClass)));
+		}
+	}
+#endif
+
 	if (CameraBoom)
 	{
 		CameraBoom->bDoCollisionTest = !bWallOcclusionDisableSpringArmProbe;
@@ -737,10 +770,13 @@ void AOblivioCharacter::BeginPlay()
 	FlashlightComponent->SetVisibility(false);
 
 	UpdateFlashlightVisuals();
+
+	TryPlayOpeningLevelSequence();
 }
 
 void AOblivioCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	StopOpeningLevelSequencePlayback(true);
 	ClearWallOcclusionOverlays();
 	Super::EndPlay(EndPlayReason);
 }
@@ -1339,11 +1375,6 @@ void AOblivioCharacter::ReloadBattery()
 	{
 		Battery = 100.0f;
 		OnBatteryChanged.Broadcast(Battery, 100.0f);
-		if (!bIsFlashlightOn)
-		{
-			bIsFlashlightOn = true;
-			UpdateFlashlightVisuals();
-		}
 
 		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Green, TEXT("Flashlight Recharged!"));
 
@@ -1684,7 +1715,7 @@ void AOblivioCharacter::ApplyMovementInversion(float Duration)
 void AOblivioCharacter::RefreshCinematicMovementLock()
 {
 	bCinematicMovementLocked =
-		PlayerCinematicState == EPlayerCinematicState::Grabbed
+		PlayerCinematicState == EPlayerCinematicState::BeingGrabbed
 		|| PlayerCinematicState == EPlayerCinematicState::Standoff
 		|| PlayerCinematicState == EPlayerCinematicState::Pushing;
 }
@@ -1692,13 +1723,18 @@ void AOblivioCharacter::RefreshCinematicMovementLock()
 void AOblivioCharacter::BeginStagingCinematic(AStagingEnemy* StagingEnemy)
 {
 	LinkedStagingEnemy = StagingEnemy;
-	SetPlayerCinematicState(EPlayerCinematicState::Grabbed);
+	SetPlayerCinematicState(EPlayerCinematicState::BeingGrabbed);
 }
 
 void AOblivioCharacter::EndStagingCinematic()
 {
 	LinkedStagingEnemy = nullptr;
 	SetPlayerCinematicState(EPlayerCinematicState::Released);
+}
+
+bool AOblivioCharacter::IsPlayerCinematicAnimDebugEnabled() const
+{
+	return bDebugPlayerCinematicAnim;
 }
 
 void AOblivioCharacter::SetPlayerCinematicState(EPlayerCinematicState NewState)
@@ -1718,7 +1754,7 @@ void AOblivioCharacter::HandlePlayerCinematicNotify(EPlayerCinematicNotify Notif
 	switch (NotifyEvent)
 	{
 	case EPlayerCinematicNotify::EnterGrabbed:
-		SetPlayerCinematicState(EPlayerCinematicState::Grabbed);
+		SetPlayerCinematicState(EPlayerCinematicState::BeingGrabbed);
 		break;
 	case EPlayerCinematicNotify::EnterStandoff:
 		SetPlayerCinematicState(EPlayerCinematicState::Standoff);
@@ -1736,7 +1772,6 @@ void AOblivioCharacter::HandlePlayerCinematicNotify(EPlayerCinematicNotify Notif
 		ReleaseFromStagingGrab();
 		break;
 	case EPlayerCinematicNotify::ForceFlashlightOn:
-		ForceFlashlightOnForCinematic();
 		break;
 	case EPlayerCinematicNotify::RestoreControl:
 		ReleaseFromStagingGrab();
@@ -1752,7 +1787,7 @@ void AOblivioCharacter::HandlePlayerCinematicNotify(EPlayerCinematicNotify Notif
 void AOblivioCharacter::ReleaseFromStagingGrab()
 {
 	bCinematicMovementLocked = false;
-	if (PlayerCinematicState == EPlayerCinematicState::Grabbed
+	if (PlayerCinematicState == EPlayerCinematicState::BeingGrabbed
 		|| PlayerCinematicState == EPlayerCinematicState::Standoff)
 	{
 		SetPlayerCinematicState(EPlayerCinematicState::Released);
@@ -1763,17 +1798,199 @@ void AOblivioCharacter::ForceFlashlightOnForCinematic()
 {
 	bFlashlightForcedOff = false;
 	GetWorldTimerManager().ClearTimer(FlashlightBlackoutTimer);
+}
 
-	if (Battery <= 0.f)
+void AOblivioCharacter::EnsureGameplayAnimClass()
+{
+	USkeletalMeshComponent* SkelMesh = GetMesh();
+	if (!SkelMesh)
 	{
-		Battery = FMath::Max(Battery, 1.f);
+		return;
 	}
 
-	if (!bIsFlashlightOn)
+	if (SkelMesh->GetAnimClass() != nullptr)
 	{
-		bIsFlashlightOn = true;
-		UpdateFlashlightVisuals();
+		return;
 	}
+
+	TSubclassOf<UAnimInstance> ClassToRestore = DefaultGameplayAnimClass;
+	if (!ClassToRestore)
+	{
+		ClassToRestore = SkelMesh->AnimClass;
+	}
+
+	if (!ClassToRestore)
+	{
+		return;
+	}
+
+	SkelMesh->SetAnimInstanceClass(ClassToRestore);
+	SkelMesh->SetAnimationMode(EAnimationMode::AnimationBlueprint);
+	SkelMesh->InitAnim(true);
+}
+
+void AOblivioCharacter::PrepareForLevelSequence()
+{
+	USkeletalMeshComponent* SkelMesh = GetMesh();
+	if (!SkelMesh || bAnimClassCachedForLevelSequence)
+	{
+		return;
+	}
+
+	TSubclassOf<UAnimInstance> AnimClassToCache = SkelMesh->GetAnimClass();
+	if (!AnimClassToCache)
+	{
+		AnimClassToCache = DefaultGameplayAnimClass;
+	}
+
+	if (!AnimClassToCache)
+	{
+		return;
+	}
+
+	CachedAnimClassForLevelSequence = AnimClassToCache;
+	bAnimClassCachedForLevelSequence = true;
+	SkelMesh->SetAnimInstanceClass(nullptr);
+}
+
+void AOblivioCharacter::RestoreAfterLevelSequence()
+{
+	if (!bAnimClassCachedForLevelSequence)
+	{
+		EnsureGameplayAnimClass();
+		return;
+	}
+
+	USkeletalMeshComponent* SkelMesh = GetMesh();
+	if (!SkelMesh)
+	{
+		bAnimClassCachedForLevelSequence = false;
+		CachedAnimClassForLevelSequence = nullptr;
+		return;
+	}
+
+	TSubclassOf<UAnimInstance> ClassToRestore = CachedAnimClassForLevelSequence;
+	if (!ClassToRestore)
+	{
+		ClassToRestore = DefaultGameplayAnimClass;
+	}
+
+	bAnimClassCachedForLevelSequence = false;
+	CachedAnimClassForLevelSequence = nullptr;
+
+	if (!ClassToRestore)
+	{
+		return;
+	}
+
+	SkelMesh->SetAnimInstanceClass(ClassToRestore);
+	SkelMesh->SetAnimationMode(EAnimationMode::AnimationBlueprint);
+	SkelMesh->InitAnim(true);
+}
+
+void AOblivioCharacter::TryPlayOpeningLevelSequence()
+{
+	if (!IsLocallyControlled())
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	UOblivioGameInstance* GI = Cast<UOblivioGameInstance>(GetGameInstance());
+	if (!GI)
+	{
+		return;
+	}
+
+	ULevelSequence* Sequence = GI->ResolveOpeningLevelSequence(World);
+	if (!Sequence)
+	{
+		return;
+	}
+
+	PrepareForLevelSequence();
+	AStagingEnemy::PrepareAllForLevelSequence(this);
+
+	FMovieSceneSequencePlaybackSettings PlaybackSettings;
+	ALevelSequenceActor* SequenceActor = nullptr;
+	ULevelSequencePlayer* SequencePlayer = ULevelSequencePlayer::CreateLevelSequencePlayer(
+		World,
+		Sequence,
+		PlaybackSettings,
+		SequenceActor);
+
+	if (!SequencePlayer)
+	{
+		AStagingEnemy::RestoreAllAfterLevelSequenceAbort(this);
+		RestoreAfterLevelSequence();
+		UE_LOG(LogTemp, Warning, TEXT("TryPlayOpeningLevelSequence: failed to create player for %s"), *GetNameSafe(Sequence));
+		return;
+	}
+
+	ActiveOpeningLevelSequencePlayer = SequencePlayer;
+	ActiveOpeningLevelSequenceActor = SequenceActor;
+	SequencePlayer->OnNativeFinished.BindUObject(this, &AOblivioCharacter::HandleOpeningLevelSequenceFinished);
+	SequencePlayer->Play();
+}
+
+void AOblivioCharacter::HandleOpeningLevelSequenceFinished()
+{
+	UE_LOG(LogTemp, Log, TEXT("TryPlayOpeningLevelSequence: OnNativeFinished"));
+
+	RestorePlayerViewAfterLevelSequence();
+	ReleaseOpeningLevelSequencePlayer();
+	AStagingEnemy::RestoreAllAfterLevelSequenceFinished(this);
+	RestoreAfterLevelSequence();
+
+	UE_LOG(LogTemp, Log, TEXT("TryPlayOpeningLevelSequence: finished — player control restored"));
+}
+
+void AOblivioCharacter::ReleaseOpeningLevelSequencePlayer()
+{
+	if (ULevelSequencePlayer* Player = ActiveOpeningLevelSequencePlayer.Get())
+	{
+		Player->OnNativeFinished.Unbind();
+		if (Player->IsPlaying() || Player->IsPaused())
+		{
+			Player->Stop();
+		}
+	}
+
+	ActiveOpeningLevelSequencePlayer.Reset();
+
+	if (ALevelSequenceActor* SequenceActor = ActiveOpeningLevelSequenceActor.Get())
+	{
+		SequenceActor->Destroy();
+	}
+
+	ActiveOpeningLevelSequenceActor.Reset();
+}
+
+void AOblivioCharacter::RestorePlayerViewAfterLevelSequence()
+{
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		PC->SetViewTarget(this);
+	}
+}
+
+void AOblivioCharacter::StopOpeningLevelSequencePlayback(bool bRestoreAnim)
+{
+	ReleaseOpeningLevelSequencePlayer();
+
+	if (!bRestoreAnim)
+	{
+		return;
+	}
+
+	AStagingEnemy::RestoreAllAfterLevelSequenceAbort(this);
+	RestorePlayerViewAfterLevelSequence();
+	RestoreAfterLevelSequence();
 }
 
 //cheat
