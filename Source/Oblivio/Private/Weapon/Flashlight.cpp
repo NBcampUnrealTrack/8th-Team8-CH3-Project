@@ -28,7 +28,8 @@ AFlashlight::AFlashlight()
 	LightAttackComp->DamageAttenuationRate = 2.f;
 	LightAttackComp->BasicLightColor = FColor::White;
 
-	
+	FogMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("FogMeshComp"));
+	FogMesh->SetupAttachment(RootComponent);
 }
 
 void AFlashlight::BeginPlay()
@@ -39,6 +40,9 @@ void AFlashlight::BeginPlay()
 
 bool AFlashlight::UseWeapon()
 {
+	bIsTurnedOn = true;
+	if (IsValid(FogMesh)) FogMesh->SetVisibility(true);
+
 	if (!IsValid(LightAttackComp)) return false;
 	if (!GetWorld()->GetTimerManager().IsTimerActive(AttackTimerHandle)) {
 		UE_LOG(LogTemp, Warning, TEXT("Setting Flashlight Timer"));
@@ -60,6 +64,9 @@ bool AFlashlight::UseWeapon()
 
 void AFlashlight::StopWeapon()
 {
+	bIsTurnedOn = false;
+	if (IsValid(FogMesh)) FogMesh->SetVisibility(false);
+
 	UE_LOG(LogTemp, Warning, TEXT("Clearing Timer"));
 	GetWorld()->GetTimerManager().ClearTimer(AttackTimerHandle);
 	LightAttackComp->TurnOffLight();

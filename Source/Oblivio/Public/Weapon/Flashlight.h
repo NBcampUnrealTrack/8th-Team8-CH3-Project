@@ -31,4 +31,11 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapon)
 	TObjectPtr<ULightAttackComponent> LightAttackComp;
+
+	//가짜 안개 산란
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapon)
+	TObjectPtr<UStaticMeshComponent> FogMesh;
+
+	UPROPERTY(VisibleAnywhere, Category = Weapon)
+	bool bIsTurnedOn;
 };

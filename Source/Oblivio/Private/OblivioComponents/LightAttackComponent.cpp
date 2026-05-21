@@ -79,7 +79,7 @@ void ULightAttackComponent::BeginPlay()
     //광원 출력 수치와 동기화
     if (IsValid(SpotLightComp)) {
         UE_LOG(LogTemp, Warning, TEXT("SpotLightComp light synced"));
-        SpotLightComp->SetAttenuationRadius(LightDistance * 10);
+        SpotLightComp->SetAttenuationRadius(3000.f);
         SpotLightComp->SetIntensity(Damage * LightIntensityScale);
         // 시작시 안보이게 꺼놓기
         SpotLightComp->SetVisibility(false);
@@ -91,7 +91,7 @@ void ULightAttackComponent::BeginPlay()
     }
     if (IsValid(PointLightComp)) {
         UE_LOG(LogTemp, Warning, TEXT("PointLightComp light synced"));
-        PointLightComp->SetAttenuationRadius(LightDistance * 10);
+        PointLightComp->SetAttenuationRadius(3000.f);
         PointLightComp->SetIntensity(Damage * LightIntensityScale);
         // 시작시 안보이게 꺼놓기
         PointLightComp->SetVisibility(false);
@@ -112,7 +112,7 @@ void ULightAttackComponent::CreateLightAttack(FVector SourceLocation, FVector Li
     FVector LightDir = LightDirection.GetSafeNormal();
     float HalfAngle = LightAngle / 2.f;
 
-    /*
+    
     //공격범위 시각화
     if (bIsConcentrated)
     {
@@ -127,7 +127,7 @@ void ULightAttackComponent::CreateLightAttack(FVector SourceLocation, FVector Li
     {
         // 전방위 원형 영역
         DrawDebugCircle(GetWorld(), SourceLocation + FVector::UpVector * 20, LightDistance, 16, FColor::Yellow, false, .1f, 0, 2.0f, FVector::ForwardVector, FVector::RightVector, false);
-    }*/
+    }
 
     //광원 출력
     if (bIsConcentrated) {
@@ -326,7 +326,7 @@ void ULightAttackComponent::ChangeLightAngle(float Angle)
             //빛 세기 조절
             LightDistance -= Angle * DistancePerAngle;
             Damage -= Angle * DamagePerAngle;
-            SpotLightComp->SetAttenuationRadius(LightDistance * 10.f);
+            //SpotLightComp->SetAttenuationRadius(LightDistance * 10.f);
             SpotLightComp->SetIntensity(Damage * LightIntensityScale);
         }
     }
