@@ -8,7 +8,7 @@ AFlashbangProjectile::AFlashbangProjectile()
 	LightAttackComp->SetupAttachment(RootComponent);
 
 	PrimaryActorTick.bCanEverTick = true;
-	LightAttackComp->Damage = 10000;
+	LightAttackComp->Damage = 300;
 	LightAttackComp->BasicLightColor = FColor::White;
 	BangDelay = 2.0f;
 	FlashDuration = 0.2f;
