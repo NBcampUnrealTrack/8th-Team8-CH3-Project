@@ -1,4 +1,5 @@
 ﻿#include "OblivioCharacter.h"
+#include "AIEnemy/StagingEnemy.h"
 #include "OblivioGameMode.h"
 #include "OblivioGameInstance.h"
 #include "Notify/PlayerFootstep.h"
@@ -834,9 +835,9 @@ void AOblivioCharacter::UpdateStatus(float DeltaTime)
 	bool bIsInWater = IsInWater();
 	float WaterSpeedMultiplier = bIsInWater ? 0.5f : 1.0f;
 
-	if (bIsStunned)
+	if (bIsStunned || bCinematicMovementLocked)
 	{
-		// 스턴 상태면 아예 움직이지 못함
+		// 스턴·연출 잠금 상태면 아예 움직이지 못함
 		GetCharacterMovement()->MaxWalkSpeed = 0.0f;
 	}
 	else
@@ -886,6 +887,11 @@ void AOblivioCharacter::UpdateStatus(float DeltaTime)
 
 void AOblivioCharacter::Move(const FVector2D& Value)
 {
+	if (bCinematicMovementLocked)
+	{
+		return;
+	}
+
 	if (Controller != nullptr)
 	{
 		const float Dir = bMovementInverted ? -1.0f : 1.0f;
@@ -1237,12 +1243,9 @@ void AOblivioCharacter::UpdateFlashlightEmbedPullback(float DeltaSeconds)
 
 	const bool bFlashOn = bIsFlashlightOn && Battery > 0.0f && !bFlashlightForcedOff;
 
-	const bool bWantPull =
-		bFlashlightPullbackFromWallsEnabled && bWeaponOk && bFlashOn;
+	const bool bWantPull = bFlashlightPullbackFromWallsEnabled && bWeaponOk && bFlashOn;
 
-	const bool bWantAttenClamp = bFlashlightWallAttenuationClampEnabled && bWeaponOk && bFlashOn;
-
-	if (!bWantPull && !bWantAttenClamp)
+	if (!bWantPull)
 	{
 		FlashlightWallPullbackSmoothed = FMath::FInterpTo(FlashlightWallPullbackSmoothed, 0.f, DeltaSeconds,
 			FlashlightWallPullbackInterpSpeed);
@@ -1270,18 +1273,6 @@ void AOblivioCharacter::UpdateFlashlightEmbedPullback(float DeltaSeconds)
 			bHasFlashlightSpotPullbackBaseline = false;
 			FlashlightSpotBaselineRelative = FVector::ZeroVector;
 		}
-
-		if (bFlashlightAttenuationClampWasApplied && Lac != nullptr && IsValid(Lac->GetSpotLightComp()))
-		{
-			const float RefUU = Lac->LightDistance * 10.f;
-			FlashlightWallAttenuationSmoothedUU = FMath::FInterpTo(
-				FlashlightWallAttenuationSmoothedUU, RefUU, DeltaSeconds, FlashlightWallAttenuationInterpSpeed);
-			Lac->GetSpotLightComp()->SetAttenuationRadius(FlashlightWallAttenuationSmoothedUU);
-			if (FMath::IsNearlyEqual(FlashlightWallAttenuationSmoothedUU, RefUU, 1.f))
-			{
-				bFlashlightAttenuationClampWasApplied = false;
-			}
-		}
 		return;
 	}
 
@@ -1306,104 +1297,30 @@ void AOblivioCharacter::UpdateFlashlightEmbedPullback(float DeltaSeconds)
 		bHitWall ? FMath::Max(Hit.Distance - FlashlightWallEmbedSafetyMargin, KINDA_SMALL_NUMBER)
 				 : FlashlightWallTraceDistance;
 
-	float PullTargetCm = 0.f;
-	if (bWantPull)
+	if (!FlashlightSpotPullbackWeakKey.IsValid() || FlashlightSpotPullbackWeakKey.Get() != ActiveSpot)
 	{
-		if (!FlashlightSpotPullbackWeakKey.IsValid() || FlashlightSpotPullbackWeakKey.Get() != ActiveSpot)
-		{
-			FlashlightWallPullbackSmoothed = 0.f;
-			FlashlightSpotPullbackWeakKey = ActiveSpot;
-			FlashlightSpotBaselineRelative = ActiveSpot->GetRelativeLocation();
-			bHasFlashlightSpotPullbackBaseline = true;
-		}
-
-		const FVector LampWorld = ActiveSpot->GetComponentLocation();
-		const float StickAlongView = FVector::DotProduct(LampWorld - TraceStart, AimForward);
-		PullTargetCm = FMath::Clamp(StickAlongView - ClearAlongFwd, 0.f, FlashlightWallEmbedMaxPullback);
+		FlashlightWallPullbackSmoothed = 0.f;
+		FlashlightSpotPullbackWeakKey = ActiveSpot;
+		FlashlightSpotBaselineRelative = ActiveSpot->GetRelativeLocation();
+		bHasFlashlightSpotPullbackBaseline = true;
 	}
 
-	if (bWantPull && bHasFlashlightSpotPullbackBaseline)
-	{
-		FlashlightWallPullbackSmoothed = FMath::FInterpTo(
-			FlashlightWallPullbackSmoothed, PullTargetCm, DeltaSeconds, FlashlightWallPullbackInterpSpeed);
+	const FVector LampWorld = ActiveSpot->GetComponentLocation();
+	const float StickAlongView = FVector::DotProduct(LampWorld - TraceStart, AimForward);
+	const float PullTargetCm = FMath::Clamp(StickAlongView - ClearAlongFwd, 0.f, FlashlightWallEmbedMaxPullback);
 
-		const FVector MoveWorld = -ActiveSpot->GetForwardVector().GetSafeNormal() * FlashlightWallPullbackSmoothed;
-		if (USceneComponent* const Parent = ActiveSpot->GetAttachParent())
-		{
-			const FVector PullDeltaLocal = Parent->GetComponentTransform().InverseTransformVectorNoScale(MoveWorld);
-			ActiveSpot->SetRelativeLocation(FlashlightSpotBaselineRelative + PullDeltaLocal);
-		}
-		else
-		{
-			ActiveSpot->SetRelativeLocation(FlashlightSpotBaselineRelative);
-		}
+	FlashlightWallPullbackSmoothed = FMath::FInterpTo(
+		FlashlightWallPullbackSmoothed, PullTargetCm, DeltaSeconds, FlashlightWallPullbackInterpSpeed);
+
+	const FVector MoveWorld = -ActiveSpot->GetForwardVector().GetSafeNormal() * FlashlightWallPullbackSmoothed;
+	if (USceneComponent* const Parent = ActiveSpot->GetAttachParent())
+	{
+		const FVector PullDeltaLocal = Parent->GetComponentTransform().InverseTransformVectorNoScale(MoveWorld);
+		ActiveSpot->SetRelativeLocation(FlashlightSpotBaselineRelative + PullDeltaLocal);
 	}
-
-	if (!bWantPull)
+	else
 	{
-		FlashlightWallPullbackSmoothed = FMath::FInterpTo(
-			FlashlightWallPullbackSmoothed, 0.f, DeltaSeconds, FlashlightWallPullbackInterpSpeed);
-		if (FlashlightSpotPullbackWeakKey.IsValid() && bHasFlashlightSpotPullbackBaseline)
-		{
-			if (USpotLightComponent* const Spot = FlashlightSpotPullbackWeakKey.Get())
-			{
-				if (USceneComponent* const Parent = Spot->GetAttachParent())
-				{
-					const FVector MoveWorld = -Spot->GetForwardVector().GetSafeNormal() * FlashlightWallPullbackSmoothed;
-					const FVector PullDeltaLocal = Parent->GetComponentTransform().InverseTransformVectorNoScale(MoveWorld);
-					Spot->SetRelativeLocation(FlashlightSpotBaselineRelative + PullDeltaLocal);
-				}
-				else
-				{
-					Spot->SetRelativeLocation(FlashlightSpotBaselineRelative);
-				}
-			}
-		}
-		if (FMath::IsNearlyZero(FlashlightWallPullbackSmoothed, 0.02f))
-		{
-			FlashlightSpotPullbackWeakKey.Reset();
-			bHasFlashlightSpotPullbackBaseline = false;
-			FlashlightSpotBaselineRelative = FVector::ZeroVector;
-		}
-	}
-
-	if (bWantAttenClamp)
-	{
-		const float RefCapUU = Lac->LightDistance * 10.f;
-		float TargetAttenuationUU = RefCapUU;
-		if (bHitWall)
-		{
-			const float DistLampToImpact = FVector::Distance(ActiveSpot->GetComponentLocation(), Hit.ImpactPoint);
-			TargetAttenuationUU = FMath::Clamp(
-				DistLampToImpact - FlashlightWallAttenuationMarginUU,
-				FlashlightWallAttenuationMinUU,
-				RefCapUU);
-		}
-
-		if (!bFlashlightAttenuationClampWasApplied)
-		{
-			FlashlightWallAttenuationSmoothedUU = ActiveSpot->AttenuationRadius;
-		}
-		bFlashlightAttenuationClampWasApplied = true;
-
-		FlashlightWallAttenuationSmoothedUU = FMath::FInterpTo(
-			FlashlightWallAttenuationSmoothedUU,
-			TargetAttenuationUU,
-			DeltaSeconds,
-			FlashlightWallAttenuationInterpSpeed);
-
-		ActiveSpot->SetAttenuationRadius(FlashlightWallAttenuationSmoothedUU);
-	}
-	else if (bFlashlightAttenuationClampWasApplied && Lac != nullptr && IsValid(Lac->GetSpotLightComp()))
-	{
-		const float RefUU = Lac->LightDistance * 10.f;
-		FlashlightWallAttenuationSmoothedUU = FMath::FInterpTo(
-			FlashlightWallAttenuationSmoothedUU, RefUU, DeltaSeconds, FlashlightWallAttenuationInterpSpeed);
-		Lac->GetSpotLightComp()->SetAttenuationRadius(FlashlightWallAttenuationSmoothedUU);
-		if (FMath::IsNearlyEqual(FlashlightWallAttenuationSmoothedUU, RefUU, 1.f))
-		{
-			bFlashlightAttenuationClampWasApplied = false;
-		}
+		ActiveSpot->SetRelativeLocation(FlashlightSpotBaselineRelative);
 	}
 }
 
@@ -1762,6 +1679,101 @@ void AOblivioCharacter::ApplyMovementInversion(float Duration)
 			bMovementInverted = false;
 		},
 		Duration, /*bLoop=*/false);
+}
+
+void AOblivioCharacter::RefreshCinematicMovementLock()
+{
+	bCinematicMovementLocked =
+		PlayerCinematicState == EPlayerCinematicState::Grabbed
+		|| PlayerCinematicState == EPlayerCinematicState::Standoff
+		|| PlayerCinematicState == EPlayerCinematicState::Pushing;
+}
+
+void AOblivioCharacter::BeginStagingCinematic(AStagingEnemy* StagingEnemy)
+{
+	LinkedStagingEnemy = StagingEnemy;
+	SetPlayerCinematicState(EPlayerCinematicState::Grabbed);
+}
+
+void AOblivioCharacter::EndStagingCinematic()
+{
+	LinkedStagingEnemy = nullptr;
+	SetPlayerCinematicState(EPlayerCinematicState::Released);
+}
+
+void AOblivioCharacter::SetPlayerCinematicState(EPlayerCinematicState NewState)
+{
+	if (PlayerCinematicState == NewState)
+	{
+		return;
+	}
+
+	PlayerCinematicState = NewState;
+	RefreshCinematicMovementLock();
+	OnPlayerCinematicStateChanged.Broadcast(this, NewState);
+}
+
+void AOblivioCharacter::HandlePlayerCinematicNotify(EPlayerCinematicNotify NotifyEvent)
+{
+	switch (NotifyEvent)
+	{
+	case EPlayerCinematicNotify::EnterGrabbed:
+		SetPlayerCinematicState(EPlayerCinematicState::Grabbed);
+		break;
+	case EPlayerCinematicNotify::EnterStandoff:
+		SetPlayerCinematicState(EPlayerCinematicState::Standoff);
+		break;
+	case EPlayerCinematicNotify::ExecuteAutoPush:
+		if (AStagingEnemy* StagingEnemy = LinkedStagingEnemy.Get())
+		{
+			StagingEnemy->ExecuteAutoPush();
+		}
+		break;
+	case EPlayerCinematicNotify::PushSucceeded:
+		SetPlayerCinematicState(EPlayerCinematicState::Pushing);
+		break;
+	case EPlayerCinematicNotify::ReleaseFromGrab:
+		ReleaseFromStagingGrab();
+		break;
+	case EPlayerCinematicNotify::ForceFlashlightOn:
+		ForceFlashlightOnForCinematic();
+		break;
+	case EPlayerCinematicNotify::RestoreControl:
+		ReleaseFromStagingGrab();
+		EndStagingCinematic();
+		break;
+	default:
+		break;
+	}
+
+	OnPlayerCinematicNotify(NotifyEvent);
+}
+
+void AOblivioCharacter::ReleaseFromStagingGrab()
+{
+	bCinematicMovementLocked = false;
+	if (PlayerCinematicState == EPlayerCinematicState::Grabbed
+		|| PlayerCinematicState == EPlayerCinematicState::Standoff)
+	{
+		SetPlayerCinematicState(EPlayerCinematicState::Released);
+	}
+}
+
+void AOblivioCharacter::ForceFlashlightOnForCinematic()
+{
+	bFlashlightForcedOff = false;
+	GetWorldTimerManager().ClearTimer(FlashlightBlackoutTimer);
+
+	if (Battery <= 0.f)
+	{
+		Battery = FMath::Max(Battery, 1.f);
+	}
+
+	if (!bIsFlashlightOn)
+	{
+		bIsFlashlightOn = true;
+		UpdateFlashlightVisuals();
+	}
 }
 
 //cheat
