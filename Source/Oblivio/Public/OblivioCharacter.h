@@ -324,6 +324,9 @@ public:
 	TObjectPtr<AWeaponBase> FlashbangWeapon;
 	TObjectPtr<AWeaponBase> FlareWeapon;
 
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	virtual AWeaponBase* AttachWeapon(TSubclassOf<AWeaponBase> AttachingWeaponClass, FName AttachingSocket);
+
 	//손전등 조절
 	UFUNCTION(BlueprintCallable)
 	void EnableAdjustFocus();

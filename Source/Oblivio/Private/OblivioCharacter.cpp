@@ -734,31 +734,21 @@ void AOblivioCharacter::BeginPlay()
 	FActorSpawnParameters Params;
 	Params.Owner = this;
 
-	//손전등
-	if (IsValid(FlashlightClass)) {
-		FlashlightWeapon = GetWorld()->SpawnActor<AWeaponBase>(FlashlightClass, GetActorTransform(), Params);
-		if (IsValid(FlashlightWeapon)) {
-			UE_LOG(LogTemp, Warning, TEXT("Attaching Flashlight Weapon"));
-			FlashlightWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("LeftHandSocket"));
+	if (GetWorld()->GetName() != "L_Floor9_DoctorsLounge") {
+		//손전등
+		if (IsValid(FlashlightClass)) {
+			FlashlightWeapon = AttachWeapon(FlashlightClass, FName("LeftHandSocket"));
+			bIsFlashlightOn = true;
 		}
 	}
-
 	//섬광탄
 	if (IsValid(FlashbangClass)) {
-		FlashbangWeapon = GetWorld()->SpawnActor<AWeaponBase>(FlashbangClass, GetActorTransform(), Params);
-		if (IsValid(FlashbangWeapon)) {
-			UE_LOG(LogTemp, Warning, TEXT("Attaching Weapon"));
-			FlashbangWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("RightHandSocket"));
-		}
+		FlashbangWeapon = AttachWeapon(FlashbangClass, FName("RightHandSocket"));
 	}
 
 	//조명탄
 	if (IsValid(FlareClass)) {
-		FlareWeapon = GetWorld()->SpawnActor<AWeaponBase>(FlareClass, GetActorTransform(), Params);
-		if (IsValid(FlareWeapon)) {
-			UE_LOG(LogTemp, Warning, TEXT("Attaching Weapon"));
-			FlareWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("RightHandSocket"));
-		}
+		FlareWeapon = AttachWeapon(FlareClass, FName("RightHandSocket"));
 	}
 
 	//AnimNotify 델리게이트 장착
@@ -1387,6 +1377,25 @@ void AOblivioCharacter::ReloadBattery()
 	}
 	
 	OnShowNoBatteryNotice();
+}
+
+//무기 장착 함수
+AWeaponBase* AOblivioCharacter::AttachWeapon(TSubclassOf<AWeaponBase> AttachingWeaponClass, FName AttachingSocket) {
+	//무기 클래스 이상하면 거부
+	if (!IsValid(AttachingWeaponClass)) {
+		UE_LOG(LogTemp,Warning, TEXT("AttachingWeapon is not valid!"))
+		return nullptr;
+	}
+
+	//무기 스폰 후 소켓에 장착
+	FActorSpawnParameters Params;
+	Params.Owner = this;
+	AWeaponBase* NewWeapon = GetWorld()->SpawnActor<AWeaponBase>(AttachingWeaponClass, GetActorTransform(), Params);
+	if (IsValid(NewWeapon)) {
+		UE_LOG(LogTemp, Warning, TEXT("Attaching Weapon %s on %s"), *AttachingWeaponClass->GetName(), *AttachingSocket.ToString());
+		NewWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, AttachingSocket);
+	}
+	return NewWeapon;
 }
 
 //섬광탄 시작 함수
