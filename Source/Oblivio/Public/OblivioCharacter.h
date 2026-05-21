@@ -9,8 +9,11 @@
 #include "GameFramework/Character.h"
 #include "InputActionValue.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "Cinematic/StagingCinematicTypes.h"
 #include "OblivioComponents/CombatInterface.h"
 #include "OblivioCharacter.generated.h"
+
+class AStagingEnemy;
 
 // 피격 판정용 델리게이트
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FPlayerDamagedSignature, float, DamageAmount, float, CurrentHealth, float, MaxHealth);
@@ -18,6 +21,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnNearbyItemChanged, class AOblivio
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPlayerAnimationEvent);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnBatteryChanged, float, CurrentBattery, float, MaxBattery);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPlayerDied);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPlayerCinematicStateChanged,
+	AOblivioCharacter*, Player, EPlayerCinematicState, NewState);
 
 //UI용 델리게이트
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnItemAcquired, const FText&, ItemName, class UTexture2D*, ItemIcon);
@@ -282,19 +287,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status|Flashlight|WallEmbed", meta = (ClampMin = "1.0", ClampMax = "120.0"))
 	float FlashlightWallPullbackInterpSpeed = 22.0f;
 
-	/** 벽 히트 시 SpotLight 감쇠 반경을 램프~벽 거리 근처로 제한해 멀리까지 콘이 퍼지는 것을 줄임(디더 구멍 누설과는 별개). */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status|Flashlight|WallEmbed")
-	bool bFlashlightWallAttenuationClampEnabled = true;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status|Flashlight|WallEmbed", meta = (ClampMin = "0.0", ClampMax = "300.0"))
-	float FlashlightWallAttenuationMarginUU = 20.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status|Flashlight|WallEmbed", meta = (ClampMin = "10.0", ClampMax = "400.0"))
-	float FlashlightWallAttenuationMinUU = 80.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status|Flashlight|WallEmbed", meta = (ClampMin = "1.0", ClampMax = "80.0"))
-	float FlashlightWallAttenuationInterpSpeed = 18.0f;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status|Upgrade")
 	bool bCanAdjustFocus = true;
 
@@ -409,6 +401,39 @@ public:
 	/** 마우스 커서 기반 회전 대신 해당 월드 지점을 보도록 잠금(탑다운은 Pitch는 컨트롤러에서 0으로 처리). Duration 후 자동 해제. */
 	UFUNCTION(BlueprintCallable, Category = "Feedback")
 	void ApplyForcedWorldLookTowards(FVector WorldLookTarget, float DurationSeconds, float RotationInterpSpeed = 14.f);
+
+	// ===============================
+	// Opening cinematic (시작 연출)
+	// ===============================
+	UFUNCTION(BlueprintCallable, Category = "Cinematic")
+	void BeginStagingCinematic(AStagingEnemy* StagingEnemy);
+
+	UFUNCTION(BlueprintCallable, Category = "Cinematic")
+	void EndStagingCinematic();
+
+	UFUNCTION(BlueprintCallable, Category = "Cinematic")
+	void SetPlayerCinematicState(EPlayerCinematicState NewState);
+
+	UFUNCTION(BlueprintPure, Category = "Cinematic")
+	EPlayerCinematicState GetPlayerCinematicState() const { return PlayerCinematicState; }
+
+	UFUNCTION(BlueprintCallable, Category = "Cinematic")
+	void HandlePlayerCinematicNotify(EPlayerCinematicNotify NotifyEvent);
+
+	UFUNCTION(BlueprintCallable, Category = "Cinematic")
+	void ReleaseFromStagingGrab();
+
+	UFUNCTION(BlueprintCallable, Category = "Cinematic")
+	void ForceFlashlightOnForCinematic();
+
+	UFUNCTION(BlueprintPure, Category = "Cinematic")
+	AStagingEnemy* GetLinkedStagingEnemy() const { return LinkedStagingEnemy.Get(); }
+
+	UPROPERTY(BlueprintAssignable, Category = "Cinematic")
+	FOnPlayerCinematicStateChanged OnPlayerCinematicStateChanged;
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Cinematic")
+	void OnPlayerCinematicNotify(EPlayerCinematicNotify NotifyEvent);
 
 	/** 플레이어 컨트롤러(AOblivioCharacterController)가 호출한다. 활성 상태면 현재 회전 타깃(FindLookAt)을 넣어 true. 만료 시 false. */
 	bool TryConsumeForcedWorldLookRotation(FRotator& OutTargetRotWorld);
@@ -553,6 +578,12 @@ private:
 
 	bool bFlashlightForcedOff = false;
 	bool bMovementInverted    = false;
+
+	EPlayerCinematicState PlayerCinematicState = EPlayerCinematicState::None;
+	bool bCinematicMovementLocked = false;
+	TWeakObjectPtr<AStagingEnemy> LinkedStagingEnemy;
+
+	void RefreshCinematicMovementLock();
 	FTimerHandle FlashlightBlackoutTimer;
 	FTimerHandle MovementInversionTimer;
 
@@ -561,7 +592,4 @@ private:
 	FVector FlashlightSpotBaselineRelative = FVector::ZeroVector;
 	TWeakObjectPtr<USpotLightComponent> FlashlightSpotPullbackWeakKey;
 	bool bHasFlashlightSpotPullbackBaseline = false;
-
-	float FlashlightWallAttenuationSmoothedUU = 0.f;
-	bool bFlashlightAttenuationClampWasApplied = false;
 };
