@@ -1,10 +1,15 @@
 #include "AIEnemy/StagingEnemy.h"
 
+#include "Animation/AnimInstance.h"
+#include "Animation/AnimSequence.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Engine/DamageEvents.h"
+#include "Engine/Engine.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "OblivioCharacter.h"
 #include "TimerManager.h"
+#include "Math/UnrealMathUtility.h"
 
 AStagingEnemy::AStagingEnemy()
 {
@@ -215,14 +220,57 @@ void AStagingEnemy::ExecuteAutoPush()
 	}
 }
 
-void AStagingEnemy::ForceFlashlightOnPlayer()
+void AStagingEnemy::HandlePlayerExecuteAutoPush()
 {
-	if (AOblivioCharacter* Player = LinkedPlayer.Get())
+	ExecuteAutoPush();
+}
+
+void AStagingEnemy::HandlePlayerForceFlashlightOn()
+{
+	SetStagingState(EStagingEnemyCinematicState::Dead);
+	ApplyCinematicLightDamage();
+	if (IsAlive())
 	{
-		Player->ForceFlashlightOnForCinematic();
-		Player->HandlePlayerCinematicNotify(EPlayerCinematicNotify::ForceFlashlightOn);
+		FinishCinematicDeath();
+	}
+}
+
+bool AStagingEnemy::IsApproachingForGrab() const
+{
+	return StagingState == EStagingEnemyCinematicState::ApproachingGrab && IsAlive();
+}
+
+bool AStagingEnemy::ShouldPlayGrabAnimation() const
+{
+	return StagingState == EStagingEnemyCinematicState::GrabbedPlayer
+		|| StagingState == EStagingEnemyCinematicState::Standoff;
+}
+
+bool AStagingEnemy::ShouldPlayKnockdownAnimation() const
+{
+	return StagingState == EStagingEnemyCinematicState::KnockedDown
+		|| StagingState == EStagingEnemyCinematicState::PushReaction;
+}
+
+bool AStagingEnemy::ShouldPlayDeadAnimation() const
+{
+	return StagingState == EStagingEnemyCinematicState::Dead
+		|| StagingState == EStagingEnemyCinematicState::FlashlightBurn;
+}
+
+float AStagingEnemy::GetDistanceToLinkedPlayer() const
+{
+	const AOblivioCharacter* Player = LinkedPlayer.Get();
+	if (!IsValid(Player))
+	{
+		return TNumericLimits<float>::Max();
 	}
 
+	return FVector::Dist(GetActorLocation(), Player->GetActorLocation());
+}
+
+void AStagingEnemy::ForceFlashlightOnPlayer()
+{
 	SetStagingState(EStagingEnemyCinematicState::FlashlightBurn);
 }
 
@@ -259,4 +307,152 @@ void AStagingEnemy::Die()
 	}
 
 	Super::Die();
+}
+
+void AStagingEnemy::PrepareForLevelSequencePlayback()
+{
+	if (bPreparedForLevelSequence)
+	{
+		return;
+	}
+
+	USkeletalMeshComponent* SkelMesh = GetMesh();
+	if (!SkelMesh)
+	{
+		return;
+	}
+
+	TSubclassOf<UAnimInstance> AnimClassToCache = SkelMesh->GetAnimClass();
+	if (!AnimClassToCache)
+	{
+		AnimClassToCache = SkelMesh->AnimClass;
+	}
+
+	if (AnimClassToCache)
+	{
+		CachedAnimClassForLevelSequence = AnimClassToCache;
+		SkelMesh->SetAnimInstanceClass(nullptr);
+	}
+
+	bPreparedForLevelSequence = true;
+	bCinematicModeActive = false;
+
+	if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
+	{
+		MoveComp->StopMovementImmediately();
+		MoveComp->DisableMovement();
+	}
+}
+
+void AStagingEnemy::RestoreLevelSequenceAnimation(bool bApplyPostSequencePose)
+{
+	USkeletalMeshComponent* SkelMesh = GetMesh();
+	if (!SkelMesh)
+	{
+		bPreparedForLevelSequence = false;
+		CachedAnimClassForLevelSequence = nullptr;
+		return;
+	}
+
+	SkelMesh->bPauseAnims = false;
+
+	if (bApplyPostSequencePose && IsValid(PostLevelSequenceAnimSequence))
+	{
+		SkelMesh->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+		SkelMesh->PlayAnimation(PostLevelSequenceAnimSequence, false);
+	}
+	else if (TSubclassOf<UAnimInstance> ClassToRestore = CachedAnimClassForLevelSequence)
+	{
+		SkelMesh->SetAnimInstanceClass(ClassToRestore);
+		SkelMesh->SetAnimationMode(EAnimationMode::AnimationBlueprint);
+		SkelMesh->InitAnim(true);
+	}
+
+	bPreparedForLevelSequence = false;
+	CachedAnimClassForLevelSequence = nullptr;
+
+	if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
+	{
+		MoveComp->SetMovementMode(MOVE_Walking);
+	}
+}
+
+void AStagingEnemy::RestoreAfterLevelSequenceAbort()
+{
+	if (!bPreparedForLevelSequence)
+	{
+		return;
+	}
+
+	RestoreLevelSequenceAnimation(false);
+}
+
+void AStagingEnemy::RestoreAfterLevelSequenceFinished()
+{
+	if (!bPreparedForLevelSequence)
+	{
+		return;
+	}
+
+	bCinematicModeActive = true;
+	RestoreLevelSequenceAnimation(true);
+}
+
+void AStagingEnemy::PrepareAllForLevelSequence(const UObject* WorldContextObject)
+{
+	UWorld* World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull);
+	if (!World)
+	{
+		return;
+	}
+
+	TArray<AActor*> StagingEnemies;
+	UGameplayStatics::GetAllActorsOfClass(World, AStagingEnemy::StaticClass(), StagingEnemies);
+	for (AActor* Actor : StagingEnemies)
+	{
+		if (AStagingEnemy* StagingEnemy = Cast<AStagingEnemy>(Actor))
+		{
+			StagingEnemy->PrepareForLevelSequencePlayback();
+		}
+	}
+}
+
+void AStagingEnemy::RestoreAllAfterLevelSequenceAbort(const UObject* WorldContextObject)
+{
+	UWorld* World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull);
+	if (!World)
+	{
+		return;
+	}
+
+	TArray<AActor*> StagingEnemies;
+	UGameplayStatics::GetAllActorsOfClass(World, AStagingEnemy::StaticClass(), StagingEnemies);
+	for (AActor* Actor : StagingEnemies)
+	{
+		if (AStagingEnemy* StagingEnemy = Cast<AStagingEnemy>(Actor))
+		{
+			StagingEnemy->RestoreAfterLevelSequenceAbort();
+		}
+	}
+}
+
+void AStagingEnemy::RestoreAllAfterLevelSequenceFinished(const UObject* WorldContextObject)
+{
+	UWorld* World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull);
+	if (!World)
+	{
+		return;
+	}
+
+	TArray<AActor*> StagingEnemies;
+	UGameplayStatics::GetAllActorsOfClass(World, AStagingEnemy::StaticClass(), StagingEnemies);
+	for (AActor* Actor : StagingEnemies)
+	{
+		if (AStagingEnemy* StagingEnemy = Cast<AStagingEnemy>(Actor))
+		{
+			StagingEnemy->RestoreAfterLevelSequenceFinished();
+		}
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[LevelSequence] Restored animation for %d StagingEnemy actor(s)"), StagingEnemies.Num());
 }

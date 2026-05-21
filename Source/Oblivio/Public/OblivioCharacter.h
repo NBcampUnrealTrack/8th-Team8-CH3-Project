@@ -262,7 +262,7 @@ public:
 	float BatteryDepletionRate = 0.5f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status|Flashlight")
-	bool bIsFlashlightOn = true;
+	bool bIsFlashlightOn = false;
 
 	/** 벽에 밀착 시 SpotLight 원점이 벽 안쪽으로 박혀 빛이 ‘뚫고’ 나오는 느낌을 줄이기 위해 라인 트레이스로 필요한 만큼 램프 위치를 발사축 역방향으로 당김. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status|Flashlight|WallEmbed")
@@ -426,8 +426,34 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Cinematic")
 	void ForceFlashlightOnForCinematic();
 
+	/** Anim Class가 None일 때 Mesh 기본 ABP 복구. */
+	UFUNCTION(BlueprintCallable, Category = "Cinematic|LevelSequence")
+	void EnsureGameplayAnimClass();
+
+	/** Level Sequence 종료 후 복구할 플레이어 ABP (BP에서 ABP_OblivioCharacter 지정). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cinematic|LevelSequence")
+	TSubclassOf<UAnimInstance> DefaultGameplayAnimClass;
+
+	/** Level Sequence 재생 전 ABP 캐시 후 Anim Class 제거. */
+	UFUNCTION(BlueprintCallable, Category = "Cinematic|LevelSequence")
+	void PrepareForLevelSequence();
+
+	/** Level Sequence 종료 후 캐시한 ABP 복구. */
+	UFUNCTION(BlueprintCallable, Category = "Cinematic|LevelSequence")
+	void RestoreAfterLevelSequence();
+
+	/** GameInstance 맵 설정에 따라 오프닝 Level Sequence 재생 (없으면 아무 것도 안 함). */
+	UFUNCTION(BlueprintCallable, Category = "Cinematic|LevelSequence")
+	void TryPlayOpeningLevelSequence();
+
 	UFUNCTION(BlueprintPure, Category = "Cinematic")
 	AStagingEnemy* GetLinkedStagingEnemy() const { return LinkedStagingEnemy.Get(); }
+
+	UFUNCTION(BlueprintPure, Category = "Cinematic|Debug")
+	bool IsPlayerCinematicAnimDebugEnabled() const;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cinematic|Debug")
+	bool bDebugPlayerCinematicAnim = true;
 
 	UPROPERTY(BlueprintAssignable, Category = "Cinematic")
 	FOnPlayerCinematicStateChanged OnPlayerCinematicStateChanged;
@@ -592,4 +618,15 @@ private:
 	FVector FlashlightSpotBaselineRelative = FVector::ZeroVector;
 	TWeakObjectPtr<USpotLightComponent> FlashlightSpotPullbackWeakKey;
 	bool bHasFlashlightSpotPullbackBaseline = false;
+
+	/** Level Sequence용 ABP 캐시 (BP 제거 후 C++ 전용). */
+	bool bAnimClassCachedForLevelSequence = false;
+	TSubclassOf<UAnimInstance> CachedAnimClassForLevelSequence;
+	TWeakObjectPtr<class ULevelSequencePlayer> ActiveOpeningLevelSequencePlayer;
+	TWeakObjectPtr<class ALevelSequenceActor> ActiveOpeningLevelSequenceActor;
+
+	void HandleOpeningLevelSequenceFinished();
+	void ReleaseOpeningLevelSequencePlayer();
+	void RestorePlayerViewAfterLevelSequence();
+	void StopOpeningLevelSequencePlayback(bool bRestoreAnim);
 };

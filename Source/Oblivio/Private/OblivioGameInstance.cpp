@@ -1,6 +1,52 @@
 #include "OblivioGameInstance.h"
 #include "OblivioSaveGame.h"
+#include "LevelSequence.h"
 #include "Kismet/GameplayStatics.h"
+
+UOblivioGameInstance::UOblivioGameInstance()
+{
+	FLevelOpeningSequenceEntry Floor9Entry;
+	Floor9Entry.LevelName = FName(TEXT("L_Floor9_DoctorsLounge"));
+	Floor9Entry.LevelSequence = TSoftObjectPtr<ULevelSequence>(
+		FSoftObjectPath(TEXT("/Game/LevelSequence/LS_Foor9.LS_Foor9")));
+	LevelOpeningSequenceEntries.Add(Floor9Entry);
+}
+
+ULevelSequence* UOblivioGameInstance::ResolveOpeningLevelSequence(const UWorld* World) const
+{
+	if (!World)
+	{
+		return nullptr;
+	}
+
+	const FName CurrentLevelName = FName(*UGameplayStatics::GetCurrentLevelName(World, true));
+	if (CurrentLevelName.IsNone())
+	{
+		return nullptr;
+	}
+
+	for (const FLevelOpeningSequenceEntry& Entry : LevelOpeningSequenceEntries)
+	{
+		if (Entry.LevelName != CurrentLevelName)
+		{
+			continue;
+		}
+
+		if (Entry.LevelSequence.IsNull())
+		{
+			return nullptr;
+		}
+
+		return Entry.LevelSequence.LoadSynchronous();
+	}
+
+	return nullptr;
+}
+
+bool UOblivioGameInstance::HasOpeningLevelSequenceForCurrentLevel(const UWorld* World) const
+{
+	return ResolveOpeningLevelSequence(World) != nullptr;
+}
 
 void UOblivioGameInstance::SaveGameData(FString SlotName)
 {
@@ -19,7 +65,6 @@ void UOblivioGameInstance::SaveGameData(FString SlotName)
 	SaveInstance->SavedFloor = CurrentFloor;
 	SaveInstance->SavedKills = TotalKills;
 	SaveInstance->SavedMementos = TotalMementos;
-	SaveInstance->SavedMementoEyeCollected = bMementoEyeCollected;
 
 	if (SlotName.Len() <= 0)
 	{
@@ -59,7 +104,11 @@ void UOblivioGameInstance::LoadGameData(FString SlotName)
 	CurrentFloor = LoadInstance->SavedFloor;
 	TotalKills = LoadInstance->SavedKills;
 	TotalMementos = LoadInstance->SavedMementos;
-	bMementoEyeCollected = LoadInstance->SavedMementoEyeCollected;
 
 	UE_LOG(LogTemp, Warning, TEXT("Game Loaded Successfully from '%s'."), *SlotName);
+}
+
+void UOblivioGameInstance::MarkPlayerMetTankOnce()
+{
+	bPlayerMetTankOnce = true;
 }

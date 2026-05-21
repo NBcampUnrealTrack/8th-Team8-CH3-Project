@@ -2,8 +2,12 @@
 
 #include "CoreMinimal.h"
 #include "Engine/GameInstance.h"
+#include "Cinematic/OblivioLevelOpeningSequenceTypes.h"
 #include "Items/OblivioInventoryComponent.h"
 #include "OblivioGameInstance.generated.h"
+
+class ULevelSequence;
+class UWorld;
 
 UCLASS()
 class OBLIVIO_API UOblivioGameInstance : public UGameInstance
@@ -11,6 +15,7 @@ class OBLIVIO_API UOblivioGameInstance : public UGameInstance
 	GENERATED_BODY()
 
 public:
+	UOblivioGameInstance();
 
 	//게임 재시작 시 데이터 초기화용
 	void ResetGameData()
@@ -60,6 +65,17 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Persistence")
 	int32 CurrentFloor = 9;
 
+	/** 맵 이름별 오프닝 Level Sequence (GameInstance BP Class Defaults에서 편집). */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Cinematic")
+	TArray<FLevelOpeningSequenceEntry> LevelOpeningSequenceEntries;
+
+	/** 현재 월드 맵 이름에 맞는 Level Sequence. 없거나 비어 있으면 nullptr. */
+	ULevelSequence* ResolveOpeningLevelSequence(const UWorld* World) const;
+
+	/** 현재 맵에 재생할 시퀀스가 있는지 (에셋까지 유효). */
+	UFUNCTION(BlueprintPure, Category = "Cinematic")
+	bool HasOpeningLevelSequenceForCurrentLevel(const UWorld* World) const;
+
 	/** `ItemID == MementoEye` 메멘토 획득 시 true — 7층 추적 눈알 등 게이트용. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Persistence|Memento")
 	bool bMementoEyeCollected = false;
@@ -70,4 +86,16 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
 	bool bIsSaveMode = false;
+
+	// -------------------------------------------------------------------------
+	// 탱커 첫 조우 — 럭스이터 양막 소환 패턴 게이트(세션·세이브 연동)
+	// -------------------------------------------------------------------------
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Progress|Tank")
+	bool bPlayerMetTankOnce = false;
+
+	UFUNCTION(BlueprintCallable, Category = "Progress|Tank")
+	void MarkPlayerMetTankOnce();
+
+	UFUNCTION(BlueprintPure, Category = "Progress|Tank")
+	bool HasPlayerMetTankOnce() const { return bPlayerMetTankOnce; }
 };
