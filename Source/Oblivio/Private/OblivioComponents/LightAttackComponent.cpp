@@ -112,7 +112,7 @@ void ULightAttackComponent::CreateLightAttack(FVector SourceLocation, FVector Li
     FVector LightDir = LightDirection.GetSafeNormal();
     float HalfAngle = LightAngle / 2.f;
 
-    /*
+    
     //공격범위 시각화
     if (bIsConcentrated)
     {
@@ -127,7 +127,7 @@ void ULightAttackComponent::CreateLightAttack(FVector SourceLocation, FVector Li
     {
         // 전방위 원형 영역
         DrawDebugCircle(GetWorld(), SourceLocation + FVector::UpVector * 20, LightDistance, 16, FColor::Yellow, false, .1f, 0, 2.0f, FVector::ForwardVector, FVector::RightVector, false);
-    }*/
+    }
 
     //광원 출력
     if (bIsConcentrated) {
