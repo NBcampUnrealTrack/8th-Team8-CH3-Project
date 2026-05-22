@@ -20,7 +20,7 @@ AOblivioCharacterController::AOblivioCharacterController()
 	, CrouchAction(nullptr)
 	, FlashlightToggleAction(nullptr)
 	, FlashbangAction(nullptr)
-	, FlareAction(nullptr)
+	, ThrowBottleAction(nullptr)
 	, ReloadAction(nullptr)
 	, InventoryAction(nullptr)
 	, CraftingAction(nullptr)
@@ -72,7 +72,7 @@ void AOblivioCharacterController::SetupInputComponent()
 		EIC->BindAction(CrouchAction, ETriggerEvent::Completed, this, &AOblivioCharacterController::OnCrouchCompleted);
 		EIC->BindAction(FlashlightToggleAction, ETriggerEvent::Started, this, &AOblivioCharacterController::OnFlashlightToggle);
 		EIC->BindAction(FlashbangAction, ETriggerEvent::Started, this, &AOblivioCharacterController::OnFlashbang);
-		EIC->BindAction(FlareAction, ETriggerEvent::Started, this, &AOblivioCharacterController::OnFlare);
+		EIC->BindAction(ThrowBottleAction, ETriggerEvent::Started, this, &AOblivioCharacterController::OnThrowBottle);
 		EIC->BindAction(ReloadAction, ETriggerEvent::Started, this, &AOblivioCharacterController::OnReload);
 		EIC->BindAction(InventoryAction, ETriggerEvent::Started, this, &AOblivioCharacterController::OnInventoryToggle);
 		EIC->BindAction(CraftingAction, ETriggerEvent::Started, this, &AOblivioCharacterController::OnCraftingToggle);
@@ -229,11 +229,11 @@ void AOblivioCharacterController::OnFlashbang(const FInputActionValue& Value)
 		if (IsValid(ObjChar->FlashbangWeapon))
 			ObjChar->UseFlashbang();
 }
-void AOblivioCharacterController::OnFlare(const FInputActionValue& Value)
+void AOblivioCharacterController::OnThrowBottle(const FInputActionValue& Value)
 {
 	if (AOblivioCharacter* ObjChar = Cast<AOblivioCharacter>(GetPawn()))
-		if (IsValid(ObjChar->FlareWeapon))
-			ObjChar->UseFlare();
+		if (IsValid(ObjChar->BottleClass))
+			ObjChar->ThrowBottle();
 }
 
 void AOblivioCharacterController::OnReload(const FInputActionValue& Value)

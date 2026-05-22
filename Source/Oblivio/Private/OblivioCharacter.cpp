@@ -747,8 +747,8 @@ void AOblivioCharacter::BeginPlay()
 	}
 
 	//조명탄
-	if (IsValid(FlareClass)) {
-		FlareWeapon = AttachWeapon(FlareClass, FName("RightHandSocket"));
+	if (IsValid(BottleClass)) {
+		BottleWeapon = AttachWeapon(BottleClass, FName("RightHandSocket"));
 	}
 
 	//AnimNotify 델리게이트 장착
@@ -1418,14 +1418,22 @@ void AOblivioCharacter::UseFlashbang()
 }
 
 //조명탄 시작 함수
-void AOblivioCharacter::UseFlare()
+void AOblivioCharacter::ThrowBottle()
 {
 	//다른 투척 호출중이면 실행 거부
-	if (IsValid(PendingWeaponClass)) return;
+	if (bIsDead || IsValid(PendingWeaponClass)) return;
 
-	UE_LOG(LogTemp, Warning, TEXT("UseFlare()!!"));
-	bool IsWeaponReady = FlareWeapon->UseWeapon();
-	if (IsWeaponReady) PendingWeaponClass = FlareWeapon;
+	if (InventoryComponent && InventoryComponent->ConsumeItem(EItemType::Bottle, 1))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UseBottle()!!"));
+		bool IsWeaponReady = BottleWeapon->UseWeapon();
+		if (IsWeaponReady) PendingWeaponClass = BottleWeapon;
+	}
+	else
+	{
+		// 유리병이 없을 때의 피드백
+		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("No Bottle in Inventory!"));
+	}
 }
 
 //AnimNotify로 타이밍에 맞게 투사체 스폰 호출
@@ -1448,7 +1456,7 @@ void AOblivioCharacter::ThrowWeapon() {
 		}
 	}
 	//유리병
-	else if (PendingWeaponClass == FlareWeapon) {
+	else if (PendingWeaponClass == BottleWeapon) {
 		UE_LOG(LogTemp, Warning, TEXT("Throwing Flare"));
 		PendingWeaponClass->ExecuteWeaponAttack(GetAimingLocation());
 	}
