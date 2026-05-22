@@ -15,6 +15,7 @@
 #include "Items/OblivioInventoryComponent.h"
 #include "Crafting/OblivioCrafting.h"
 #include "DoorBase.h"
+#include "BestiaryCollectible.h"
 
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -1080,6 +1081,13 @@ void AOblivioCharacter::Interact()
 		}
 	}
 
+	// ------ 도감 상호작용 로직 ------
+	if (ABestiaryCollectible* BestiaryDoc = Cast<ABestiaryCollectible>(TargetActor))
+	{
+		// E키를 눌렀을 때만 해금 함수 실행
+		BestiaryDoc->CollectDocument(this);
+		return;
+	}
 
 	// 일반 아이템 (인벤토리 추가)
 	if (AOblivioItemBase* PickedItem = Cast<AOblivioItemBase>(TargetActor))

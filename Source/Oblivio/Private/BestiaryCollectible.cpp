@@ -19,7 +19,7 @@ ABestiaryCollectible::ABestiaryCollectible()
 
     InteractSphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
     InteractSphere->SetCollisionResponseToAllChannels(ECR_Ignore);
-    InteractSphere->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+    InteractSphere->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
 
     HighlightEffect = CreateDefaultSubobject<UNiagaraComponent>(TEXT("HighlightEffect"));
     HighlightEffect->SetupAttachment(RootComponent);
