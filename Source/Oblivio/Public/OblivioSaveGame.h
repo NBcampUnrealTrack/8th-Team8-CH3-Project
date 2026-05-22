@@ -29,6 +29,8 @@ public:
 	UPROPERTY()
 	bool SavedMementoEyeCollected = false;
 	UPROPERTY()
+	TArray<FName> SavedPlayedOpeningLevelSequences;
+	UPROPERTY()
 	TArray<FInventorySlot> SavedInventorySlots;
 
 	//세이브 슬롯 이름 및 인덱스
