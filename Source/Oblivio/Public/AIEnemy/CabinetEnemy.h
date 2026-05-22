@@ -24,6 +24,7 @@ public:
 	ACabinetEnemy();
 
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void Tick(float DeltaSeconds) override;
 	virtual EEnemyAIState GetEnemyState() const override;
 
@@ -182,6 +183,9 @@ protected:
 	UPROPERTY(Transient, BlueprintReadOnly, Category = "Cabinet|Encounter")
 	bool bCabinetVisualsDetachedToWorld = false;
 
+	UPROPERTY(Transient, BlueprintReadOnly, Category = "Cabinet|Encounter")
+	bool bCabinetVisualsPersistedInWorld = false;
+
 	UPROPERTY(Transient, BlueprintReadOnly, Category = "Cabinet|Grab")
 	bool bGrabPairCollisionSuppressed = false;
 
@@ -197,10 +201,15 @@ protected:
 	float CabinetDoorOpenElapsed = 0.f;
 	FRotator CabinetDoorClosedRotation = FRotator::ZeroRotator;
 	FRotator CabinetDoorOpenRotation = FRotator::ZeroRotator;
+	FTransform CachedCabinetBodyWorldTransform = FTransform::Identity;
+	bool bCachedCabinetBodyWorldTransform = false;
 
 	void UpdateCabinetDoorRotation(float DeltaSeconds);
 	void CacheCabinetDoorClosedRotation();
 	void DetachCabinetVisualsToWorld();
+	void PersistCabinetVisualsInWorld();
+	bool IsCabinetVisualMeshComponent(const UStaticMeshComponent* MeshComp) const;
+	void GatherCabinetVisualMeshes(TArray<UStaticMeshComponent*>& OutMeshes) const;
 	void ApplyGrabPairCollisionSuppression(AOblivioCharacter* Player);
 	void RestoreGrabPairCollisionSuppression();
 	void BeginGrabPlayerTransformLock(AOblivioCharacter* Player);
