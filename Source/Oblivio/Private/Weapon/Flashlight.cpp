@@ -8,6 +8,8 @@
 
 AFlashlight::AFlashlight()
 {
+	PrimaryActorTick.bCanEverTick = true;
+
 	SphereComp->SetCollisionProfileName("NoCollision");
 
 	LightAttackComp = CreateDefaultSubobject<ULightAttackComponent>(TEXT("LightAttackComp"));
@@ -19,10 +21,10 @@ AFlashlight::AFlashlight()
 	LightAttackComp->LightTime = 5.f;
 	LightAttackComp->MinAngle = 10.f;
 	LightAttackComp->MaxAngle = 160.f;
+	LightAttackComp->LightAngle = 60.f;
 	LightAttackComp->DistancePerAngle = 3.f;
 	LightAttackComp->DamagePerAngle = 0.02f;
 	LightAttackComp->Damage = 3.f;
-	LightAttackComp->LightAngle = 60.f;
 	LightAttackComp->LightDistance = 1000.f;
 	LightAttackComp->MaxDamageDistance = 500.f;
 	LightAttackComp->DamageAttenuationRate = 2.f;
@@ -35,7 +37,18 @@ AFlashlight::AFlashlight()
 void AFlashlight::BeginPlay()
 {
 	Super::BeginPlay();
+	TargetAngle = LightAttackComp->LightAngle;
 	UseWeapon();
+}
+
+void AFlashlight::Tick(float DeltaTime) {
+	Super::Tick(DeltaTime);
+	if (!FMath::IsNearlyEqual(TargetAngle, LightAttackComp->LightAngle, 0.001f)) {
+		UE_LOG(LogTemp, Warning, TEXT("Interporating from %f to %f"), LightAttackComp->LightAngle, TargetAngle);
+		float NewAngle = FMath::FInterpTo(LightAttackComp->LightAngle, TargetAngle, DeltaTime, AngleInterpSpeed);
+		UE_LOG(LogTemp, Warning, TEXT("NewAngle: %f"), NewAngle);
+		LightAttackComp->ChangeLightAngle(NewAngle - LightAttackComp->LightAngle);
+	}
 }
 
 bool AFlashlight::UseWeapon()
@@ -74,7 +87,7 @@ void AFlashlight::StopWeapon()
 void AFlashlight::ChangeWeaponAngle(float DeltaAngle)
 {
 	UE_LOG(LogTemp, Warning, TEXT("ChangeWeaponAngle Called"));
-	LightAttackComp->ChangeLightAngle(DeltaAngle);
+	TargetAngle = FMath::Clamp(TargetAngle + DeltaAngle, LightAttackComp->MinAngle, LightAttackComp->MaxAngle);
 }
 
 void AFlashlight::EndPlay(const EEndPlayReason::Type EndPlayReason) {
