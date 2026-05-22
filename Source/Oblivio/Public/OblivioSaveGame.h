@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/SaveGame.h"
@@ -32,6 +32,8 @@ public:
 	TArray<FName> SavedPlayedOpeningLevelSequences;
 	UPROPERTY()
 	TArray<FInventorySlot> SavedInventorySlots;
+	UPROPERTY()
+	TArray<FName> SavedUnlockedMonsters;
 
 	//세이브 슬롯 이름 및 인덱스
 	UPROPERTY()

@@ -1,4 +1,4 @@
-#include "OblivioGameInstance.h"
+﻿#include "OblivioGameInstance.h"
 #include "OblivioSaveGame.h"
 #include "LevelSequence.h"
 #include "Kismet/GameplayStatics.h"
@@ -98,6 +98,7 @@ void UOblivioGameInstance::SaveGameData(FString SlotName)
 	SaveInstance->SavedKills = TotalKills;
 	SaveInstance->SavedMementos = TotalMementos;
 	SaveInstance->SavedPlayedOpeningLevelSequences = PlayedOpeningLevelSequenceLevels;
+	SaveInstance->SavedUnlockedMonsters = UnlockedMonsters;
 
 	if (SlotName.Len() <= 0)
 	{
@@ -138,6 +139,7 @@ void UOblivioGameInstance::LoadGameData(FString SlotName)
 	TotalKills = LoadInstance->SavedKills;
 	TotalMementos = LoadInstance->SavedMementos;
 	PlayedOpeningLevelSequenceLevels = LoadInstance->SavedPlayedOpeningLevelSequences;
+	UnlockedMonsters = LoadInstance->SavedUnlockedMonsters;
 
 	UE_LOG(LogTemp, Warning, TEXT("Game Loaded Successfully from '%s'."), *SlotName);
 }
@@ -145,4 +147,19 @@ void UOblivioGameInstance::LoadGameData(FString SlotName)
 void UOblivioGameInstance::MarkPlayerMetTankOnce()
 {
 	bPlayerMetTankOnce = true;
+}
+
+void UOblivioGameInstance::UnlockMonsterEntry(FName MonsterID)
+{
+	// 이미 해금된 몬스터가 아니라면 추가
+	if (!UnlockedMonsters.Contains(MonsterID))
+	{
+		UnlockedMonsters.AddUnique(MonsterID);
+		UE_LOG(LogTemp, Warning, TEXT("Bestiary Unlocked: %s"), *MonsterID.ToString());
+	}
+}
+
+bool UOblivioGameInstance::IsMonsterUnlocked(FName MonsterID) const
+{
+	return UnlockedMonsters.Contains(MonsterID);
 }
