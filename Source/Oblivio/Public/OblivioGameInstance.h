@@ -30,6 +30,7 @@ public:
 		CurrentThirst = 100.f;
 		bMementoEyeCollected = false;
 		PlayedOpeningLevelSequenceLevels.Empty();
+		UnlockedMonsters.Empty();
 	}
 
 	//세이브/로드 함수
@@ -55,6 +56,18 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "PlayerStatus")
 	float CurrentThirst = 100.0f;
+
+	//몬스터 도감
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Persistence|Bestiary")
+	TArray<FName> UnlockedMonsters;
+
+	// 도감 획득 시 호출할 함수
+	UFUNCTION(BlueprintCallable, Category = "Persistence|Bestiary")
+	void UnlockMonsterEntry(FName MonsterID);
+
+	// 특정 몬스터가 해금되었는지 검사하는 함수 (UI에서 체크할 때 유용함)
+	UFUNCTION(BlueprintPure, Category = "Persistence|Bestiary")
+	bool IsMonsterUnlocked(FName MonsterID) const;
 
 	//카르마/유품/층수
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Persistence")
