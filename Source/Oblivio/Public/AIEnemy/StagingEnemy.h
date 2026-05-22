@@ -65,10 +65,14 @@ public:
 	bool IsApproachingForGrab() const;
 
 	UFUNCTION(BlueprintPure, Category = "Staging|Anim")
-	bool ShouldPlayGrabAnimation() const;
+	virtual bool ShouldPlayGrabAnimation() const;
 
 	UFUNCTION(BlueprintPure, Category = "Staging|Anim")
-	bool ShouldPlayKnockdownAnimation() const;
+	virtual bool ShouldPlayKnockdownAnimation() const;
+
+	/** E 연타 성공 넉백 구간(CabinetEnemy). ABP 전환용. */
+	UFUNCTION(BlueprintPure, Category = "Staging|Anim")
+	virtual bool ShouldPlayMashKnockbackAnimation() const { return false; }
 
 	UFUNCTION(BlueprintPure, Category = "Staging|Anim")
 	bool ShouldPlayDeadAnimation() const;
@@ -167,9 +171,11 @@ protected:
 	TObjectPtr<UAnimSequence> PostLevelSequenceAnimSequence;
 
 	void EnterCinematicMode();
+	void ExitCinematicMode();
+	void ApplyKnockdownLaunch(const FVector& PushDir, bool bHorizontalOnly = true);
 	void RestoreLevelSequenceAnimation(bool bApplyPostSequencePose);
 	void UpdateStagingApproach(float DeltaSeconds);
-	void HandleGrabComplete();
+	virtual void HandleGrabComplete();
 	void HandleEnterStandoff();
 	void HandleExecuteAutoPush();
 	void HandleKnockdownBegin();
