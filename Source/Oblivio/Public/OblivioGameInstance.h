@@ -29,6 +29,7 @@ public:
 		CurrentHunger = 100.f;
 		CurrentThirst = 100.f;
 		bMementoEyeCollected = false;
+		PlayedOpeningLevelSequenceLevels.Empty();
 	}
 
 	//세이브/로드 함수
@@ -69,12 +70,23 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Cinematic")
 	TArray<FLevelOpeningSequenceEntry> LevelOpeningSequenceEntries;
 
+	/** 이미 재생 완료한 맵의 오프닝 LS (세이브 연동). */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Cinematic")
+	TArray<FName> PlayedOpeningLevelSequenceLevels;
+
 	/** 현재 월드 맵 이름에 맞는 Level Sequence. 없거나 비어 있으면 nullptr. */
 	ULevelSequence* ResolveOpeningLevelSequence(const UWorld* World) const;
 
 	/** 현재 맵에 재생할 시퀀스가 있는지 (에셋까지 유효). */
 	UFUNCTION(BlueprintPure, Category = "Cinematic")
 	bool HasOpeningLevelSequenceForCurrentLevel(const UWorld* World) const;
+
+	/** 해당 맵 오프닝 LS를 이미 재생했는지 (재입장·다시하기 시 스킵). */
+	UFUNCTION(BlueprintPure, Category = "Cinematic")
+	bool HasPlayedOpeningLevelSequence(const UWorld* World) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Cinematic")
+	void MarkOpeningLevelSequencePlayed(const UWorld* World);
 
 	/** `ItemID == MementoEye` 메멘토 획득 시 true — 7층 추적 눈알 등 게이트용. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Persistence|Memento")

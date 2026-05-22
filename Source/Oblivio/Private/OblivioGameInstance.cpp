@@ -48,6 +48,38 @@ bool UOblivioGameInstance::HasOpeningLevelSequenceForCurrentLevel(const UWorld* 
 	return ResolveOpeningLevelSequence(World) != nullptr;
 }
 
+bool UOblivioGameInstance::HasPlayedOpeningLevelSequence(const UWorld* World) const
+{
+	if (!World)
+	{
+		return false;
+	}
+
+	const FName CurrentLevelName = FName(*UGameplayStatics::GetCurrentLevelName(World, true));
+	if (CurrentLevelName.IsNone())
+	{
+		return false;
+	}
+
+	return PlayedOpeningLevelSequenceLevels.Contains(CurrentLevelName);
+}
+
+void UOblivioGameInstance::MarkOpeningLevelSequencePlayed(const UWorld* World)
+{
+	if (!World)
+	{
+		return;
+	}
+
+	const FName CurrentLevelName = FName(*UGameplayStatics::GetCurrentLevelName(World, true));
+	if (CurrentLevelName.IsNone())
+	{
+		return;
+	}
+
+	PlayedOpeningLevelSequenceLevels.AddUnique(CurrentLevelName);
+}
+
 void UOblivioGameInstance::SaveGameData(FString SlotName)
 {
 	UOblivioSaveGame* SaveInstance = Cast<UOblivioSaveGame>(UGameplayStatics::CreateSaveGameObject(UOblivioSaveGame::StaticClass()));
@@ -65,6 +97,7 @@ void UOblivioGameInstance::SaveGameData(FString SlotName)
 	SaveInstance->SavedFloor = CurrentFloor;
 	SaveInstance->SavedKills = TotalKills;
 	SaveInstance->SavedMementos = TotalMementos;
+	SaveInstance->SavedPlayedOpeningLevelSequences = PlayedOpeningLevelSequenceLevels;
 
 	if (SlotName.Len() <= 0)
 	{
@@ -104,6 +137,7 @@ void UOblivioGameInstance::LoadGameData(FString SlotName)
 	CurrentFloor = LoadInstance->SavedFloor;
 	TotalKills = LoadInstance->SavedKills;
 	TotalMementos = LoadInstance->SavedMementos;
+	PlayedOpeningLevelSequenceLevels = LoadInstance->SavedPlayedOpeningLevelSequences;
 
 	UE_LOG(LogTemp, Warning, TEXT("Game Loaded Successfully from '%s'."), *SlotName);
 }

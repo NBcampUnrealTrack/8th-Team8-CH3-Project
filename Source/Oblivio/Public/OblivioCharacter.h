@@ -449,6 +449,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Cinematic|LevelSequence")
 	void TryPlayOpeningLevelSequence();
 
+	UFUNCTION(BlueprintPure, Category = "Cinematic|LevelSequence")
+	bool IsOpeningLevelSequenceActive() const { return bOpeningLevelSequenceActive; }
+
+	/** LS 재생 중 HUD 등 UI 표시/숨김 — BP_OblivioCharacter Event Graph에서 처리. */
+	UFUNCTION(BlueprintImplementableEvent, Category = "Cinematic|LevelSequence")
+	void OnOpeningLevelSequenceUIChanged(bool bUIVisible);
+
 	UFUNCTION(BlueprintPure, Category = "Cinematic")
 	AStagingEnemy* GetLinkedStagingEnemy() const { return LinkedStagingEnemy.Get(); }
 
@@ -625,11 +632,14 @@ private:
 	/** Level Sequence용 ABP 캐시 (BP 제거 후 C++ 전용). */
 	bool bAnimClassCachedForLevelSequence = false;
 	TSubclassOf<UAnimInstance> CachedAnimClassForLevelSequence;
+	bool bOpeningLevelSequenceActive = false;
+	TEnumAsByte<EMovementMode> CachedMovementModeForLevelSequence = MOVE_Walking;
 	TWeakObjectPtr<class ULevelSequencePlayer> ActiveOpeningLevelSequencePlayer;
 	TWeakObjectPtr<class ALevelSequenceActor> ActiveOpeningLevelSequenceActor;
 
+	void BeginOpeningLevelSequenceControl();
+	void EndOpeningLevelSequenceControl();
 	void HandleOpeningLevelSequenceFinished();
 	void ReleaseOpeningLevelSequencePlayer();
-	void RestorePlayerViewAfterLevelSequence();
 	void StopOpeningLevelSequencePlayback(bool bRestoreAnim);
 };

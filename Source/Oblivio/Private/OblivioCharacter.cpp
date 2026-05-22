@@ -861,7 +861,7 @@ void AOblivioCharacter::UpdateStatus(float DeltaTime)
 	bool bIsInWater = IsInWater();
 	float WaterSpeedMultiplier = bIsInWater ? 0.5f : 1.0f;
 
-	if (bIsStunned || bCinematicMovementLocked)
+	if (bIsStunned || bCinematicMovementLocked || bOpeningLevelSequenceActive)
 	{
 		// 스턴·연출 잠금 상태면 아예 움직이지 못함
 		GetCharacterMovement()->MaxWalkSpeed = 0.0f;
@@ -913,7 +913,7 @@ void AOblivioCharacter::UpdateStatus(float DeltaTime)
 
 void AOblivioCharacter::Move(const FVector2D& Value)
 {
-	if (bCinematicMovementLocked)
+	if (bCinematicMovementLocked || bOpeningLevelSequenceActive)
 	{
 		return;
 	}
@@ -1897,6 +1897,42 @@ void AOblivioCharacter::RestoreAfterLevelSequence()
 	SkelMesh->InitAnim(true);
 }
 
+void AOblivioCharacter::BeginOpeningLevelSequenceControl()
+{
+	if (bOpeningLevelSequenceActive)
+	{
+		return;
+	}
+
+	bOpeningLevelSequenceActive = true;
+
+	if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
+	{
+		CachedMovementModeForLevelSequence = MoveComp->MovementMode;
+		MoveComp->StopMovementImmediately();
+		MoveComp->DisableMovement();
+	}
+
+	OnOpeningLevelSequenceUIChanged(false);
+}
+
+void AOblivioCharacter::EndOpeningLevelSequenceControl()
+{
+	if (!bOpeningLevelSequenceActive)
+	{
+		return;
+	}
+
+	bOpeningLevelSequenceActive = false;
+
+	if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
+	{
+		MoveComp->SetMovementMode(CachedMovementModeForLevelSequence);
+	}
+
+	OnOpeningLevelSequenceUIChanged(true);
+}
+
 void AOblivioCharacter::TryPlayOpeningLevelSequence()
 {
 	if (!IsLocallyControlled())
@@ -1922,8 +1958,16 @@ void AOblivioCharacter::TryPlayOpeningLevelSequence()
 		return;
 	}
 
+	if (GI->HasPlayedOpeningLevelSequence(World))
+	{
+		UE_LOG(LogTemp, Log, TEXT("TryPlayOpeningLevelSequence: skipped — already played on %s"),
+			*UGameplayStatics::GetCurrentLevelName(World, true));
+		return;
+	}
+
 	PrepareForLevelSequence();
 	AStagingEnemy::PrepareAllForLevelSequence(this);
+	BeginOpeningLevelSequenceControl();
 
 	FMovieSceneSequencePlaybackSettings PlaybackSettings;
 	ALevelSequenceActor* SequenceActor = nullptr;
@@ -1935,6 +1979,7 @@ void AOblivioCharacter::TryPlayOpeningLevelSequence()
 
 	if (!SequencePlayer)
 	{
+		EndOpeningLevelSequenceControl();
 		AStagingEnemy::RestoreAllAfterLevelSequenceAbort(this);
 		RestoreAfterLevelSequence();
 		UE_LOG(LogTemp, Warning, TEXT("TryPlayOpeningLevelSequence: failed to create player for %s"), *GetNameSafe(Sequence));
@@ -1944,6 +1989,7 @@ void AOblivioCharacter::TryPlayOpeningLevelSequence()
 	ActiveOpeningLevelSequencePlayer = SequencePlayer;
 	ActiveOpeningLevelSequenceActor = SequenceActor;
 	SequencePlayer->OnNativeFinished.BindUObject(this, &AOblivioCharacter::HandleOpeningLevelSequenceFinished);
+	GI->MarkOpeningLevelSequencePlayed(World);
 	SequencePlayer->Play();
 }
 
@@ -1951,8 +1997,8 @@ void AOblivioCharacter::HandleOpeningLevelSequenceFinished()
 {
 	UE_LOG(LogTemp, Log, TEXT("TryPlayOpeningLevelSequence: OnNativeFinished"));
 
-	RestorePlayerViewAfterLevelSequence();
 	ReleaseOpeningLevelSequencePlayer();
+	EndOpeningLevelSequenceControl();
 	AStagingEnemy::RestoreAllAfterLevelSequenceFinished(this);
 	RestoreAfterLevelSequence();
 
@@ -1980,14 +2026,6 @@ void AOblivioCharacter::ReleaseOpeningLevelSequencePlayer()
 	ActiveOpeningLevelSequenceActor.Reset();
 }
 
-void AOblivioCharacter::RestorePlayerViewAfterLevelSequence()
-{
-	if (APlayerController* PC = Cast<APlayerController>(GetController()))
-	{
-		PC->SetViewTarget(this);
-	}
-}
-
 void AOblivioCharacter::StopOpeningLevelSequencePlayback(bool bRestoreAnim)
 {
 	ReleaseOpeningLevelSequencePlayer();
@@ -1997,8 +2035,8 @@ void AOblivioCharacter::StopOpeningLevelSequencePlayback(bool bRestoreAnim)
 		return;
 	}
 
+	EndOpeningLevelSequenceControl();
 	AStagingEnemy::RestoreAllAfterLevelSequenceAbort(this);
-	RestorePlayerViewAfterLevelSequence();
 	RestoreAfterLevelSequence();
 }
 
