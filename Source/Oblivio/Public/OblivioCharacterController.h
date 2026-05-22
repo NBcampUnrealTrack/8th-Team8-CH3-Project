@@ -50,7 +50,7 @@ protected:
 	class UInputAction* FlashbangAction;
 
 	UPROPERTY(EditAnywhere, Category = "Input")
-	class UInputAction* FlareAction;
+	class UInputAction* ThrowBottleAction;
 
 	UPROPERTY(EditAnywhere, Category = "Input")
 	class UInputAction* ReloadAction;
@@ -91,7 +91,7 @@ protected:
 	void OnCrouchCompleted(const FInputActionValue& Value);
 	void OnFlashlightToggle(const FInputActionValue& Value);
 	void OnFlashbang(const FInputActionValue& Value);
-	void OnFlare(const FInputActionValue& Value);
+	void OnThrowBottle(const FInputActionValue& Value);
 	void OnReload(const FInputActionValue& Value);
 	void OnInventoryToggle(const FInputActionValue& Value);
 	void OnCraftingToggle(const FInputActionValue& Value);

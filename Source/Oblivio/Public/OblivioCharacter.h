@@ -318,11 +318,11 @@ public:
 	TSubclassOf<AWeaponBase> FlashbangClass;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
-	TSubclassOf<AWeaponBase> FlareClass;
+	TSubclassOf<AWeaponBase> BottleClass;
 
 	TObjectPtr<AWeaponBase> FlashlightWeapon;
 	TObjectPtr<AWeaponBase> FlashbangWeapon;
-	TObjectPtr<AWeaponBase> FlareWeapon;
+	TObjectPtr<AWeaponBase> BottleWeapon;
 
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	virtual AWeaponBase* AttachWeapon(TSubclassOf<AWeaponBase> AttachingWeaponClass, FName AttachingSocket);
@@ -391,7 +391,7 @@ public:
 	void StopCrouching();
 	void ToggleFlashlight();
 	void UseFlashbang();
-	void UseFlare();
+	void ThrowBottle();
 	void AdjustFocus(float Value);
 	
 	UFUNCTION(BlueprintCallable, Category = "UI")

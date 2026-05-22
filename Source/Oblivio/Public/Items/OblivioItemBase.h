@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
@@ -25,7 +25,8 @@ enum class EItemType : uint8
 	Water   UMETA(DisplayName = "Water"),
 	Battery UMETA(DisplayName = "Battery"),
     Key     UMETA(DisplayName = "Key"),
-    Memento UMETA(DisplayName = "Memento")
+    Memento UMETA(DisplayName = "Memento"),
+    Bottle  UMETA(DisplayName = "Bottle")
 };
 class UNiagaraComponent;
 UCLASS()
