@@ -15,7 +15,6 @@ class OBLIVIO_API AFlashlight : public AWeaponBase
 	GENERATED_BODY()
 public:
 	AFlashlight();
-	virtual void BeginPlay() override;
 	virtual bool UseWeapon() override;
 	virtual void StopWeapon() override;
 	virtual void ChangeWeaponAngle(float DeltaAngle) override;
@@ -24,6 +23,9 @@ public:
 	float GetAttackInterval() const { return AttackInterval; }
 
 protected:
+	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaSeconds) override;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Attack)
 	float AttackInterval;
 	FTimerHandle AttackTimerHandle;
@@ -38,4 +40,10 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, Category = Weapon)
 	bool bIsTurnedOn;
+
+	//빛 각도 조절 보간
+	UPROPERTY(VisibleAnywhere, Category = Weapon)
+	float TargetAngle;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Weapon)
+	float AngleInterpSpeed;
 };
