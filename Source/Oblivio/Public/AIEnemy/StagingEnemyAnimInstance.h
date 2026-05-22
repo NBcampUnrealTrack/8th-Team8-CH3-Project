@@ -30,6 +30,9 @@ public:
 	bool bShouldPlayKnockdownAnimation = false;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Staging|Anim", meta = (BlueprintThreadSafe))
+	bool bShouldPlayMashKnockbackAnimation = false;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Staging|Anim", meta = (BlueprintThreadSafe))
 	bool bShouldPlayDeadAnimation = false;
 
 	/** Blend Space / Speed 기반 Walk용 (cm/s). */
@@ -55,6 +58,9 @@ public:
 	/** AnimGraph 검색: "Is Moving" */
 	UFUNCTION(BlueprintPure, Category = "Staging|Anim", meta = (BlueprintThreadSafe))
 	bool IsMoving() const { return bIsMoving; }
+
+	UFUNCTION(BlueprintPure, Category = "Staging|Anim", meta = (BlueprintThreadSafe))
+	bool ShouldPlayMashKnockbackAnimation() const { return bShouldPlayMashKnockbackAnimation; }
 
 	float AnimDebugAccumSec = 0.f;
 };

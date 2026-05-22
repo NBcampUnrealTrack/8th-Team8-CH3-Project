@@ -1,5 +1,6 @@
 ﻿#include "OblivioCharacter.h"
 #include "AIEnemy/StagingEnemy.h"
+#include "AIEnemy/CabinetEnemy.h"
 #include "Cinematic/StagingCinematicTypes.h"
 #include "OblivioCharacterAnimInstance.h"
 #include "OblivioGameInstance.h"
@@ -94,6 +95,18 @@ AOblivioCharacter::AOblivioCharacter()
 
 	TopDownCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("TopDownCamera"));
 	TopDownCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
+
+	GrabFirstPersonCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("GrabFirstPersonCamera"));
+	if (USkeletalMeshComponent* SkelMesh = GetMesh())
+	{
+		GrabFirstPersonCamera->SetupAttachment(SkelMesh);
+	}
+	else
+	{
+		GrabFirstPersonCamera->SetupAttachment(RootComponent);
+	}
+	GrabFirstPersonCamera->bUsePawnControlRotation = false;
+	GrabFirstPersonCamera->bAutoActivate = false;
 
 	FlashlightComponent = CreateDefaultSubobject<USpotLightComponent>(TEXT("Flashlight"));
 	FlashlightComponent->SetupAttachment(RootComponent);
@@ -722,6 +735,16 @@ void AOblivioCharacter::BeginPlay()
 		CameraBoom->bDoCollisionTest = !bWallOcclusionDisableSpringArmProbe;
 	}
 
+	if (GrabFirstPersonCamera)
+	{
+		GrabFirstPersonCamera->SetActive(false);
+	}
+
+	if (TopDownCamera)
+	{
+		TopDownCamera->SetActive(true);
+	}
+
 	if (APlayerController* PC = Cast<APlayerController>(GetController()))
 	{
 		if (PC->PlayerCameraManager)
@@ -778,6 +801,7 @@ void AOblivioCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void AOblivioCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	EnforceCabinetGrabWorldTransformLock();
 	UpdateStatus(DeltaTime);
 	UpdateWallOcclusionDither();
 	RefreshWallOcclusionFadeMaterialInstances();
@@ -980,6 +1004,11 @@ void AOblivioCharacter::PlaceObstacle()
 
 void AOblivioCharacter::Interact()
 {
+	if (TryHandleCabinetMashInput())
+	{
+		return;
+	}
+
 	// 상호작용할 대상(TargetActor) 하나만 확실하게 정하기
 	AActor* TargetActor = nullptr;
 
@@ -1602,6 +1631,9 @@ void AOblivioCharacter::HandleDeath()
 	if (bIsDead) return;
 	bIsDead = true;
 
+	RestoreGameplayCamera();
+	GetWorldTimerManager().ClearTimer(GrabCameraSwitchTimerHandle);
+
 	if (IsValid(LowHealthAudioComponent) && LowHealthAudioComponent->IsPlaying())
 	{
 		LowHealthAudioComponent->Stop();
@@ -1721,6 +1753,101 @@ void AOblivioCharacter::ApplyMovementInversion(float Duration)
 		Duration, /*bLoop=*/false);
 }
 
+void AOblivioCharacter::ActivateGrabFirstPersonCamera()
+{
+	if (!bEnableGrabFirstPersonCamera || bGrabFirstPersonCameraActive || !IsLocallyControlled())
+	{
+		return;
+	}
+
+	if (!GrabFirstPersonCamera || !TopDownCamera)
+	{
+		return;
+	}
+
+	ApplyGrabCameraSwitch(true);
+}
+
+void AOblivioCharacter::RestoreGameplayCamera()
+{
+	if (!bGrabFirstPersonCameraActive)
+	{
+		return;
+	}
+
+	ApplyGrabCameraSwitch(false);
+}
+
+void AOblivioCharacter::ApplyGrabCameraSwitch(bool bToFirstPerson)
+{
+	if (!GrabFirstPersonCamera || !TopDownCamera)
+	{
+		return;
+	}
+
+	auto PerformSwitch = [this, bToFirstPerson]()
+	{
+		if (bToFirstPerson)
+		{
+			TopDownCamera->SetActive(false);
+			GrabFirstPersonCamera->SetActive(true);
+			bGrabFirstPersonCameraActive = true;
+		}
+		else
+		{
+			GrabFirstPersonCamera->SetActive(false);
+			TopDownCamera->SetActive(true);
+			bGrabFirstPersonCameraActive = false;
+
+			if (CameraBoom)
+			{
+				CameraBoom->bDoCollisionTest = !bWallOcclusionDisableSpringArmProbe;
+			}
+		}
+	};
+
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	if (!PC || !PC->IsLocalController() || GrabCameraSwitchBlendTime <= KINDA_SMALL_NUMBER)
+	{
+		PerformSwitch();
+		return;
+	}
+
+	APlayerCameraManager* CameraManager = PC->PlayerCameraManager;
+	if (!CameraManager)
+	{
+		PerformSwitch();
+		return;
+	}
+
+	const float HalfBlend = GrabCameraSwitchBlendTime * 0.5f;
+	GetWorldTimerManager().ClearTimer(GrabCameraSwitchTimerHandle);
+	CameraManager->StartCameraFade(0.f, 1.f, HalfBlend, FLinearColor::Black, false, true);
+
+	TWeakObjectPtr<AOblivioCharacter> WeakThis(this);
+	GetWorldTimerManager().SetTimer(
+		GrabCameraSwitchTimerHandle,
+		[WeakThis, PerformSwitch, HalfBlend]()
+		{
+			if (!WeakThis.IsValid())
+			{
+				return;
+			}
+
+			PerformSwitch();
+
+			if (APlayerController* LocalPC = Cast<APlayerController>(WeakThis->GetController()))
+			{
+				if (APlayerCameraManager* LocalCameraManager = LocalPC->PlayerCameraManager)
+				{
+					LocalCameraManager->StartCameraFade(1.f, 0.f, HalfBlend, FLinearColor::Black, false, true);
+				}
+			}
+		},
+		HalfBlend,
+		false);
+}
+
 void AOblivioCharacter::RefreshCinematicMovementLock()
 {
 	bCinematicMovementLocked =
@@ -1737,8 +1864,21 @@ void AOblivioCharacter::BeginStagingCinematic(AStagingEnemy* StagingEnemy)
 
 void AOblivioCharacter::EndStagingCinematic()
 {
+	RestoreGameplayCamera();
 	LinkedStagingEnemy = nullptr;
 	SetPlayerCinematicState(EPlayerCinematicState::Released);
+}
+
+bool AOblivioCharacter::TryHandleCabinetMashInput()
+{
+	ACabinetEnemy* CabinetEnemy = Cast<ACabinetEnemy>(LinkedStagingEnemy.Get());
+	if (!IsValid(CabinetEnemy) || !CabinetEnemy->IsMashWindowActive())
+	{
+		return false;
+	}
+
+	CabinetEnemy->RegisterMashPress();
+	return true;
 }
 
 bool AOblivioCharacter::IsPlayerCinematicAnimDebugEnabled() const
@@ -1764,6 +1904,7 @@ void AOblivioCharacter::HandlePlayerCinematicNotify(EPlayerCinematicNotify Notif
 	{
 	case EPlayerCinematicNotify::EnterGrabbed:
 		SetPlayerCinematicState(EPlayerCinematicState::BeingGrabbed);
+		ActivateGrabFirstPersonCamera();
 		break;
 	case EPlayerCinematicNotify::EnterStandoff:
 		SetPlayerCinematicState(EPlayerCinematicState::Standoff);
@@ -1775,9 +1916,11 @@ void AOblivioCharacter::HandlePlayerCinematicNotify(EPlayerCinematicNotify Notif
 		}
 		break;
 	case EPlayerCinematicNotify::PushSucceeded:
+		RestoreGameplayCamera();
 		SetPlayerCinematicState(EPlayerCinematicState::Pushing);
 		break;
 	case EPlayerCinematicNotify::ReleaseFromGrab:
+		RestoreGameplayCamera();
 		ReleaseFromStagingGrab();
 		break;
 	case EPlayerCinematicNotify::ForceFlashlightOn:
@@ -1796,10 +1939,66 @@ void AOblivioCharacter::HandlePlayerCinematicNotify(EPlayerCinematicNotify Notif
 void AOblivioCharacter::ReleaseFromStagingGrab()
 {
 	bCinematicMovementLocked = false;
+	RestoreGameplayCamera();
 	if (PlayerCinematicState == EPlayerCinematicState::BeingGrabbed
 		|| PlayerCinematicState == EPlayerCinematicState::Standoff)
 	{
 		SetPlayerCinematicState(EPlayerCinematicState::Released);
+	}
+}
+
+void AOblivioCharacter::SetCabinetGrabWorldTransformLock(bool bEnabled, const FVector& WorldLocation, const FRotator& WorldRotation)
+{
+	if (bEnabled)
+	{
+		bCabinetGrabWorldTransformLockActive = true;
+		CabinetGrabLockedWorldLocation = WorldLocation;
+		CabinetGrabLockedWorldRotation = WorldRotation;
+
+		if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
+		{
+			bCabinetGrabMovementTickWasEnabled = MoveComp->IsComponentTickEnabled();
+			MoveComp->SetComponentTickEnabled(false);
+			MoveComp->StopMovementImmediately();
+			MoveComp->SetMovementMode(MOVE_None);
+		}
+	}
+	else
+	{
+		bCabinetGrabWorldTransformLockActive = false;
+
+		if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
+		{
+			MoveComp->SetComponentTickEnabled(bCabinetGrabMovementTickWasEnabled);
+			if (IsAlive())
+			{
+				MoveComp->SetMovementMode(MOVE_Walking);
+			}
+		}
+	}
+}
+
+void AOblivioCharacter::EnforceCabinetGrabWorldTransformLock()
+{
+	if (!bCabinetGrabWorldTransformLockActive)
+	{
+		return;
+	}
+
+	if (!CabinetGrabLockedWorldLocation.Equals(GetActorLocation(), 0.5f))
+	{
+		SetActorLocation(CabinetGrabLockedWorldLocation, false, nullptr, ETeleportType::TeleportPhysics);
+	}
+
+	if (!CabinetGrabLockedWorldRotation.Equals(GetActorRotation(), 0.5f))
+	{
+		SetActorRotation(CabinetGrabLockedWorldRotation);
+	}
+
+	if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
+	{
+		MoveComp->StopMovementImmediately();
+		MoveComp->Velocity = FVector::ZeroVector;
 	}
 }
 

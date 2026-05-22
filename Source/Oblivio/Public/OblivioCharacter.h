@@ -92,6 +92,17 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components|Camera")
 	class UCameraComponent* TopDownCamera;
 
+	/** 그랩 연출 중 1인칭 시점. BP 뷰포트에서 배치한 Transform 그대로 사용. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components|Camera")
+	class UCameraComponent* GrabFirstPersonCamera;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Components|Camera|Grab")
+	bool bEnableGrabFirstPersonCamera = true;
+
+	/** 그랩 1인칭 카메라 전환 시 페이드 길이(초). 0이면 즉시 전환. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Components|Camera|Grab", meta = (ClampMin = "0"))
+	float GrabCameraSwitchBlendTime = 0.25f;
+
 	/** true면 스프링암이 벽에 안 밀림(기본). 가리는 벽은 WallOcclusionOverlayMaterial 디더 오버레이로 처리. 바닥까지 걸리면 임계값·ExtraTraceLocals 조정. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components|Camera|Occlusion",
 		meta = (ToolTip = "CameraBoom 프로브 충돌 비활성화. 카메라와 캐릭터 사이 레이에 걸린 스태틱 메시에 오버레이 재질 적용."))
@@ -414,6 +425,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Cinematic")
 	void EndStagingCinematic();
 
+	/** 캐비넷 E 연타 구간 — Interact(E) 입력 처리. true면 다른 상호작용 스킵. */
+	UFUNCTION(BlueprintCallable, Category = "Cinematic|Cabinet")
+	bool TryHandleCabinetMashInput();
+
 	UFUNCTION(BlueprintCallable, Category = "Cinematic")
 	void SetPlayerCinematicState(EPlayerCinematicState NewState);
 
@@ -425,6 +440,17 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Cinematic")
 	void ReleaseFromStagingGrab();
+
+	void SetCabinetGrabWorldTransformLock(bool bEnabled, const FVector& WorldLocation = FVector::ZeroVector, const FRotator& WorldRotation = FRotator::ZeroRotator);
+
+	UFUNCTION(BlueprintCallable, Category = "Cinematic|Camera")
+	void ActivateGrabFirstPersonCamera();
+
+	UFUNCTION(BlueprintCallable, Category = "Cinematic|Camera")
+	void RestoreGameplayCamera();
+
+	UFUNCTION(BlueprintPure, Category = "Cinematic|Camera")
+	bool IsGrabFirstPersonCameraActive() const { return bGrabFirstPersonCameraActive; }
 
 	UFUNCTION(BlueprintCallable, Category = "Cinematic")
 	void ForceFlashlightOnForCinematic();
@@ -620,8 +646,18 @@ private:
 	TWeakObjectPtr<AStagingEnemy> LinkedStagingEnemy;
 
 	void RefreshCinematicMovementLock();
+	void ApplyGrabCameraSwitch(bool bToFirstPerson);
+
+	bool bCabinetGrabWorldTransformLockActive = false;
+	FVector CabinetGrabLockedWorldLocation = FVector::ZeroVector;
+	FRotator CabinetGrabLockedWorldRotation = FRotator::ZeroRotator;
+	bool bCabinetGrabMovementTickWasEnabled = false;
+	void EnforceCabinetGrabWorldTransformLock();
 	FTimerHandle FlashlightBlackoutTimer;
 	FTimerHandle MovementInversionTimer;
+	FTimerHandle GrabCameraSwitchTimerHandle;
+
+	bool bGrabFirstPersonCameraActive = false;
 
 	/** Flashlight 무기 SpotLight 후퇴 보간 상태 */
 	float FlashlightWallPullbackSmoothed = 0.f;
