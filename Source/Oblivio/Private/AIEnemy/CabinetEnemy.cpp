@@ -30,6 +30,54 @@ namespace
 
 		return SlotNames.IsEmpty() ? TEXT("(none)") : FString::Join(SlotNames, TEXT(", "));
 	}
+
+	void ConfigurePersistedCabinetMeshCollision(UStaticMeshComponent* MeshComp)
+	{
+		if (!MeshComp)
+		{
+			return;
+		}
+
+		MeshComp->SetMobility(EComponentMobility::Static);
+		MeshComp->SetCollisionObjectType(ECC_WorldStatic);
+		MeshComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		MeshComp->SetCollisionProfileName(TEXT("BlockAll"));
+		MeshComp->SetGenerateOverlapEvents(false);
+		MeshComp->SetCanEverAffectNavigation(true);
+	}
+
+	bool TransferStaticMeshComponentToProp(
+		UStaticMeshComponent* MeshComp,
+		AActor* CabinetProp,
+		const FTransform& DesiredWorldTransform,
+		USceneComponent* AttachParent,
+		const FTransform& RelativeTransform,
+		bool bAttachToParent)
+	{
+		if (!IsValid(MeshComp) || !IsValid(CabinetProp))
+		{
+			return false;
+		}
+
+		MeshComp->UnregisterComponent();
+		MeshComp->Rename(nullptr, CabinetProp, REN_DontCreateRedirectors | REN_ForceNoResetLoaders);
+		CabinetProp->AddInstanceComponent(MeshComp);
+		ConfigurePersistedCabinetMeshCollision(MeshComp);
+
+		if (bAttachToParent && AttachParent)
+		{
+			MeshComp->SetupAttachment(AttachParent);
+			MeshComp->SetRelativeTransform(RelativeTransform);
+		}
+		else
+		{
+			MeshComp->SetWorldTransform(DesiredWorldTransform);
+		}
+
+		MeshComp->RegisterComponent();
+		MeshComp->RecreatePhysicsState();
+		return true;
+	}
 }
 
 ACabinetEnemy::ACabinetEnemy()
@@ -311,6 +359,43 @@ void ACabinetEnemy::CacheCabinetDoorClosedRotation()
 	}
 }
 
+bool ACabinetEnemy::IsCabinetVisualMeshComponent(const UStaticMeshComponent* MeshComp) const
+{
+	return IsValid(MeshComp) && MeshComp != Cast<UStaticMeshComponent>(GetMesh());
+}
+
+void ACabinetEnemy::GatherCabinetVisualMeshes(TArray<UStaticMeshComponent*>& OutMeshes) const
+{
+	OutMeshes.Reset();
+
+	if (!CabinetBodyMesh)
+	{
+		return;
+	}
+
+	OutMeshes.Add(CabinetBodyMesh);
+
+	TArray<USceneComponent*> BodyChildren;
+	CabinetBodyMesh->GetChildrenComponents(true, BodyChildren);
+	for (USceneComponent* Child : BodyChildren)
+	{
+		if (UStaticMeshComponent* ChildMesh = Cast<UStaticMeshComponent>(Child))
+		{
+			OutMeshes.AddUnique(ChildMesh);
+		}
+	}
+
+	TArray<UStaticMeshComponent*> StaticMeshes;
+	GetComponents<UStaticMeshComponent>(StaticMeshes);
+	for (UStaticMeshComponent* MeshComp : StaticMeshes)
+	{
+		if (IsCabinetVisualMeshComponent(MeshComp))
+		{
+			OutMeshes.AddUnique(MeshComp);
+		}
+	}
+}
+
 void ACabinetEnemy::DetachCabinetVisualsToWorld()
 {
 	if (bCabinetVisualsDetachedToWorld || !CabinetBodyMesh)
@@ -318,15 +403,150 @@ void ACabinetEnemy::DetachCabinetVisualsToWorld()
 		return;
 	}
 
+	TArray<UStaticMeshComponent*> CabinetMeshes;
+	GatherCabinetVisualMeshes(CabinetMeshes);
+
 	if (CabinetBodyMesh->GetAttachParent())
 	{
 		CabinetBodyMesh->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
 	}
 
+	CabinetBodyMesh->SetUsingAbsoluteLocation(true);
+	CabinetBodyMesh->SetUsingAbsoluteRotation(true);
+	CabinetBodyMesh->SetUsingAbsoluteScale(true);
+
+	for (UStaticMeshComponent* MeshComp : CabinetMeshes)
+	{
+		if (!IsValid(MeshComp) || MeshComp == CabinetBodyMesh)
+		{
+			continue;
+		}
+
+		if (MeshComp->GetAttachParent() == CabinetBodyMesh)
+		{
+			continue;
+		}
+
+		if (MeshComp->GetAttachParent())
+		{
+			MeshComp->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+		}
+
+		MeshComp->SetUsingAbsoluteLocation(true);
+		MeshComp->SetUsingAbsoluteRotation(true);
+		MeshComp->SetUsingAbsoluteScale(true);
+	}
+
+	CachedCabinetBodyWorldTransform = CabinetBodyMesh->GetComponentTransform();
+	bCachedCabinetBodyWorldTransform = true;
 	bCabinetVisualsDetachedToWorld = true;
 
-	UE_LOG(LogCabinetEnemy, Log, TEXT("%s: cabinet visuals detached to world at %s"),
-		*GetName(), *CabinetBodyMesh->GetComponentLocation().ToString());
+	UE_LOG(LogCabinetEnemy, Log, TEXT("%s: cabinet visuals detached to world at %s (meshes=%d)"),
+		*GetName(), *CachedCabinetBodyWorldTransform.GetLocation().ToString(), CabinetMeshes.Num());
+}
+
+void ACabinetEnemy::PersistCabinetVisualsInWorld()
+{
+	if (bCabinetVisualsPersistedInWorld || !GetWorld() || !IsValid(CabinetBodyMesh))
+	{
+		return;
+	}
+
+	TArray<UStaticMeshComponent*> MeshesToPersist;
+	GatherCabinetVisualMeshes(MeshesToPersist);
+	if (MeshesToPersist.Num() == 0)
+	{
+		return;
+	}
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	AActor* const CabinetProp = GetWorld()->SpawnActor<AActor>(AActor::StaticClass(), SpawnParams);
+	if (!IsValid(CabinetProp))
+	{
+		return;
+	}
+
+#if WITH_EDITOR
+	CabinetProp->SetActorLabel(FString::Printf(TEXT("%s_CabinetProp"), *GetName()));
+#endif
+
+	const FTransform BodyWorldTransform = bCachedCabinetBodyWorldTransform
+		? CachedCabinetBodyWorldTransform
+		: CabinetBodyMesh->GetComponentTransform();
+
+	TMap<UStaticMeshComponent*, FTransform> SavedRelativeTransforms;
+	TMap<UStaticMeshComponent*, FTransform> SavedWorldTransforms;
+	TMap<UStaticMeshComponent*, USceneComponent*> SavedAttachParents;
+	for (UStaticMeshComponent* MeshComp : MeshesToPersist)
+	{
+		if (!IsValid(MeshComp))
+		{
+			continue;
+		}
+
+		SavedRelativeTransforms.Add(MeshComp, MeshComp->GetRelativeTransform());
+		SavedWorldTransforms.Add(MeshComp, MeshComp->GetComponentTransform());
+		SavedAttachParents.Add(MeshComp, MeshComp->GetAttachParent());
+	}
+
+	if (!TransferStaticMeshComponentToProp(
+		CabinetBodyMesh,
+		CabinetProp,
+		BodyWorldTransform,
+		nullptr,
+		FTransform::Identity,
+		false))
+	{
+		CabinetProp->Destroy();
+		return;
+	}
+
+	CabinetProp->SetRootComponent(CabinetBodyMesh);
+
+	for (UStaticMeshComponent* MeshComp : MeshesToPersist)
+	{
+		if (!IsValid(MeshComp) || MeshComp == CabinetBodyMesh)
+		{
+			continue;
+		}
+
+		const bool bAttachToBody = SavedAttachParents.FindRef(MeshComp) == CabinetBodyMesh;
+		const FTransform RelativeTransform = SavedRelativeTransforms.FindRef(MeshComp);
+		const FTransform WorldTransform = SavedWorldTransforms.FindRef(MeshComp);
+
+		TransferStaticMeshComponentToProp(
+			MeshComp,
+			CabinetProp,
+			WorldTransform,
+			CabinetBodyMesh,
+			RelativeTransform,
+			bAttachToBody);
+	}
+
+	if (EncounterTrigger)
+	{
+		EncounterTrigger->DestroyComponent();
+	}
+
+	CabinetBodyMesh = nullptr;
+	CabinetDoorMesh = nullptr;
+	EncounterTrigger = nullptr;
+
+	bCabinetVisualsPersistedInWorld = true;
+
+	UE_LOG(LogCabinetEnemy, Log, TEXT("%s: cabinet visuals transferred to world prop at %s (meshes=%d)"),
+		*GetName(), *BodyWorldTransform.GetLocation().ToString(), MeshesToPersist.Num());
+}
+
+void ACabinetEnemy::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (EndPlayReason == EEndPlayReason::Destroyed)
+	{
+		PersistCabinetVisualsInWorld();
+	}
+
+	Super::EndPlay(EndPlayReason);
 }
 
 void ACabinetEnemy::OpenCabinetDoor()
@@ -1083,6 +1303,7 @@ void ACabinetEnemy::ScheduleKnockdownFinish()
 			if (WeakThis->bDestroyAfterKnockdown)
 			{
 				UE_LOG(LogCabinetEnemy, Log, TEXT("%s: destroyed after knockdown"), *WeakThis->GetName());
+				WeakThis->PersistCabinetVisualsInWorld();
 				WeakThis->Destroy();
 			}
 		},
