@@ -103,7 +103,7 @@ EGameEndingType AOblivioGameMode::DetermineEnding()
 	{
 		FinalEnding = EGameEndingType::Oblivion;
 	}
-	else if (GI->TotalKills > 0 && GI->TotalMementos > 0)//수치 조정 필요
+	else if (GI->TotalMementos > 0)//수치 조정 필요
 	{
 		FinalEnding = EGameEndingType::DeathRow;
 	}

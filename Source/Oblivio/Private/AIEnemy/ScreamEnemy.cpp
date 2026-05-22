@@ -1,4 +1,4 @@
-#include "AIEnemy/ScreamEnemy.h"
+﻿#include "AIEnemy/ScreamEnemy.h"
 
 #include "AIController.h"
 #include "Components/CapsuleComponent.h"
@@ -57,9 +57,10 @@ void AScreamEnemy::BeginPlay()
 		CachedMovementMode = static_cast<uint8>(Move->MovementMode);
 		CachedMaxFlySpeed = Move->MaxFlySpeed;
 	}
-	if (const UCapsuleComponent* Cap = GetCapsuleComponent())
+	if (UCapsuleComponent* Cap = GetCapsuleComponent())
 	{
 		CachedWorldStaticResponse = Cap->GetCollisionResponseToChannel(ECC_WorldStatic);
+		Cap->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Block);
 	}
 	if (const USkeletalMeshComponent* MeshComp = GetMesh())
 	{
