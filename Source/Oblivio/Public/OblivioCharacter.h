@@ -294,6 +294,7 @@ public:
 	int32 BatteryItemCount = 0;
 
 	bool bIsDead = false;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement")
 	bool bIsRunning = false;
 	bool bIsInventoryOpen = false;
 	bool bIsCraftingOpen = false;
