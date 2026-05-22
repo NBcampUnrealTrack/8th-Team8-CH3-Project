@@ -11,20 +11,21 @@ void UStagingEnemyAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 {
 	Super::NativeUpdateAnimation(DeltaSeconds);
 
-#if !OBLIVIO_STAGING_GRAB_CINEMATIC_ENABLED
-	return;
-#else
+#if OBLIVIO_STAGING_GRAB_CINEMATIC_ENABLED
 	const EStagingEnemyCinematicState PrevAnimState = StagingState;
 	const bool bPrevApproaching = bIsApproachingForGrab;
 	const bool bPrevGrab = bShouldPlayGrabAnimation;
 	const bool bPrevKnock = bShouldPlayKnockdownAnimation;
+	const bool bPrevMashKnockback = bShouldPlayMashKnockbackAnimation;
 	const bool bPrevDead = bShouldPlayDeadAnimation;
 	const bool bPrevMoving = bIsMoving;
+#endif
 
 	StagingState = EStagingEnemyCinematicState::Idle;
 	bIsApproachingForGrab = false;
 	bShouldPlayGrabAnimation = false;
 	bShouldPlayKnockdownAnimation = false;
+	bShouldPlayMashKnockbackAnimation = false;
 	bShouldPlayDeadAnimation = false;
 	GroundSpeed = 0.f;
 	bIsMoving = false;
@@ -40,6 +41,7 @@ void UStagingEnemyAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	bIsApproachingForGrab = StagingEnemy->IsApproachingForGrab();
 	bShouldPlayGrabAnimation = StagingEnemy->ShouldPlayGrabAnimation();
 	bShouldPlayKnockdownAnimation = StagingEnemy->ShouldPlayKnockdownAnimation();
+	bShouldPlayMashKnockbackAnimation = StagingEnemy->ShouldPlayMashKnockbackAnimation();
 	bShouldPlayDeadAnimation = StagingEnemy->ShouldPlayDeadAnimation();
 
 	if (const ACharacter* const Character = Cast<ACharacter>(OwnerPawn))
@@ -50,8 +52,23 @@ void UStagingEnemyAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		}
 	}
 
-	bIsMoving = GroundSpeed > 10.f || bIsApproachingForGrab;
+	const bool bSuppressLocomotionForCinematic =
+		StagingState == EStagingEnemyCinematicState::PushReaction
+		|| StagingState == EStagingEnemyCinematicState::MashEscapeSuccess
+		|| StagingState == EStagingEnemyCinematicState::KnockedDown
+		|| bShouldPlayDeadAnimation;
 
+	if (bSuppressLocomotionForCinematic)
+	{
+		GroundSpeed = 0.f;
+		bIsMoving = false;
+	}
+	else
+	{
+		bIsMoving = GroundSpeed > 10.f || bIsApproachingForGrab;
+	}
+
+#if OBLIVIO_STAGING_GRAB_CINEMATIC_ENABLED
 	if (!StagingEnemy->IsStagingDebugEnabled())
 	{
 		return;
@@ -61,6 +78,7 @@ void UStagingEnemyAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		|| bIsApproachingForGrab != bPrevApproaching
 		|| bShouldPlayGrabAnimation != bPrevGrab
 		|| bShouldPlayKnockdownAnimation != bPrevKnock
+		|| bShouldPlayMashKnockbackAnimation != bPrevMashKnockback
 		|| bShouldPlayDeadAnimation != bPrevDead
 		|| bIsMoving != bPrevMoving;
 

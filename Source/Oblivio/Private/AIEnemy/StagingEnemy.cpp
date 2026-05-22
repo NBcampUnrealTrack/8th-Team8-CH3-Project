@@ -97,6 +97,33 @@ void AStagingEnemy::EnterCinematicMode()
 	SetEnemyState(EEnemyAIState::Idle, true);
 }
 
+void AStagingEnemy::ExitCinematicMode()
+{
+	bCinematicModeActive = false;
+
+	if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
+	{
+		MoveComp->SetMovementMode(MOVE_Walking);
+	}
+}
+
+void AStagingEnemy::ApplyKnockdownLaunch(const FVector& PushDir, bool bHorizontalOnly)
+{
+	if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
+	{
+		MoveComp->SetMovementMode(MOVE_Walking);
+		MoveComp->StopMovementImmediately();
+	}
+
+	FVector LaunchVelocity = PushDir.GetSafeNormal2D() * PushKnockbackStrength;
+	if (!bHorizontalOnly)
+	{
+		LaunchVelocity.Z = PushKnockbackUpward;
+	}
+
+	LaunchCharacter(LaunchVelocity, true, true);
+}
+
 void AStagingEnemy::StartOpeningCinematic(AOblivioCharacter* Player)
 {
 	if (!IsValid(Player) || !IsAlive())
@@ -216,7 +243,7 @@ void AStagingEnemy::ExecuteAutoPush()
 
 		const FVector PushDir =
 			(GetActorLocation() - Player->GetActorLocation()).GetSafeNormal2D();
-		LaunchCharacter(PushDir * PushKnockbackStrength + FVector(0.f, 0.f, PushKnockbackUpward), true, true);
+		ApplyKnockdownLaunch(PushDir, true);
 	}
 }
 

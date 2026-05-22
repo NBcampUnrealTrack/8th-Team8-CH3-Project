@@ -16,10 +16,13 @@ enum class EStagingEnemyCinematicState : uint8
 	ApproachingGrab UMETA(DisplayName = "Approaching Grab"),
 	GrabbedPlayer UMETA(DisplayName = "Grabbed Player"),
 	Standoff UMETA(DisplayName = "Standoff"),
+	MashEscape UMETA(DisplayName = "Mash Escape (E 연타)"),
 	PushReaction UMETA(DisplayName = "Push Reaction"),
 	KnockedDown UMETA(DisplayName = "Knocked Down"),
 	FlashlightBurn UMETA(DisplayName = "Flashlight Burn"),
 	Dead UMETA(DisplayName = "Dead"),
+	/** 캐비넷 E 연타 성공 → 즉시 넉백. Push Reaction 과 분리(Avoid Idle→Grab 오동작). */
+	MashEscapeSuccess UMETA(DisplayName = "Mash Escape Success (E 연타 성공)"),
 };
 
 /** 플레이어 연출 FSM — ABP_OblivioCharacter AnimGraph 전환에 사용. */
