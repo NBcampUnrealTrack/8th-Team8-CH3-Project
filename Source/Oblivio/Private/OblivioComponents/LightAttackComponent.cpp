@@ -313,19 +313,19 @@ void ULightAttackComponent::TurnOffLight()
     if (IsValid(PointLightComp)) PointLightComp->SetVisibility(false);
 }
 
-void ULightAttackComponent::ChangeLightAngle(float Angle)
+void ULightAttackComponent::ChangeLightAngle(float DeltaAngle)
 {
     UE_LOG(LogTemp, Warning, TEXT("Updating LightAngle"));
     if (IsValid(SpotLightComp) && bIsConcentrated) {
-        if (LightAngle + Angle > MinAngle && LightAngle + Angle < MaxAngle) {
+        if (LightAngle + DeltaAngle > MinAngle && LightAngle + DeltaAngle < MaxAngle) {
             //빛 각도 조절
-            LightAngle = LightAngle + Angle;
+            LightAngle = LightAngle + DeltaAngle;
             SpotLightComp->SetOuterConeAngle(LightAngle / 2);
             SpotLightComp->SetInnerConeAngle(LightAngle / 2);
 
             //빛 세기 조절
-            LightDistance -= Angle * DistancePerAngle;
-            Damage -= Angle * DamagePerAngle;
+            LightDistance -= DeltaAngle * DistancePerAngle;
+            Damage -= DeltaAngle * DamagePerAngle;
             //SpotLightComp->SetAttenuationRadius(LightDistance * 10.f);
             SpotLightComp->SetIntensity(Damage * LightIntensityScale);
         }
