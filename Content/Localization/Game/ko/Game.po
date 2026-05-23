@@ -1,0 +1,1509 @@
+# Fill out your copyright notice in the Description page of Project Settings.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Game\n"
+"POT-Creation-Date: 2026-05-23 09:25\n"
+"PO-Revision-Date: 2026-05-23 18:30+0900\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: ko\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"X-Generator: Poedit 3.9\n"
+
+#. Key:	8EA27CD840E657E6C1E717A0D4FC8B6F
+#. SourceLocation:	/Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.CRAWLING_FLESH_MASS.Behavior
+#: /Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.CRAWLING_FLESH_MASS.Behavior
+#, fuzzy
+msgctxt ",8EA27CD840E657E6C1E717A0D4FC8B6F"
+msgid "Possesses absolutely no intelligence or reason. Detecting even the slightest body temperature change in a living organism nearby causes them to form abnormal swarms, charging blindly to create a suffocating encirclement."
+msgstr "전혀 지능이나 이성이 없다. 근처 생명체의 체온 변화가 조금이라도 감지되면, 그들은 비정상적인 무리를 형성해 맹목적으로 돌진해 숨 막히는 포위망을 만듭니다."
+
+#. Key:	4836B07B4EE85B06DAE6729B10466738
+#. SourceLocation:	/Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.CRAWLING_FLESH_MASS.Weakness
+#: /Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.CRAWLING_FLESH_MASS.Weakness
+#, fuzzy
+msgctxt ",4836B07B4EE85B06DAE6729B10466738"
+msgid "Despite its overwhelming numbers, its epidermal defense is extremely vulnerable. Direct exposure to a strong, focused light source (flashlight beam) causes the cells to instantly break down and disintegrate (instant kill)."
+msgstr "수적으로 압도적임에도 불구하고 표피 방어력은 매우 취약합니다. 강하고 집중된 광원(손전등 빔)에 직접 노출되면 세포가 즉시 분해되고 분해됩니다(즉각적으로 죽음)."
+
+#. Key:	C98861D049625828823FD8B1442D364B
+#. SourceLocation:	/Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.FETUS_TANK.Behavior
+#: /Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.FETUS_TANK.Behavior
+#, fuzzy
+msgctxt ",C98861D049625828823FD8B1442D364B"
+msgid "Its central nervous system is terrifyingly tangled within a massive mound of flesh, causing it to charge in a state of blind rage born from eternal, chronic agony. It tramples and destroys the surrounding terrain with its overwhelming mass."
+msgstr "중추신경계는 거대한 살덩이에 무섭게 얽혀 있어, 영원하고 만성적인 고통에서 비롯된 맹목적인 분노 상태로 돌진한다. 압도적인 질량으로 주변 지형을 짓밟고 파괴한다."
+
+#. Key:	CAB7B20A4A57AC8C29833583994C7618
+#. SourceLocation:	/Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.FETUS_TANK.ObservationRecord
+#: /Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.FETUS_TANK.ObservationRecord
+#, fuzzy
+msgctxt ",CAB7B20A4A57AC8C29833583994C7618"
+msgid "A failed product of an illegal genetic fusion experiment involving aborted fetuses and biological tissue in the classified ward. Cell rejection triggered an explosive, cancer-like self-multiplication, fusing the subjects into a giant mountain of meat."
+msgstr "기밀 병동에서 낙태된 태아와 생물 조직을 이용한 불법 유전자 융합 실험의 실패한 산물. 세포 거부 반응은 폭발적이고 암과 같은 자기 증식을 촉발시켜 피험자들을 거대한 고기 산으로 융합시켰다."
+
+#. Key:	85C6F0EA4ABC83E5035B4881FB802F75
+#. SourceLocation:	/Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.FETUS_TANK.Weakness
+#: /Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.FETUS_TANK.Weakness
+#, fuzzy
+msgctxt ",85C6F0EA4ABC83E5035B4881FB802F75"
+msgid "The extreme density of its muscles and hide grants it phenomenal defensive capabilities (tanking), but its deformed, heavy weight makes its turning speed and mobility extremely sluggish."
+msgstr "근육과 가죽의 극도로 밀집된 덕분에 뛰어난 방어 능력(탱킹)이 가능하지만, 변형되고 무거운 무게 때문에 회전 속도와 기동성이 매우 느립니다."
+
+#. Key:	2F3EADCB437EEA859FF86A971C33285E
+#. SourceLocation:	/Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.HEADLESS_LOVER.Behavior
+#: /Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.HEADLESS_LOVER.Behavior
+#, fuzzy
+msgctxt ",2F3EADCB437EEA859FF86A971C33285E"
+msgid "Roams the corridors blindly, spewing black filth from its severed, empty neck. Making visual contact with it immediately forces the player into a state of extreme psychological panic (controls are inverted)."
+msgstr "복도를 맹목적으로 돌아다니며, 잘린 텅 빈 목에서 검은 오염물을 뿜어낸다. 시각적으로 접촉하면 플레이어는 극심한 심리적 공황 상태에 빠지게 됩니다(조작이 뒤집혀 있습니다)."
+
+#. Key:	3469B5924F97DFA3B9D756B11DA86660
+#. SourceLocation:	/Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.HEADLESS_LOVER.ObservationRecord
+#: /Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.HEADLESS_LOVER.ObservationRecord
+#, fuzzy
+msgctxt ",3469B5924F97DFA3B9D756B11DA86660"
+msgid "A female test subject who fully trusted her assigned doctor. After her brain—the core sample of the project—was forcibly extracted, her discarded torso was illegally dumped into a waste bin, only to reanimate into this anomaly."
+msgstr "배정받은 의사를 전적으로 신뢰하는 여성 실험 대상. 프로젝트의 핵심 샘플인 그녀의 뇌가 강제로 추출된 후, 버려진 몸통은 불법적으로 쓰레기통에 버려졌다가 이 이상 현상으로 다시 살아났다."
+
+#. Key:	7D8F53CF407119E4D24685BE39AB220F
+#. SourceLocation:	/Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.HEADLESS_LOVER.Weakness
+#: /Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.HEADLESS_LOVER.Weakness
+#, fuzzy
+msgctxt ",7D8F53CF407119E4D24685BE39AB220F"
+msgid "Lacking a brain as a central controller, it is completely immune to visual disturbances (such as flashlight beams). Its stagger resistance is at maximum, making it nearly impossible to stop with firepower. Fleeing is the only viable option."
+msgstr "뇌가 중앙 조종자가 없기 때문에, 손전등 빛과 같은 시각적 방해에 완전히 면역이다. 스태거 저항이 최대치여서 화력으로 멈추는 것이 거의 불가능합니다. 도망치는 것만이 유일한 현실적인 선택지입니다."
+
+#. Key:	C141A1F8484D46B7D98CF288638246AE
+#. SourceLocation:	/Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.LIMP.Behavior
+#: /Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.LIMP.Behavior
+#, fuzzy
+msgctxt ",C141A1F8484D46B7D98CF288638246AE"
+msgid "Utilizes extremely developed lower body muscles to move at unbelievable speeds. It tends to ambush from blind spots or ceilings, exhibiting an unpredictable movement trajectory."
+msgstr "매우 발달된 하체 근육을 활용해 믿기 힘든 속도로 움직입니다. 사각지대나 천장에서 매복하는 경향이 있어 예측 불가능한 움직임 경로를 보입니다."
+
+#. Key:	7FCAF619478B1A6FE3E43B8001B50D23
+#. SourceLocation:	/Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.LIMP.ObservationRecord
+#: /Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.LIMP.ObservationRecord
+#, fuzzy
+msgctxt ",7FCAF619478B1A6FE3E43B8001B50D23"
+msgid "The subject complained of hallucinations, claiming insects were burrowing into his legs. A nerve-blocking surgery was performed to suppress the symptoms. According to the nurse's report, the subject climbed the walls at a bizarre speed immediately after the surgery and vanished."
+msgstr "대상자는 환각을 호소하며 곤충이 다리 속으로 파고든다고 주장했다. 증상을 억제하기 위해 신경 차단 수술이 시행되었습니다. 간호사 보고서에 따르면, 수술 직후 피험자는 기이한 속도로 벽을 타고 올라가 사라졌다."
+
+#. Key:	A1F85962429704556B14FCBC26762E06
+#. SourceLocation:	/Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.LIMP.Weakness
+#: /Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.LIMP.Weakness
+msgctxt ",A1F85962429704556B14FCBC26762E06"
+msgid "Unknown"
+msgstr "알 수 없음"
+
+#. Key:	4336544647E5AE8F23682F819E85A83C
+#. SourceLocation:	/Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.LUXEATER.Behavior
+#: /Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.LUXEATER.Behavior
+#, fuzzy
+msgctxt ",4336544647E5AE8F23682F819E85A83C"
+msgid "An entity that has undergone a horrific reverse-mutation of its bio-magnetic field. It actively devours any artificial light sources (such as flashlights) within its frontal range, forcing the surrounding area into complete darkness in real-time."
+msgstr "그 존재는 자신의 생체 자기장이 끔찍하게 역돌연변이를 겪은 것이다. 정면 범위 내의 인공 광원(손전등 등)을 적극적으로 삼켜 주변 지역을 실시간으로 완전한 어둠으로 몰아넣습니다."
+
+#. Key:	307170684C9D5309390948913A21FF53
+#. SourceLocation:	/Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.LUXEATER.ObservationRecord
+#: /Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.LUXEATER.ObservationRecord
+#, fuzzy
+msgctxt ",307170684C9D5309390948913A21FF53"
+msgid "Subjected to sadistic, high-intensity light exposure experiments under the guise of treating hallucination seizures where the subject claimed 'shadows' were watching him. After 72 hours, he suffered total blindness due to retinal loss, but his ocular structure evolved to devour light instead."
+msgstr "환각 발작 치료라는 명목으로 가장한 가학적이고 고강도의 빛 노출 실험을 당했으며, 피험자는 '그림자'가 자신을 지켜보고 있다고 주장했다. 72시간 후 망막 손실로 인해 완전히 실명했으나, 그의 안구 구조는 빛을 흡수하도록 진화했다."
+
+#. Key:	552313E9472EA4BB2E4A3D957AA80205
+#. SourceLocation:	/Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.LUXEATER.Weakness
+#: /Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.LUXEATER.Weakness
+#, fuzzy
+msgctxt ",552313E9472EA4BB2E4A3D957AA80205"
+msgid "It detects and obsesses over light to absorb it. A preemptive tactic of cutting off light sources (turning off your flashlight) to avoid its gaze and nullify its ability is strictly required"
+msgstr "빛을 감지하고 집착하여 흡수합니다. 빛의 시선을 피하고 그 능력을 무력화하기 위해 손전등을 끄는 선제적 전술이 반드시 필요합니다"
+
+#. Key:	582630934E21BC663A5E22BDD3ECA80A
+#. SourceLocation:	/Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.WALL_WAIL.Behavior
+#: /Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.WALL_WAIL.Behavior
+#, fuzzy
+msgctxt ",582630934E21BC663A5E22BDD3ECA80A"
+msgid "Lacking a physical collision body, it moves freely by phasing through structures and walls. Instead of physically attacking the player, it inflicts extreme psychological pressure through bizarre screams, low-frequency vibrations, and instantaneous teleportation echoing through the space."
+msgstr "물리적 충돌 몸체가 없기 때문에 구조물과 벽을 통과하며 자유롭게 움직입니다. 플레이어를 물리적으로 공격하는 대신, 기이한 비명, 저주파 진동, 순간 순간이동 등으로 극심한 심리적 압박을 가합니다."
+
+#. Key:	719107F34534698F4EA11A8E57D8A3F6
+#. SourceLocation:	/Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.WALL_WAIL.ObservationRecord
+#: /Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.WALL_WAIL.ObservationRecord
+#, fuzzy
+msgctxt ",719107F34534698F4EA11A8E57D8A3F6"
+msgid "The subject died due to medical malpractice during an open-chest surgery. To cover up the failure, the corpse was concealed and sealed inside the concrete wall behind the 3rd-floor CT room. Since then, the screams have begun echoing from the wall itself."
+msgstr "이 피실험자는 개흉 수술 중 의료 과실로 사망했다. 실패를 은폐하기 위해 시신은 3층 CT 방 뒤 콘크리트 벽 안에 숨겨져 봉인되었다. 그 이후로 비명은 벽 자체에서 울려 퍼지기 시작했다."
+
+#. Key:	7A860E1743EB3EF324620F8CE7ACB10A
+#. SourceLocation:	/Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.WALL_WAIL.Weakness
+#: /Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.WALL_WAIL.Weakness
+msgctxt ",7A860E1743EB3EF324620F8CE7ACB10A"
+msgid "Unknown"
+msgstr "알 수 없음"
+
+#. Key:	34B0B33D4FEFE21827F145B9A1C9FC77
+#. SourceLocation:	/Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.WHISPER_PHANTOM.Behavior
+#: /Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.WHISPER_PHANTOM.Behavior
+#, fuzzy
+msgctxt ",34B0B33D4FEFE21827F145B9A1C9FC77"
+msgid "Roams as a spiritual entity rather than a physical form. It clings to the player's blind spots, constantly whispering the atrocities of past experiments. If positioned outside the player's field of view, it drains their sanity and health in real-time."
+msgstr "물리적 형태가 아니라 영적인 존재로 떠돌고 있습니다. 플레이어의 맹점을 붙잡아 과거 실험의 참혹함을 끊임없이 속삭인다. 플레이어의 시야 밖에 위치하면 실시간으로 정신력과 체력을 소모합니다."
+
+#. Key:	B137177B40AB49F5F5142CB2E9D1E357
+#. SourceLocation:	/Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.WHISPER_PHANTOM.ObservationRecord
+#: /Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.WHISPER_PHANTOM.ObservationRecord
+#, fuzzy
+msgctxt ",B137177B40AB49F5F5142CB2E9D1E357"
+msgid "A structuralized phantom born from the guilt and collective mental breakdown of the medical staff who stood by and permitted the cruel biological experiments on the 9th floor."
+msgstr "9층에서 잔인한 생물학적 실험을 방관하며 방관한 의료진의 죄책감과 집단적 정신 붕괴에서 태어난 구조화된 유령."
+
+#. Key:	CFA65B7B4CAE972E6183439484E49A00
+#. SourceLocation:	/Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.WHISPER_PHANTOM.Weakness
+#: /Game/Blueprints/Bestiary/DT_Bestiary.DT_Bestiary.WHISPER_PHANTOM.Weakness
+#, fuzzy
+msgctxt ",CFA65B7B4CAE972E6183439484E49A00"
+msgid "It can be burned to death using the light from the flashlight possessed by the player."
+msgstr "플레이어가 소유한 손전등의 빛을 이용해 불에 타 죽일 수도 있습니다."
+
+#. Key:	243AEE76467506D400B7388454EE1889
+#. SourceLocation:	/Game/Blueprints/BP_OblivioCharacter.BP_OblivioCharacter_C:ExecuteUbergraph_BP_OblivioCharacter [Script Bytecode]
+#: /Game/Blueprints/BP_OblivioCharacter.BP_OblivioCharacter_C:ExecuteUbergraph_BP_OblivioCharacter
+#: [Script Bytecode]
+#, fuzzy
+msgctxt ",243AEE76467506D400B7388454EE1889"
+msgid "NO BATTERY"
+msgstr "배터리 없음"
+
+#. Key:	C83F5D8C414742C9E28A7C9523F63F3D
+#. SourceLocation:	/Game/Blueprints/BP_OblivioCharacter.BP_OblivioCharacter_C:ExecuteUbergraph_BP_OblivioCharacter [Script Bytecode]
+#: /Game/Blueprints/BP_OblivioCharacter.BP_OblivioCharacter_C:ExecuteUbergraph_BP_OblivioCharacter
+#: [Script Bytecode]
+msgctxt ",C83F5D8C414742C9E28A7C9523F63F3D"
+msgid "You don't have a battery to recharge."
+msgstr "충전할 배터리가 없음"
+
+#. Key:	1EC359B64EAF37A2433BD4A43BAAA132
+#. SourceLocation:	/Game/Blueprints/InteractingProps/2F/BP_Shoe.Default__BP_Shoe_C.ItemDescription
+#: /Game/Blueprints/InteractingProps/2F/BP_Shoe.Default__BP_Shoe_C.ItemDescription
+#, fuzzy
+msgctxt ",1EC359B64EAF37A2433BD4A43BAAA132"
+msgid "Shoe of the baby who got killed by the Doctor. When you pick it up the floor will be flooded...!"
+msgstr "닥터에게 죽인 아기의 신발. 집으면 바닥이 침수될 거야...!"
+
+#. Key:	24ACF0294FD787F15224EE8A711ACD06
+#. SourceLocation:	/Game/Blueprints/InteractingProps/2F/BP_Shoe.Default__BP_Shoe_C.ItemName
+#: /Game/Blueprints/InteractingProps/2F/BP_Shoe.Default__BP_Shoe_C.ItemName
+#, fuzzy
+msgctxt ",24ACF0294FD787F15224EE8A711ACD06"
+msgid "Shoe"
+msgstr "신발"
+
+#. Key:	1844C27646DE13AE384206ABC3757B24
+#. SourceLocation:	/Game/Blueprints/InteractingProps/4F/BP_MeatChunk.Default__BP_MeatChunk_C.ItemDescription
+#: /Game/Blueprints/InteractingProps/4F/BP_MeatChunk.Default__BP_MeatChunk_C.ItemDescription
+#, fuzzy
+msgctxt ",1844C27646DE13AE384206ABC3757B24"
+msgid "It feeds on the light. The brighter your beam, the faster it finds you. I tried to defend myself with this scalpel, but physical weapons are useless against the void. If you hear the clicking sound from the ceiling... turn off your flashlight immediately. Let the darkness take you, or IT will."
+msgstr "빛을 먹고 살아. 빔이 밝을수록 더 빨리 찾아옵니다. 이 메스로 방어하려 했지만, 물리적 무기는 공허 앞에서는 소용없어. 천장에서 딸깍거리는 소리가 들리면... 손전등을 즉시 꺼. 어둠이 당신을 데려가게 두든가, 아니면 IT가 그럴 것이다."
+
+#. Key:	64FA359E4A443D4BA3F4A3A5D9344349
+#. SourceLocation:	/Game/Blueprints/InteractingProps/4F/BP_MeatChunk.Default__BP_MeatChunk_C.ItemName
+#: /Game/Blueprints/InteractingProps/4F/BP_MeatChunk.Default__BP_MeatChunk_C.ItemName
+#, fuzzy
+msgctxt ",64FA359E4A443D4BA3F4A3A5D9344349"
+msgid "Scalpel"
+msgstr "메스"
+
+#. Key:	D038865049765BEDC4B519AD774CF20E
+#. SourceLocation:	/Game/Blueprints/InteractingProps/6F/BP_Scalpel.Default__BP_Scalpel_C.ItemDescription
+#: /Game/Blueprints/InteractingProps/6F/BP_Scalpel.Default__BP_Scalpel_C.ItemDescription
+#, fuzzy
+msgctxt ",D038865049765BEDC4B519AD774CF20E"
+msgid "It feeds on the light. The brighter your beam, the faster it finds you. I tried to defend myself with this scalpel, but physical weapons are useless against the void. If you hear the clicking sound from the ceiling... turn off your flashlight immediately. Let the darkness take you, or IT will."
+msgstr "빛을 먹고 살아. 빔이 밝을수록 더 빨리 찾아옵니다. 이 메스로 방어하려 했지만, 물리적 무기는 공허 앞에서는 소용없어. 천장에서 딸깍거리는 소리가 들리면... 손전등을 즉시 꺼. 어둠이 당신을 데려가게 두든가, 아니면 IT가 그럴 것이다."
+
+#. Key:	0E04235747F0FF6FA5AE8D8F574533AE
+#. SourceLocation:	/Game/Blueprints/InteractingProps/6F/BP_Scalpel.Default__BP_Scalpel_C.ItemName
+#: /Game/Blueprints/InteractingProps/6F/BP_Scalpel.Default__BP_Scalpel_C.ItemName
+#, fuzzy
+msgctxt ",0E04235747F0FF6FA5AE8D8F574533AE"
+msgid "Scalpel"
+msgstr "메스"
+
+#. Key:	FCF11B9C453DF6FD339D65BA8326D8FD
+#. SourceLocation:	/Game/Blueprints/InteractingProps/8F/BP_HeadlessWomansKeepsake.Default__BP_HeadlessWomansKeepsake_C.ItemDescription
+#: /Game/Blueprints/InteractingProps/8F/BP_HeadlessWomansKeepsake.Default__BP_HeadlessWomansKeepsake_C.ItemDescription
+#, fuzzy
+msgctxt ",FCF11B9C453DF6FD339D65BA8326D8FD"
+msgid "They said the voices were just in my head. The head doctor said if they could just 'relieve the pressure,' the ringing would stop. I trusted them. But the buzzing only got louder. If the head is the source of the madness... then it must be removed. I will do it myself. I will finally have silence."
+msgstr "그들은 그 목소리들이 내 머릿속에서만 나온 것이라고 말했다. 주치의는 '압력만 풀어주면' 이명이 멈출 거라고 했어요. 나는 그들을 믿었다. 하지만 윙윙거림은 점점 더 커졌다. 머리가 광기의 근원이라면... 그럼 제거해야 해. 내가 직접 할게. 드디어 침묵을 얻게 될 거야."
+
+#. Key:	3ED71E3F48C28ECA06C7C8B9CF751F32
+#. SourceLocation:	/Game/Blueprints/InteractingProps/8F/BP_HeadlessWomansKeepsake.Default__BP_HeadlessWomansKeepsake_C.ItemName
+#: /Game/Blueprints/InteractingProps/8F/BP_HeadlessWomansKeepsake.Default__BP_HeadlessWomansKeepsake_C.ItemName
+msgctxt ",3ED71E3F48C28ECA06C7C8B9CF751F32"
+msgid "Diary"
+msgstr "일기"
+
+#. Key:	CDED5A7347C63A326645BFA6B2E84860
+#. SourceLocation:	/Game/Blueprints/InteractingProps/8F/BP_PatientDiagnosisChart.Default__BP_PatientDiagnosisChart_C.ItemDescription
+#: /Game/Blueprints/InteractingProps/8F/BP_PatientDiagnosisChart.Default__BP_PatientDiagnosisChart_C.ItemDescription
+#, fuzzy
+msgctxt ",CDED5A7347C63A326645BFA6B2E84860"
+msgid ""
+"My head is pounding.\r\n"
+"The 9th-floor doctor's lounge... I have absolutely no memory of how or why I passed out here.\r\n"
+"The name tag on this bloodstained coat tells me I'm a doctor at this hospital, but everything else is buried in a hazy fog.\r\n"
+"\r\n"
+"What the hell are those grotesque footsteps and screams echoing from the hallway? It looks like the entire building is on total lockdown. The power is completely cut.\r\n"
+"I have to find a way out of here alive. Before whatever is lurking outside that door finds me..."
+msgstr ""
+"머리가 너무 아파요.\r\n"
+"9층 의사 휴게실... 여기서 어떻게 기절했는지 전혀 기억나지 않습니다.\r\n"
+"이 피 묻은 코트의 명찰은 내가 이 병원의 의사임을 알려주지만, 나머지는 모두 흐릿한 안개 속에 묻혀 있다.\r\n"
+"\r\n"
+"복도에서 울려 퍼지는 저 끔찍한 발걸음과 비명 소리는 도대체 뭐지? 건물 전체가 완전 봉쇄된 것 같아. 전기가 완전히 끊겼어.\r\n"
+"여기서 살아서 나갈 방법을 찾아야 해. 저 문 밖에 숨어 있는 무언가가 나를 찾기 전에..."
+
+#. Key:	616B4B2245D9AC86322071BDF55EDDC2
+#. SourceLocation:	/Game/Blueprints/InteractingProps/8F/BP_PatientDiagnosisChart.Default__BP_PatientDiagnosisChart_C.ItemName
+#: /Game/Blueprints/InteractingProps/8F/BP_PatientDiagnosisChart.Default__BP_PatientDiagnosisChart_C.ItemName
+msgctxt ",616B4B2245D9AC86322071BDF55EDDC2"
+msgid "Diary"
+msgstr "일기"
+
+#. Key:	B054B2734A1385AC13DF77ABEAA6F4D0
+#. SourceLocation:	/Game/Blueprints/InteractingProps/8F/BP_PatientsLetter.Default__BP_PatientsLetter_C.ItemDescription
+#: /Game/Blueprints/InteractingProps/8F/BP_PatientsLetter.Default__BP_PatientsLetter_C.ItemDescription
+#, fuzzy
+msgctxt ",B054B2734A1385AC13DF77ABEAA6F4D0"
+msgid "Doctor, you said you'd cure me. You promised to take away the pain. So I gave you my heart, my mind, my everything. But you left me alone in the dark. Don't worry, my love. I will find you. Even if I have to tear this hospital apart, piece by bloody piece. We will be together forever."
+msgstr "의사 선생님, 저를 치료해 주신다고 하셨잖아요. 고통을 없애주겠다고 약속했잖아. 그래서 나는 내 마음과 정신, 내 모든 것을 너에게 줬어. 하지만 넌 나를 어둠 속에 혼자 남겨뒀어. 걱정 마, 내 사랑. 내가 널 찾을 거야. 이 병원을 피투성이로 한 조각씩 부숴야 한다 해도. 우리는 영원히 함께할 거야."
+
+#. Key:	8D37795D47E7460B221C04B27D50DBA3
+#. SourceLocation:	/Game/Blueprints/InteractingProps/8F/BP_PatientsLetter.Default__BP_PatientsLetter_C.ItemName
+#: /Game/Blueprints/InteractingProps/8F/BP_PatientsLetter.Default__BP_PatientsLetter_C.ItemName
+msgctxt ",8D37795D47E7460B221C04B27D50DBA3"
+msgid "Diary"
+msgstr "일기"
+
+#. Key:	5377574B4AD7B5D70B2018A472C88B97
+#. SourceLocation:	/Game/Blueprints/InteractingProps/9F/BP_Diary.Default__BP_Diary_C.ItemDescription
+#: /Game/Blueprints/InteractingProps/9F/BP_Diary.Default__BP_Diary_C.ItemDescription
+#, fuzzy
+msgctxt ",5377574B4AD7B5D70B2018A472C88B97"
+msgid "Patient 804. Symptoms escalated rapidly overnight. Initial diagnosis of severe paranoia has been updated. The patient claims the shadows are whispering and exhibits extreme photosensitivity. Sedatives are completely ineffective. We need to move them to the lower floors immediately... God, what is happening to this hospital?"
+msgstr "환자 804. 증상은 하룻밤 사이에 급격히 악화되었습니다. 심한 편집증 초기 진단이 업데이트되었습니다. 환자는 그림자가 속삭이고 극심한 광민성을 보인다고 주장합니다. 진정제는 전혀 효과가 없습니다. 즉시 아래층으로 옮겨야 해... 세상에, 이 병원에 무슨 일이 일어나고 있는 거죠?"
+
+#. Key:	66145B284184D7E1AD8D45BBB51D3419
+#. SourceLocation:	/Game/Blueprints/InteractingProps/9F/BP_Diary.Default__BP_Diary_C.ItemName
+#: /Game/Blueprints/InteractingProps/9F/BP_Diary.Default__BP_Diary_C.ItemName
+msgctxt ",66145B284184D7E1AD8D45BBB51D3419"
+msgid "Diary"
+msgstr "일기"
+
+#. Key:	314A4D294118E41DFB0180BA5701589B
+#. SourceLocation:	/Game/Blueprints/InteractingProps/9F/BP_Phone.Default__BP_Phone_C.ItemDescription
+#: /Game/Blueprints/InteractingProps/9F/BP_Phone.Default__BP_Phone_C.ItemDescription
+#, fuzzy
+msgctxt ",314A4D294118E41DFB0180BA5701589B"
+msgid "\"You did this... I know you knew what was in those syringes. Nurse Sarah is dead because of you. The lockdown is active, but they are crawling up the stairs. Don't you dare come out of that room. We will find you before they do.\""
+msgstr "\"네가 이랬어... 네가 그 주사기 안에 뭐가 들어 있는지 알고 있었던 거 알아. 간호사 사라가 죽은 건 네 탓이야. 봉쇄는 진행 중이지만, 아이들은 계단을 기어오르고 있다. 그 방에서 절대 나오지 마. 우리가 그들보다 먼저 널 찾을 거야.\""
+
+#. Key:	3CF6FB3548F56270E389908A0C14DEC9
+#. SourceLocation:	/Game/Blueprints/InteractingProps/9F/BP_Phone.Default__BP_Phone_C.ItemName
+#: /Game/Blueprints/InteractingProps/9F/BP_Phone.Default__BP_Phone_C.ItemName
+#, fuzzy
+msgctxt ",3CF6FB3548F56270E389908A0C14DEC9"
+msgid "Memento"
+msgstr "유품"
+
+#. Key:	1ACB8DBD47540D47A5A43D81C4A9EA2C
+#. SourceLocation:	/Game/Blueprints/InteractingProps/BP_Doors.BP_Doors_C:UpdateInteractText [Script Bytecode]
+#: /Game/Blueprints/InteractingProps/BP_Doors.BP_Doors_C:UpdateInteractText
+#: [Script Bytecode]
+msgctxt ",1ACB8DBD47540D47A5A43D81C4A9EA2C"
+msgid "Open"
+msgstr "열기"
+
+#. Key:	2FFB28684FA309C2681DCFA9E32C930B
+#. SourceLocation:	/Game/Blueprints/InteractingProps/BP_Doors.BP_Doors_C:UpdateInteractText [Script Bytecode]
+#: /Game/Blueprints/InteractingProps/BP_Doors.BP_Doors_C:UpdateInteractText
+#: [Script Bytecode]
+msgctxt ",2FFB28684FA309C2681DCFA9E32C930B"
+msgid "Close"
+msgstr "닫기"
+
+#. Key:	49FE6FFB48989D6045DF3B99E70D81B6
+#. SourceLocation:	/Game/Blueprints/InteractingProps/BP_Doors.Default__BP_Doors_C.InteractText
+#: /Game/Blueprints/InteractingProps/BP_Doors.Default__BP_Doors_C.InteractText
+msgctxt ",49FE6FFB48989D6045DF3B99E70D81B6"
+msgid "Open"
+msgstr "열기"
+
+#. Key:	BD61591A4AE251AA5D6D6597CAF679A5
+#. SourceLocation:	/Game/Blueprints/InteractingProps/BP_FlashlightEnabler.Default__BP_FlashlightEnabler_C.ItemDescription
+#: /Game/Blueprints/InteractingProps/BP_FlashlightEnabler.Default__BP_FlashlightEnabler_C.ItemDescription
+#, fuzzy
+msgctxt ",BD61591A4AE251AA5D6D6597CAF679A5"
+msgid ""
+"My head is pounding.\r\n"
+"The 9th-floor doctor's lounge... I have absolutely no memory of how or why I passed out here.\r\n"
+"The name tag on this bloodstained coat tells me I'm a doctor at this hospital, but everything else is buried in a hazy fog.\r\n"
+"\r\n"
+"What the hell are those grotesque footsteps and screams echoing from the hallway? It looks like the entire building is on total lockdown. The power is completely cut.\r\n"
+"I have to find a way out of here alive. Before whatever is lurking outside that door finds me..."
+msgstr ""
+"머리가 너무 아파요.\r\n"
+"9층 의사 휴게실... 여기서 어떻게 기절했는지 전혀 기억나지 않습니다.\r\n"
+"이 피 묻은 코트의 명찰은 내가 이 병원의 의사임을 알려주지만, 나머지는 모두 흐릿한 안개 속에 묻혀 있다.\r\n"
+"\r\n"
+"복도에서 울려 퍼지는 저 끔찍한 발걸음과 비명 소리는 도대체 뭐지? 건물 전체가 완전 봉쇄된 것 같아. 전기가 완전히 끊겼어.\r\n"
+"여기서 살아서 나갈 방법을 찾아야 해. 저 문 밖에 숨어 있는 무언가가 나를 찾기 전에..."
+
+#. Key:	B7C0D9244AAAB45B9BA33C896315954E
+#. SourceLocation:	/Game/Blueprints/InteractingProps/BP_FlashlightEnabler.Default__BP_FlashlightEnabler_C.ItemName
+#: /Game/Blueprints/InteractingProps/BP_FlashlightEnabler.Default__BP_FlashlightEnabler_C.ItemName
+msgctxt ",B7C0D9244AAAB45B9BA33C896315954E"
+msgid "Diary"
+msgstr "일기"
+
+#. Key:	A886EF93459E8917CABF2EA71F9F49EA
+#. SourceLocation:	/Game/Blueprints/InteractingProps/BP_MorgueFridge_Ending.Default__BP_MorgueFridge_Ending_C.InteractText
+#: /Game/Blueprints/InteractingProps/BP_MorgueFridge_Ending.Default__BP_MorgueFridge_Ending_C.InteractText
+msgctxt ",A886EF93459E8917CABF2EA71F9F49EA"
+msgid "Enter"
+msgstr "입력"
+
+#. Key:	25BE189247E56C67D2DF928EFD1483E5
+#. SourceLocation:	/Game/Blueprints/InteractingProps/BP_StairCaseDoor.BP_StairCaseDoor_C:ExecuteUbergraph_BP_StairCaseDoor [Script Bytecode]
+#: /Game/Blueprints/InteractingProps/BP_StairCaseDoor.BP_StairCaseDoor_C:ExecuteUbergraph_BP_StairCaseDoor
+#: [Script Bytecode]
+msgctxt ",25BE189247E56C67D2DF928EFD1483E5"
+msgid "You need a key to open this door."
+msgstr "열쇠 필요."
+
+#. Key:	3F9437BE4EC6B603A2C487A02C8C65A7
+#. SourceLocation:	/Game/Blueprints/InteractingProps/BP_StairCaseDoor.BP_StairCaseDoor_C:ExecuteUbergraph_BP_StairCaseDoor [Script Bytecode]
+#: /Game/Blueprints/InteractingProps/BP_StairCaseDoor.BP_StairCaseDoor_C:ExecuteUbergraph_BP_StairCaseDoor
+#: [Script Bytecode]
+msgctxt ",3F9437BE4EC6B603A2C487A02C8C65A7"
+msgid "KEY REQUIRED"
+msgstr "열쇠 필요"
+
+#. Key:	2ABD37BC45BAEEC49BA00CB6C4934670
+#. SourceLocation:	/Game/Blueprints/Items/BP_BatteryItem.Default__BP_BatteryItem_C.InteractText
+#: /Game/Blueprints/Items/BP_BatteryItem.Default__BP_BatteryItem_C.InteractText
+msgctxt ",2ABD37BC45BAEEC49BA00CB6C4934670"
+msgid "Pick Up"
+msgstr "집기"
+
+#. Key:	71F2F9D64A9966227F6EAB87C8F16F86
+#. SourceLocation:	/Game/Blueprints/Items/BP_BatteryItem.Default__BP_BatteryItem_C.ItemDescription
+#: /Game/Blueprints/Items/BP_BatteryItem.Default__BP_BatteryItem_C.ItemDescription
+#, fuzzy
+msgctxt ",71F2F9D64A9966227F6EAB87C8F16F86"
+msgid "Used to Charge Flashlight"
+msgstr "손전등 충전에 사용됨"
+
+#. Key:	479A17B042F22D89496D21ACC2E52CDA
+#. SourceLocation:	/Game/Blueprints/Items/BP_BatteryItem.Default__BP_BatteryItem_C.ItemName
+#: /Game/Blueprints/Items/BP_BatteryItem.Default__BP_BatteryItem_C.ItemName
+msgctxt ",479A17B042F22D89496D21ACC2E52CDA"
+msgid "Battery"
+msgstr "배터리"
+
+#. Key:	45CB11874A99C61102C9BE9816A673E4
+#. SourceLocation:	/Game/Blueprints/Items/BP_Food.Default__BP_Food_C.InteractText
+#: /Game/Blueprints/Items/BP_Food.Default__BP_Food_C.InteractText
+msgctxt ",45CB11874A99C61102C9BE9816A673E4"
+msgid "Pick Up"
+msgstr "집기"
+
+#. Key:	C538E4F14AD77F42E6BC149DE21CC518
+#. SourceLocation:	/Game/Blueprints/Items/BP_Food.Default__BP_Food_C.ItemDescription
+#: /Game/Blueprints/Items/BP_Food.Default__BP_Food_C.ItemDescription
+#, fuzzy
+msgctxt ",C538E4F14AD77F42E6BC149DE21CC518"
+msgid "The can soup restores players hunger by 30"
+msgstr "캔 수프는 플레이어의 배고픔을 30% 회복시켜 줍니다"
+
+#. Key:	51CECC024A8C84CA34FCAEADC65ECCCC
+#. SourceLocation:	/Game/Blueprints/Items/BP_Food.Default__BP_Food_C.ItemName
+#: /Game/Blueprints/Items/BP_Food.Default__BP_Food_C.ItemName
+msgctxt ",51CECC024A8C84CA34FCAEADC65ECCCC"
+msgid "Food"
+msgstr "식품"
+
+#. Key:	7ACA533C47F17B2B895714BC35B4F000
+#. SourceLocation:	/Game/Blueprints/Items/BP_Iron.Default__BP_Iron_C.InteractText
+#: /Game/Blueprints/Items/BP_Iron.Default__BP_Iron_C.InteractText
+msgctxt ",7ACA533C47F17B2B895714BC35B4F000"
+msgid "Pick Up"
+msgstr "집기"
+
+#. Key:	2E86E73845252A6981049A9DD028957E
+#. SourceLocation:	/Game/Blueprints/Items/BP_Iron.Default__BP_Iron_C.ItemDescription
+#: /Game/Blueprints/Items/BP_Iron.Default__BP_Iron_C.ItemDescription
+#, fuzzy
+msgctxt ",2E86E73845252A6981049A9DD028957E"
+msgid "Used to craft obstacle"
+msgstr "장애물 제작에 사용됨"
+
+#. Key:	304204164BFA4397BD7A459BFE163090
+#. SourceLocation:	/Game/Blueprints/Items/BP_Iron.Default__BP_Iron_C.ItemName
+#: /Game/Blueprints/Items/BP_Iron.Default__BP_Iron_C.ItemName
+msgctxt ",304204164BFA4397BD7A459BFE163090"
+msgid "Iron"
+msgstr "아이론"
+
+#. Key:	1E1B80B44DF676C0E58494B9A0712553
+#. SourceLocation:	/Game/Blueprints/Items/BP_Key.Default__BP_Key_C.InteractText
+#: /Game/Blueprints/Items/BP_Key.Default__BP_Key_C.InteractText
+msgctxt ",1E1B80B44DF676C0E58494B9A0712553"
+msgid "Pick Up"
+msgstr "집기"
+
+#. Key:	2B2BEBD04E9C01DA4DBAA1971AABED46
+#. SourceLocation:	/Game/Blueprints/Items/BP_Key.Default__BP_Key_C.ItemDescription
+#: /Game/Blueprints/Items/BP_Key.Default__BP_Key_C.ItemDescription
+#, fuzzy
+msgctxt ",2B2BEBD04E9C01DA4DBAA1971AABED46"
+msgid "Key for going to next floor "
+msgstr "다음 층으로 가는 키 "
+
+#. Key:	D3191FBF43727ACAEEA000A6B52CE766
+#. SourceLocation:	/Game/Blueprints/Items/BP_Key.Default__BP_Key_C.ItemName
+#: /Game/Blueprints/Items/BP_Key.Default__BP_Key_C.ItemName
+msgctxt ",D3191FBF43727ACAEEA000A6B52CE766"
+msgid "Key"
+msgstr "키"
+
+#. Key:	9514D7A34314E10136342FAEC6F962B0
+#. SourceLocation:	/Game/Blueprints/Items/BP_Water.Default__BP_Water_C.InteractText
+#: /Game/Blueprints/Items/BP_Water.Default__BP_Water_C.InteractText
+msgctxt ",9514D7A34314E10136342FAEC6F962B0"
+msgid "Pick Up"
+msgstr "집기"
+
+#. Key:	34FD5D9A4BA61CFB6731F59139D48E0C
+#. SourceLocation:	/Game/Blueprints/Items/BP_Water.Default__BP_Water_C.ItemDescription
+#: /Game/Blueprints/Items/BP_Water.Default__BP_Water_C.ItemDescription
+#, fuzzy
+msgctxt ",34FD5D9A4BA61CFB6731F59139D48E0C"
+msgid "Water restores player's thirst by 50 and allow player's to sprint"
+msgstr "물은 플레이어의 갈증을 50% 회복시키고 전력 질주를 가능하게 합니다"
+
+#. Key:	E0EC62584FBC772793A06B8F4524CB0C
+#. SourceLocation:	/Game/Blueprints/Items/BP_Water.Default__BP_Water_C.ItemName
+#: /Game/Blueprints/Items/BP_Water.Default__BP_Water_C.ItemName
+msgctxt ",E0EC62584FBC772793A06B8F4524CB0C"
+msgid "Water"
+msgstr "물"
+
+#. Key:	CDA18FE74CA648DC090BE597C5A3D9C5
+#. SourceLocation:	/Game/Blueprints/Items/BP_Wood.Default__BP_Wood_C.InteractText
+#: /Game/Blueprints/Items/BP_Wood.Default__BP_Wood_C.InteractText
+msgctxt ",CDA18FE74CA648DC090BE597C5A3D9C5"
+msgid "Pick Up"
+msgstr "집기"
+
+#. Key:	06F6E42241AAD59207606C8ED8272EFE
+#. SourceLocation:	/Game/Blueprints/Items/BP_Wood.Default__BP_Wood_C.ItemDescription
+#: /Game/Blueprints/Items/BP_Wood.Default__BP_Wood_C.ItemDescription
+#, fuzzy
+msgctxt ",06F6E42241AAD59207606C8ED8272EFE"
+msgid "Used to craft obstacle"
+msgstr "장애물 제작에 사용됨"
+
+#. Key:	62408F3A47C52B56717EBE92FC9A0DAB
+#. SourceLocation:	/Game/Blueprints/Items/BP_Wood.Default__BP_Wood_C.ItemName
+#: /Game/Blueprints/Items/BP_Wood.Default__BP_Wood_C.ItemName
+msgctxt ",62408F3A47C52B56717EBE92FC9A0DAB"
+msgid "Wood"
+msgstr "나무"
+
+#. Key:	CE9A165144FD48DFE566CD996D999C0B
+#. SourceLocation:	/Game/Blueprints/UI/WBP_ContextMenu.WBP_ContextMenu_C:WidgetTree.Txt_Drop.Text
+#: /Game/Blueprints/UI/WBP_ContextMenu.WBP_ContextMenu_C:WidgetTree.Txt_Drop.Text
+msgctxt ",CE9A165144FD48DFE566CD996D999C0B"
+msgid "Drop"
+msgstr "드롭"
+
+#. Key:	B67021BC4964158891ED03BFB9155B9F
+#. SourceLocation:	/Game/Blueprints/UI/WBP_ContextMenu.WBP_ContextMenu_C:WidgetTree.Txt_Use.Text
+#: /Game/Blueprints/UI/WBP_ContextMenu.WBP_ContextMenu_C:WidgetTree.Txt_Use.Text
+msgctxt ",B67021BC4964158891ED03BFB9155B9F"
+msgid "Use"
+msgstr "사용"
+
+#. Key:	B203E66B4663FB021D49578AAFA07ED8
+#. SourceLocation:	/Game/Blueprints/UI/WBP_Crafting.WBP_Crafting_C:WidgetTree.TextBlock.Text
+#: /Game/Blueprints/UI/WBP_Crafting.WBP_Crafting_C:WidgetTree.TextBlock.Text
+#, fuzzy
+msgctxt ",B203E66B4663FB021D49578AAFA07ED8"
+msgid "[1~7]"
+msgstr "[1~7]"
+
+#. Key:	79D5E7E649E1F0719D6905B48FBAC16E
+#. SourceLocation:	/Game/Blueprints/UI/WBP_Crafting.WBP_Crafting_C:WidgetTree.TextBlock_1.Text
+#: /Game/Blueprints/UI/WBP_Crafting.WBP_Crafting_C:WidgetTree.TextBlock_1.Text
+msgctxt ",79D5E7E649E1F0719D6905B48FBAC16E"
+msgid "SELECT OBSTACLE"
+msgstr "장애물 선택"
+
+#. Key:	F64C2EFA40BF12F37D5720AAE0E393FE
+#. SourceLocation:	/Game/Blueprints/UI/WBP_Crafting.WBP_Crafting_C:WidgetTree.TextBlock_2.Text
+#: /Game/Blueprints/UI/WBP_Crafting.WBP_Crafting_C:WidgetTree.TextBlock_2.Text
+#, fuzzy
+msgctxt ",F64C2EFA40BF12F37D5720AAE0E393FE"
+msgid "[Z]"
+msgstr "[Z]"
+
+#. Key:	AC19AC7441F58CAC440ECE83666CF3BE
+#. SourceLocation:	/Game/Blueprints/UI/WBP_Crafting.WBP_Crafting_C:WidgetTree.TextBlock_236.Text
+#: /Game/Blueprints/UI/WBP_Crafting.WBP_Crafting_C:WidgetTree.TextBlock_236.Text
+msgctxt ",AC19AC7441F58CAC440ECE83666CF3BE"
+msgid "CLOSE CRAFTING"
+msgstr "크래프팅 닫기"
+
+#. Key:	AF56CF614BB20E880634BCB47F403B17
+#. SourceLocation:	/Game/Blueprints/UI/WBP_Crafting.WBP_Crafting_C:WidgetTree.TextBlock_3.Text
+#: /Game/Blueprints/UI/WBP_Crafting.WBP_Crafting_C:WidgetTree.TextBlock_3.Text
+msgctxt ",AF56CF614BB20E880634BCB47F403B17"
+msgid "ROTATE OBJECT"
+msgstr "장애물 회전"
+
+#. Key:	5FE7772B49F760DB8395C683A2B7A307
+#. SourceLocation:	/Game/Blueprints/UI/WBP_Crafting.WBP_Crafting_C:WidgetTree.TextBlock_4.Text
+#: /Game/Blueprints/UI/WBP_Crafting.WBP_Crafting_C:WidgetTree.TextBlock_4.Text
+msgctxt ",5FE7772B49F760DB8395C683A2B7A307"
+msgid "[L-Click]"
+msgstr "[L-Click]"
+
+#. Key:	5DBBC75C46473AFA8224758C42398D85
+#. SourceLocation:	/Game/Blueprints/UI/WBP_Crafting.WBP_Crafting_C:WidgetTree.TextBlock_5.Text
+#: /Game/Blueprints/UI/WBP_Crafting.WBP_Crafting_C:WidgetTree.TextBlock_5.Text
+msgctxt ",5DBBC75C46473AFA8224758C42398D85"
+msgid "PLACE OBJECT"
+msgstr "장애물 설치"
+
+#. Key:	6047E80F456BBD6892495BA981FA6C34
+#. SourceLocation:	/Game/Blueprints/UI/WBP_Crafting.WBP_Crafting_C:WidgetTree.TextBlock_98.Text
+#: /Game/Blueprints/UI/WBP_Crafting.WBP_Crafting_C:WidgetTree.TextBlock_98.Text
+msgctxt ",6047E80F456BBD6892495BA981FA6C34"
+msgid "[C]"
+msgstr "[C]"
+
+#. Key:	62A55CB840E10DADEFC9DFAF1C49993A
+#. SourceLocation:	/Game/Blueprints/UI/WBP_Crafting.WBP_Crafting_C:WidgetTree.Txt_Slot1.Text
+#: /Game/Blueprints/UI/WBP_Crafting.WBP_Crafting_C:WidgetTree.Txt_Slot1.Text
+msgctxt ",62A55CB840E10DADEFC9DFAF1C49993A"
+msgid "1"
+msgstr "1"
+
+#. Key:	CC49C94141B6F1AF1BF61E90FC091C6C
+#. SourceLocation:	/Game/Blueprints/UI/WBP_Crafting.WBP_Crafting_C:WidgetTree.Txt_Slot2.Text
+#: /Game/Blueprints/UI/WBP_Crafting.WBP_Crafting_C:WidgetTree.Txt_Slot2.Text
+msgctxt ",CC49C94141B6F1AF1BF61E90FC091C6C"
+msgid "2"
+msgstr "2"
+
+#. Key:	B72E27844E1298451258CEA98AEE62C0
+#. SourceLocation:	/Game/Blueprints/UI/WBP_Crafting.WBP_Crafting_C:WidgetTree.Txt_Slot3.Text
+#: /Game/Blueprints/UI/WBP_Crafting.WBP_Crafting_C:WidgetTree.Txt_Slot3.Text
+msgctxt ",B72E27844E1298451258CEA98AEE62C0"
+msgid "3"
+msgstr "3"
+
+#. Key:	18C9DC9846B16A7A9A6801BBBA9910A1
+#. SourceLocation:	/Game/Blueprints/UI/WBP_Crafting.WBP_Crafting_C:WidgetTree.Txt_Slot4.Text
+#: /Game/Blueprints/UI/WBP_Crafting.WBP_Crafting_C:WidgetTree.Txt_Slot4.Text
+msgctxt ",18C9DC9846B16A7A9A6801BBBA9910A1"
+msgid "4"
+msgstr "4"
+
+#. Key:	B80B4B554898D26BAAA0DEA8D3EC05B4
+#. SourceLocation:	/Game/Blueprints/UI/WBP_Crafting.WBP_Crafting_C:WidgetTree.Txt_Slot5.Text
+#: /Game/Blueprints/UI/WBP_Crafting.WBP_Crafting_C:WidgetTree.Txt_Slot5.Text
+msgctxt ",B80B4B554898D26BAAA0DEA8D3EC05B4"
+msgid "5"
+msgstr "5"
+
+#. Key:	7341D6A843FED5B296D671A746A6803A
+#. SourceLocation:	/Game/Blueprints/UI/WBP_CraftingFireHint.WBP_CraftingFireHint_C:WidgetTree.MultiLineEditableTextBox_0.Text
+#: /Game/Blueprints/UI/WBP_CraftingFireHint.WBP_CraftingFireHint_C:WidgetTree.MultiLineEditableTextBox_0.Text
+#, fuzzy
+msgctxt ",7341D6A843FED5B296D671A746A6803A"
+msgid "Craft Campfire to save game and stop battery and health from draining"
+msgstr "캠프파이어를 제작해 게임을 저장하고 배터리와 체력 소모를 막으세요"
+
+#. Key:	8E8C13664D7C930AA2AC2D9D971D21E9
+#. SourceLocation:	/Game/Blueprints/UI/WBP_CraftingMaterial.WBP_CraftingMaterial_C:SetMaterialInfo [Script Bytecode]
+#: /Game/Blueprints/UI/WBP_CraftingMaterial.WBP_CraftingMaterial_C:SetMaterialInfo
+#: [Script Bytecode]
+msgctxt ",8E8C13664D7C930AA2AC2D9D971D21E9"
+msgid "{Required}%"
+msgstr "{Required}%"
+
+#. Key:	D8D157194D1FC655B654B39169643E49
+#. SourceLocation:	/Game/Blueprints/UI/WBP_CraftingMaterial.WBP_CraftingMaterial_C:SetMaterialInfo [Script Bytecode]
+#: /Game/Blueprints/UI/WBP_CraftingMaterial.WBP_CraftingMaterial_C:SetMaterialInfo
+#: [Script Bytecode]
+#, fuzzy
+msgctxt ",D8D157194D1FC655B654B39169643E49"
+msgid "{Owned} / {Required}"
+msgstr "{Owned} / {Required}"
+
+#. Key:	6201C83E45B26598461527AED756921B
+#. SourceLocation:	/Game/Blueprints/UI/WBP_CraftingTutorial.WBP_CraftingTutorial_C:WidgetTree.TextBlock.Text
+#: /Game/Blueprints/UI/WBP_CraftingTutorial.WBP_CraftingTutorial_C:WidgetTree.TextBlock.Text
+#, fuzzy
+msgctxt ",6201C83E45B26598461527AED756921B"
+msgid "2. [1] - [7] Select obstacle"
+msgstr "2. [1] - [7] 장애물 선택"
+
+#. Key:	E07C507942BCBBBAF1A3B9AE90734643
+#. SourceLocation:	/Game/Blueprints/UI/WBP_CraftingTutorial.WBP_CraftingTutorial_C:WidgetTree.TextBlock_0.Text
+#: /Game/Blueprints/UI/WBP_CraftingTutorial.WBP_CraftingTutorial_C:WidgetTree.TextBlock_0.Text
+#, fuzzy
+msgctxt ",E07C507942BCBBBAF1A3B9AE90734643"
+msgid "1. [C] Press to open crafting menu"
+msgstr "1. [C] 제작 메뉴를 열기 위해 버튼을 눌러주세요"
+
+#. Key:	E33B39F84518DAAAA7EC8E96A191CA49
+#. SourceLocation:	/Game/Blueprints/UI/WBP_CraftingTutorial.WBP_CraftingTutorial_C:WidgetTree.TextBlock_1.Text
+#: /Game/Blueprints/UI/WBP_CraftingTutorial.WBP_CraftingTutorial_C:WidgetTree.TextBlock_1.Text
+msgctxt ",E33B39F84518DAAAA7EC8E96A191CA49"
+msgid "3. [Z] Rotate"
+msgstr "3. [Z] 장애물 회전"
+
+#. Key:	69652FC34C18878E0ABD0B967F2DE9A5
+#. SourceLocation:	/Game/Blueprints/UI/WBP_CraftingTutorial.WBP_CraftingTutorial_C:WidgetTree.TextBlock_2.Text
+#: /Game/Blueprints/UI/WBP_CraftingTutorial.WBP_CraftingTutorial_C:WidgetTree.TextBlock_2.Text
+msgctxt ",69652FC34C18878E0ABD0B967F2DE9A5"
+msgid "4. [Left Click] to place"
+msgstr "4. [좌 클릭] 설치하기"
+
+#. Key:	9F7E43D34D6A2890DC32D7B3C9F40C67
+#. SourceLocation:	/Game/Blueprints/UI/WBP_FloodTimer.WBP_FloodTimer_C:ExecuteUbergraph_WBP_FloodTimer [Script Bytecode]
+#: /Game/Blueprints/UI/WBP_FloodTimer.WBP_FloodTimer_C:ExecuteUbergraph_WBP_FloodTimer
+#: [Script Bytecode]
+#, fuzzy
+msgctxt ",9F7E43D34D6A2890DC32D7B3C9F40C67"
+msgid "{0}:{1}"
+msgstr "{0}:{1}"
+
+#. Key:	89D255FE4C2D09064D02FF9126945D1D
+#. SourceLocation:	/Game/Blueprints/UI/WBP_GameOver.WBP_GameOver_C:WidgetTree.Txt_Continue.Text
+#: /Game/Blueprints/UI/WBP_GameOver.WBP_GameOver_C:WidgetTree.Txt_Continue.Text
+msgctxt ",89D255FE4C2D09064D02FF9126945D1D"
+msgid "CONTINUE"
+msgstr "계속"
+
+#. Key:	7B8087B840A2CEEC80EE7694321D8ECE
+#. SourceLocation:	/Game/Blueprints/UI/WBP_GameOver.WBP_GameOver_C:WidgetTree.Txt_Load.Text
+#: /Game/Blueprints/UI/WBP_GameOver.WBP_GameOver_C:WidgetTree.Txt_Load.Text
+msgctxt ",7B8087B840A2CEEC80EE7694321D8ECE"
+msgid "LOAD"
+msgstr "불러오기"
+
+#. Key:	65FEEC3B45E6FAC0E3DB20B40AB4CCCA
+#. SourceLocation:	/Game/Blueprints/UI/WBP_GameOver.WBP_GameOver_C:WidgetTree.Txt_MainMenu.Text
+#: /Game/Blueprints/UI/WBP_GameOver.WBP_GameOver_C:WidgetTree.Txt_MainMenu.Text
+msgctxt ",65FEEC3B45E6FAC0E3DB20B40AB4CCCA"
+msgid "MAIN MENU"
+msgstr "메인 메뉴"
+
+#. Key:	E0FD6DB64405475D7F78228755FA8275
+#. SourceLocation:	/Game/Blueprints/UI/WBP_GameOver.WBP_GameOver_C:WidgetTree.Txt_NoEscape.Text
+#: /Game/Blueprints/UI/WBP_GameOver.WBP_GameOver_C:WidgetTree.Txt_NoEscape.Text
+msgctxt ",E0FD6DB64405475D7F78228755FA8275"
+msgid "There was no escape."
+msgstr "도망칠 곳은 없었다."
+
+#. Key:	5069780945FAF26FF1E89C9EFFF11E9C
+#. SourceLocation:	/Game/Blueprints/UI/WBP_GameOver.WBP_GameOver_C:WidgetTree.Txt_YouDied.Text
+#: /Game/Blueprints/UI/WBP_GameOver.WBP_GameOver_C:WidgetTree.Txt_YouDied.Text
+msgctxt ",5069780945FAF26FF1E89C9EFFF11E9C"
+msgid "YOU DIED"
+msgstr "YOU DIED"
+
+#. Key:	4153386544022487442350BDEE84AEE5
+#. SourceLocation:	/Game/Blueprints/UI/WBP_Interact.WBP_Interact_C:WidgetTree.Txt_Interact.Text
+#: /Game/Blueprints/UI/WBP_Interact.WBP_Interact_C:WidgetTree.Txt_Interact.Text
+msgctxt ",4153386544022487442350BDEE84AEE5"
+msgid "Interact"
+msgstr "상호작용"
+
+#. Key:	60F66D7444B9BF16CCB37892DDDABF8F
+#. SourceLocation:	/Game/Blueprints/UI/WBP_Inventory.WBP_Inventory_C:WidgetTree.TextBlock_126.Text
+#: /Game/Blueprints/UI/WBP_Inventory.WBP_Inventory_C:WidgetTree.TextBlock_126.Text
+msgctxt ",60F66D7444B9BF16CCB37892DDDABF8F"
+msgid "INVENTORY"
+msgstr "인벤토리"
+
+#. Key:	EFA022F64AF2708FD5C325A58AB79F13
+#. SourceLocation:	/Game/Blueprints/UI/WBP_Inventory.WBP_Inventory_C:WidgetTree.Txt_BeDescription.Text
+#: /Game/Blueprints/UI/WBP_Inventory.WBP_Inventory_C:WidgetTree.Txt_BeDescription.Text
+#, fuzzy
+msgctxt ",EFA022F64AF2708FD5C325A58AB79F13"
+msgid "BEHAVIOR DESCRIPTION"
+msgstr "행동 설명"
+
+#. Key:	9A51722F4F068779E661F2909BCA3DFA
+#. SourceLocation:	/Game/Blueprints/UI/WBP_Inventory.WBP_Inventory_C:WidgetTree.Txt_Behavior.Text
+#: /Game/Blueprints/UI/WBP_Inventory.WBP_Inventory_C:WidgetTree.Txt_Behavior.Text
+#, fuzzy
+msgctxt ",9A51722F4F068779E661F2909BCA3DFA"
+msgid "BEHAVIOR"
+msgstr "행동"
+
+#. Key:	8157D15D407A1355B0A1B1B495D06751
+#. SourceLocation:	/Game/Blueprints/UI/WBP_Inventory.WBP_Inventory_C:WidgetTree.Txt_CreatureArchive.Text
+#: /Game/Blueprints/UI/WBP_Inventory.WBP_Inventory_C:WidgetTree.Txt_CreatureArchive.Text
+#, fuzzy
+msgctxt ",8157D15D407A1355B0A1B1B495D06751"
+msgid "CREATURE ARCHIVE"
+msgstr "생물 기록 보관소"
+
+#. Key:	EBFB366A4EC34E152359268CBA1BDC73
+#. SourceLocation:	/Game/Blueprints/UI/WBP_Inventory.WBP_Inventory_C:WidgetTree.Txt_ItemDescription.Text
+#: /Game/Blueprints/UI/WBP_Inventory.WBP_Inventory_C:WidgetTree.Txt_ItemDescription.Text
+msgctxt ",EBFB366A4EC34E152359268CBA1BDC73"
+msgid "Select an item."
+msgstr "장애물 선택"
+
+#. Key:	D76D7F91463136689B7BD88C137D12CA
+#. SourceLocation:	/Game/Blueprints/UI/WBP_Inventory.WBP_Inventory_C:WidgetTree.Txt_Name.Text
+#: /Game/Blueprints/UI/WBP_Inventory.WBP_Inventory_C:WidgetTree.Txt_Name.Text
+msgctxt ",D76D7F91463136689B7BD88C137D12CA"
+msgid "Name"
+msgstr "이름"
+
+#. Key:	0F49C8FB46FE48BE8516F6B1551909FC
+#. SourceLocation:	/Game/Blueprints/UI/WBP_Inventory.WBP_Inventory_C:WidgetTree.Txt_ObDescription.Text
+#: /Game/Blueprints/UI/WBP_Inventory.WBP_Inventory_C:WidgetTree.Txt_ObDescription.Text
+#, fuzzy
+msgctxt ",0F49C8FB46FE48BE8516F6B1551909FC"
+msgid "OBSERVATION RECORD DESCRIPTION"
+msgstr "관측 기록 설명"
+
+#. Key:	7B9922264237130462FF1AA8437C5650
+#. SourceLocation:	/Game/Blueprints/UI/WBP_Inventory.WBP_Inventory_C:WidgetTree.Txt_Observation.Text
+#: /Game/Blueprints/UI/WBP_Inventory.WBP_Inventory_C:WidgetTree.Txt_Observation.Text
+#, fuzzy
+msgctxt ",7B9922264237130462FF1AA8437C5650"
+msgid "OBSERVATION RECORD"
+msgstr "관측 기록"
+
+#. Key:	20D940E44F13A7765E1E578A47088689
+#. SourceLocation:	/Game/Blueprints/UI/WBP_Inventory.WBP_Inventory_C:WidgetTree.Txt_Treat.Text
+#: /Game/Blueprints/UI/WBP_Inventory.WBP_Inventory_C:WidgetTree.Txt_Treat.Text
+msgctxt ",20D940E44F13A7765E1E578A47088689"
+msgid "LOW"
+msgstr "낮음"
+
+#. Key:	56DEB77046B35BB50E6676996F599B6C
+#. SourceLocation:	/Game/Blueprints/UI/WBP_Inventory.WBP_Inventory_C:WidgetTree.Txt_TreatLevel.Text
+#: /Game/Blueprints/UI/WBP_Inventory.WBP_Inventory_C:WidgetTree.Txt_TreatLevel.Text
+msgctxt ",56DEB77046B35BB50E6676996F599B6C"
+msgid "TREAT LEVEL"
+msgstr "위험 수준"
+
+#. Key:	137EE8024FC4E5065039A780AB4D5C0C
+#. SourceLocation:	/Game/Blueprints/UI/WBP_Inventory.WBP_Inventory_C:WidgetTree.Txt_Weaknesses.Text
+#: /Game/Blueprints/UI/WBP_Inventory.WBP_Inventory_C:WidgetTree.Txt_Weaknesses.Text
+#, fuzzy
+msgctxt ",137EE8024FC4E5065039A780AB4D5C0C"
+msgid "WEAKNESSES"
+msgstr "약점"
+
+#. Key:	F7A4F0394BA920E7EDB67FB9ACBA9528
+#. SourceLocation:	/Game/Blueprints/UI/WBP_Inventory.WBP_Inventory_C:WidgetTree.Txt_WeDescription.Text
+#: /Game/Blueprints/UI/WBP_Inventory.WBP_Inventory_C:WidgetTree.Txt_WeDescription.Text
+#, fuzzy
+msgctxt ",F7A4F0394BA920E7EDB67FB9ACBA9528"
+msgid "WEAKNESSES DESCRIPTION"
+msgstr "약점 설명"
+
+#. Key:	FA778CEE4522FC382EF23FBF959F54AE
+#. SourceLocation:	/Game/Blueprints/UI/WBP_Load.WBP_Load_C:WidgetTree.Txt_Back.Text
+#: /Game/Blueprints/UI/WBP_Load.WBP_Load_C:WidgetTree.Txt_Back.Text
+msgctxt ",FA778CEE4522FC382EF23FBF959F54AE"
+msgid "Back"
+msgstr "뒤로"
+
+#. Key:	8528C51F43CDC703A82C819FA5A95376
+#. SourceLocation:	/Game/Blueprints/UI/WBP_Load.WBP_Load_C:WidgetTree.Txt_dot.Text
+#: /Game/Blueprints/UI/WBP_Load.WBP_Load_C:WidgetTree.Txt_dot.Text
+msgctxt ",8528C51F43CDC703A82C819FA5A95376"
+msgid "..."
+msgstr "..."
+
+#. Key:	0435540642F5B891332DA3990894C8DD
+#. SourceLocation:	/Game/Blueprints/UI/WBP_Load.WBP_Load_C:WidgetTree.Txt_PatientRecord.Text
+#: /Game/Blueprints/UI/WBP_Load.WBP_Load_C:WidgetTree.Txt_PatientRecord.Text
+msgctxt ",0435540642F5B891332DA3990894C8DD"
+msgid "PATIENT RECORD"
+msgstr "환자 기록"
+
+#. Key:	98EE1F8248717A69359716B8EFE87DD7
+#. SourceLocation:	/Game/Blueprints/UI/WBP_Load.WBP_Load_C:WidgetTree.Txt_Save.Text
+#: /Game/Blueprints/UI/WBP_Load.WBP_Load_C:WidgetTree.Txt_Save.Text
+msgctxt ",98EE1F8248717A69359716B8EFE87DD7"
+msgid "SAVE"
+msgstr "저장"
+
+#. Key:	9F25CD0542154D0319F8B9AB6726F584
+#. SourceLocation:	/Game/Blueprints/UI/WBP_Load.WBP_Load_C:WidgetTree.Txt_Savingdata.Text
+#: /Game/Blueprints/UI/WBP_Load.WBP_Load_C:WidgetTree.Txt_Savingdata.Text
+msgctxt ",9F25CD0542154D0319F8B9AB6726F584"
+msgid "Saving data"
+msgstr "저장중"
+
+#. Key:	8D89489F4FC7D750932FD99DD532E524
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.LoadingTip(0).LoadingTip
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.LoadingTip(0).LoadingTip
+#, fuzzy
+msgctxt ",8D89489F4FC7D750932FD99DD532E524"
+msgid "Memory fragments may affect the ending."
+msgstr "기억 조각이 결말에 영향을 줄 수 있습니다."
+
+#. Key:	9BC7547840299CC8A1EFBABD5D3DB193
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.LoadingTip(1).LoadingTip
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.LoadingTip(1).LoadingTip
+#, fuzzy
+msgctxt ",9BC7547840299CC8A1EFBABD5D3DB193"
+msgid "You cannot use the flashlight without enough battery."
+msgstr "배터리가 충분하지 않으면 손전등을 사용할 수 없습니다."
+
+#. Key:	71E40ECA40A30E0A04A456A126D41CCE
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.LoadingTip(2).LoadingTip
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.LoadingTip(2).LoadingTip
+#, fuzzy
+msgctxt ",71E40ECA40A30E0A04A456A126D41CCE"
+msgid "Thirst and hunger will not wait for you."
+msgstr "갈증과 굶주림은 당신을 기다리지 않을 것입니다."
+
+#. Key:	0D51D6EC43F9C46DF7F5EE8B5481AE3B
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.LoadingTip(3).LoadingTip
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.LoadingTip(3).LoadingTip
+#, fuzzy
+msgctxt ",0D51D6EC43F9C46DF7F5EE8B5481AE3B"
+msgid "When you turn on your flashlight, something may turn its eyes toward you."
+msgstr "손전등을 켜면 무언가가 눈을 돌릴 수 있습니다."
+
+#. Key:	0DD3AF7F41824AAB338593A5D9786420
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientFloorTexts(0).PatientFloorTexts
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientFloorTexts(0).PatientFloorTexts
+msgctxt ",0DD3AF7F41824AAB338593A5D9786420"
+msgid "09F Doctor's Lounge"
+msgstr "09F 의사 휴개실"
+
+#. Key:	706F43C1497EADAFE45E28B97BB8B631
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientFloorTexts(1).PatientFloorTexts
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientFloorTexts(1).PatientFloorTexts
+msgctxt ",706F43C1497EADAFE45E28B97BB8B631"
+msgid "08F Consultation & General Wards"
+msgstr "08F 진료실 및 일반 병동"
+
+#. Key:	793006334F61F3380230D2B949E57038
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientFloorTexts(2).PatientFloorTexts
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientFloorTexts(2).PatientFloorTexts
+#, fuzzy
+msgctxt ",793006334F61F3380230D2B949E57038"
+msgid "06F Operating Theater I"
+msgstr "06F 수술실 I"
+
+#. Key:	883825104A01DD5119B0B29AFA0ACD65
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientFloorTexts(3).PatientFloorTexts
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientFloorTexts(3).PatientFloorTexts
+#, fuzzy
+msgctxt ",883825104A01DD5119B0B29AFA0ACD65"
+msgid "05F Intensive Care Unit(ICU)"
+msgstr "05F 중환자실(ICU)"
+
+#. Key:	1F927F9148D7E8F69367788C6F5AF856
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientFloorTexts(4).PatientFloorTexts
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientFloorTexts(4).PatientFloorTexts
+msgctxt ",1F927F9148D7E8F69367788C6F5AF856"
+msgid "04F Operating Theater II"
+msgstr "04F 수술실 II"
+
+#. Key:	E7E547914132D79318888C8F09F81F7D
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientFloorTexts(5).PatientFloorTexts
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientFloorTexts(5).PatientFloorTexts
+#, fuzzy
+msgctxt ",E7E547914132D79318888C8F09F81F7D"
+msgid "03F CT Scan & Diagnostics"
+msgstr "03F CT 스캔 및 진단"
+
+#. Key:	B575E475456E7172E921D59688791FCE
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientFloorTexts(6).PatientFloorTexts
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientFloorTexts(6).PatientFloorTexts
+#, fuzzy
+msgctxt ",B575E475456E7172E921D59688791FCE"
+msgid "01F Main Lobby"
+msgstr "01F 메인 로비"
+
+#. Key:	2562A13142B7CF31F147A7957C8CBEED
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientMemoryLossTexts(0).PatientMemoryLossTexts
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientMemoryLossTexts(0).PatientMemoryLossTexts
+msgctxt ",2562A13142B7CF31F147A7957C8CBEED"
+msgid "Severe"
+msgstr "심각함"
+
+#. Key:	F60EB0EB4A1E78996B0C7B8628E72F89
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientMemoryLossTexts(1).PatientMemoryLossTexts
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientMemoryLossTexts(1).PatientMemoryLossTexts
+msgctxt ",F60EB0EB4A1E78996B0C7B8628E72F89"
+msgid "Severe"
+msgstr "심각함"
+
+#. Key:	7F287BBA4346C4AD39966AA437F95852
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientMemoryLossTexts(2).PatientMemoryLossTexts
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientMemoryLossTexts(2).PatientMemoryLossTexts
+msgctxt ",7F287BBA4346C4AD39966AA437F95852"
+msgid "Severe"
+msgstr "심각함"
+
+#. Key:	AA6ED2B64EE3C95FFAC142BA5953D708
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientMemoryLossTexts(3).PatientMemoryLossTexts
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientMemoryLossTexts(3).PatientMemoryLossTexts
+msgctxt ",AA6ED2B64EE3C95FFAC142BA5953D708"
+msgid "Severe"
+msgstr "심각함"
+
+#. Key:	0F19DEFC495A9928A957C28BB9DA2E69
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientMemoryLossTexts(4).PatientMemoryLossTexts
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientMemoryLossTexts(4).PatientMemoryLossTexts
+msgctxt ",0F19DEFC495A9928A957C28BB9DA2E69"
+msgid "Severe"
+msgstr "심각함"
+
+#. Key:	005AEA67430AA3437017BCB4B288B299
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientMemoryLossTexts(5).PatientMemoryLossTexts
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientMemoryLossTexts(5).PatientMemoryLossTexts
+msgctxt ",005AEA67430AA3437017BCB4B288B299"
+msgid "Severe"
+msgstr "심각함"
+
+#. Key:	ED47B60A4CAB1E0518847A8FF4A4C0E8
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientMemoryLossTexts(6).PatientMemoryLossTexts
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientMemoryLossTexts(6).PatientMemoryLossTexts
+msgctxt ",ED47B60A4CAB1E0518847A8FF4A4C0E8"
+msgid "Severe"
+msgstr "심각함"
+
+#. Key:	DF9943CA4CE865E3F0A5E7BCB9797388
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientNameTexts(0).PatientNameTexts
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientNameTexts(0).PatientNameTexts
+msgctxt ",DF9943CA4CE865E3F0A5E7BCB9797388"
+msgid "Whisper"
+msgstr "속삭이는 환영"
+
+#. Key:	9F7BB24E4D672B622E3346A7514F9D8F
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientNameTexts(1).PatientNameTexts
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientNameTexts(1).PatientNameTexts
+msgctxt ",9F7BB24E4D672B622E3346A7514F9D8F"
+msgid "Headless"
+msgstr "머리 없는 여인"
+
+#. Key:	031F34084A242247F1557AAAEA90903C
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientNameTexts(2).PatientNameTexts
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientNameTexts(2).PatientNameTexts
+msgctxt ",031F34084A242247F1557AAAEA90903C"
+msgid "Luxeater"
+msgstr "빛을 먹는 자"
+
+#. Key:	BA2627E045CE8E7785264991BC4B0290
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientNameTexts(3).PatientNameTexts
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientNameTexts(3).PatientNameTexts
+#, fuzzy
+msgctxt ",BA2627E045CE8E7785264991BC4B0290"
+msgid "Stalker"
+msgstr "절름발이 추격자"
+
+#. Key:	52452F7C47470E7A5A108198CFDC2404
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientNameTexts(4).PatientNameTexts
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientNameTexts(4).PatientNameTexts
+msgctxt ",52452F7C47470E7A5A108198CFDC2404"
+msgid "Crawling"
+msgstr "기어다니는 살점"
+
+#. Key:	F196AF2A4D8EF3C50C2A4A89DEF08950
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientNameTexts(5).PatientNameTexts
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientNameTexts(5).PatientNameTexts
+msgctxt ",F196AF2A4D8EF3C50C2A4A89DEF08950"
+msgid "Wallwail"
+msgstr "벽속에 비명"
+
+#. Key:	5909F7FA4EDFAC2D09A59C89917ABB61
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientNameTexts(6).PatientNameTexts
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientNameTexts(6).PatientNameTexts
+msgctxt ",5909F7FA4EDFAC2D09A59C89917ABB61"
+msgid "Tank"
+msgstr "비대한 태아"
+
+#. Key:	EE6C80B3499EE08DB7369CACB4FBF151
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientNotesTexts(0).PatientNotesTexts
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientNotesTexts(0).PatientNotesTexts
+msgctxt ",EE6C80B3499EE08DB7369CACB4FBF151"
+msgid "Collect fragments of memory to uncover the truth."
+msgstr "진실을 밝히기 위해 기억의 조각들을 수집하세요."
+
+#. Key:	AFF557504BA25CF3DB38558E4143C517
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientNotesTexts(1).PatientNotesTexts
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientNotesTexts(1).PatientNotesTexts
+msgctxt ",AFF557504BA25CF3DB38558E4143C517"
+msgid "Collect fragments of memory to uncover the truth."
+msgstr "진실을 밝히기 위해 기억의 조각들을 수집하세요."
+
+#. Key:	FAEE8C564CD2E91A72F9BCB8F874EEA4
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientNotesTexts(2).PatientNotesTexts
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientNotesTexts(2).PatientNotesTexts
+msgctxt ",FAEE8C564CD2E91A72F9BCB8F874EEA4"
+msgid "Collect fragments of memory to uncover the truth."
+msgstr "진실을 밝히기 위해 기억의 조각들을 수집하세요."
+
+#. Key:	9FE4D7E94DFB213ABBAD588A3D5ADA9B
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientNotesTexts(3).PatientNotesTexts
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientNotesTexts(3).PatientNotesTexts
+msgctxt ",9FE4D7E94DFB213ABBAD588A3D5ADA9B"
+msgid "Collect fragments of memory to uncover the truth."
+msgstr "진실을 밝히기 위해 기억의 조각들을 수집하세요."
+
+#. Key:	83A6B847466D031102EE848BDD01C75B
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientNotesTexts(4).PatientNotesTexts
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientNotesTexts(4).PatientNotesTexts
+msgctxt ",83A6B847466D031102EE848BDD01C75B"
+msgid "Collect fragments of memory to uncover the truth."
+msgstr "진실을 밝히기 위해 기억의 조각들을 수집하세요."
+
+#. Key:	B713866049A27D6AA260EF9CA151965D
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientNotesTexts(5).PatientNotesTexts
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientNotesTexts(5).PatientNotesTexts
+msgctxt ",B713866049A27D6AA260EF9CA151965D"
+msgid "Collect fragments of memory to uncover the truth."
+msgstr "진실을 밝히기 위해 기억의 조각들을 수집하세요."
+
+#. Key:	A56490B94A2FE4326A6FECA5BB743FFD
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientNotesTexts(6).PatientNotesTexts
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientNotesTexts(6).PatientNotesTexts
+msgctxt ",A56490B94A2FE4326A6FECA5BB743FFD"
+msgid "Collect fragments of memory to uncover the truth."
+msgstr "진실을 밝히기 위해 기억의 조각들을 수집하세요."
+
+#. Key:	B235489B40B5E04E0A62CFB9B2C2FD40
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientStatusTexts(0).PatientStatusTexts
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientStatusTexts(0).PatientStatusTexts
+msgctxt ",B235489B40B5E04E0A62CFB9B2C2FD40"
+msgid "Unstable"
+msgstr "불안정"
+
+#. Key:	7EA4CEF448516761E5828D9C393F1EB3
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientStatusTexts(1).PatientStatusTexts
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientStatusTexts(1).PatientStatusTexts
+msgctxt ",7EA4CEF448516761E5828D9C393F1EB3"
+msgid "Unstable"
+msgstr "불안정"
+
+#. Key:	B0312AD746D65C0F5A42F7BE12F167E4
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientStatusTexts(2).PatientStatusTexts
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientStatusTexts(2).PatientStatusTexts
+msgctxt ",B0312AD746D65C0F5A42F7BE12F167E4"
+msgid "Unstable"
+msgstr "불안정"
+
+#. Key:	CCD4420B4049657A1236BA9ECAFE8A19
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientStatusTexts(3).PatientStatusTexts
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientStatusTexts(3).PatientStatusTexts
+msgctxt ",CCD4420B4049657A1236BA9ECAFE8A19"
+msgid "Unstable"
+msgstr "불안정"
+
+#. Key:	B18E68C1443BBD3E1E709A8C8B481212
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientStatusTexts(4).PatientStatusTexts
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientStatusTexts(4).PatientStatusTexts
+msgctxt ",B18E68C1443BBD3E1E709A8C8B481212"
+msgid "Unstable"
+msgstr "불안정"
+
+#. Key:	111172B74B271EE2E2E15C8F383D53D0
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientStatusTexts(5).PatientStatusTexts
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientStatusTexts(5).PatientStatusTexts
+msgctxt ",111172B74B271EE2E2E15C8F383D53D0"
+msgid "Unstable"
+msgstr "불안정"
+
+#. Key:	015F5C8C432A9C38CD67A797C2538A7A
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientStatusTexts(6).PatientStatusTexts
+#: /Game/Blueprints/UI/WBP_LoadingScreen.Default__WBP_LoadingScreen_C.PatientStatusTexts(6).PatientStatusTexts
+msgctxt ",015F5C8C432A9C38CD67A797C2538A7A"
+msgid "Unstable"
+msgstr "불안정"
+
+#. Key:	E6D0773E4F55B45283CE6DA491E5815E
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.WBP_LoadingScreen_C:WidgetTree.Txt_Tip.Text
+#: /Game/Blueprints/UI/WBP_LoadingScreen.WBP_LoadingScreen_C:WidgetTree.Txt_Tip.Text
+msgctxt ",E6D0773E4F55B45283CE6DA491E5815E"
+msgid "TIP."
+msgstr "팁."
+
+#. Key:	9FDC7F8D4C7DDD684A68DFB56A1F41B9
+#. SourceLocation:	/Game/Blueprints/UI/WBP_LoadingScreen.WBP_LoadingScreen_C:WidgetTree.Txt_TipText.Text
+#: /Game/Blueprints/UI/WBP_LoadingScreen.WBP_LoadingScreen_C:WidgetTree.Txt_TipText.Text
+msgctxt ",9FDC7F8D4C7DDD684A68DFB56A1F41B9"
+msgid "팁 문장"
+msgstr "팁 문자"
+
+#. Key:	59EA6F8F488DBD17CEA00CBD88EBB305
+#. SourceLocation:	/Game/Blueprints/UI/WBP_MainMenu.WBP_MainMenu_C:WidgetTree.Txt_Exit.Text
+#: /Game/Blueprints/UI/WBP_MainMenu.WBP_MainMenu_C:WidgetTree.Txt_Exit.Text
+msgctxt ",59EA6F8F488DBD17CEA00CBD88EBB305"
+msgid "EXIT GAME"
+msgstr "게임 종료"
+
+#. Key:	7F5141B84582124C32588CBCCFA9F6A4
+#. SourceLocation:	/Game/Blueprints/UI/WBP_MainMenu.WBP_MainMenu_C:WidgetTree.Txt_Load.Text
+#: /Game/Blueprints/UI/WBP_MainMenu.WBP_MainMenu_C:WidgetTree.Txt_Load.Text
+msgctxt ",7F5141B84582124C32588CBCCFA9F6A4"
+msgid "LOAD GAME"
+msgstr "게임 불러오기"
+
+#. Key:	F756A1074CF2420CF886C3B540048A01
+#. SourceLocation:	/Game/Blueprints/UI/WBP_MainMenu.WBP_MainMenu_C:WidgetTree.Txt_New.Text
+#: /Game/Blueprints/UI/WBP_MainMenu.WBP_MainMenu_C:WidgetTree.Txt_New.Text
+msgctxt ",F756A1074CF2420CF886C3B540048A01"
+msgid "NEW GAME"
+msgstr "새 게임"
+
+#. Key:	D37861EC4643AF763898ED90AC375A95
+#. SourceLocation:	/Game/Blueprints/UI/WBP_MainMenu.WBP_MainMenu_C:WidgetTree.Txt_Setting.Text
+#: /Game/Blueprints/UI/WBP_MainMenu.WBP_MainMenu_C:WidgetTree.Txt_Setting.Text
+msgctxt ",D37861EC4643AF763898ED90AC375A95"
+msgid "SETTING"
+msgstr "설정"
+
+#. Key:	5BFB101943168B2F42E274828C6F18FC
+#. SourceLocation:	/Game/Blueprints/UI/WBP_Memento.WBP_Memento_C:WidgetTree.TextBlock_0.Text
+#: /Game/Blueprints/UI/WBP_Memento.WBP_Memento_C:WidgetTree.TextBlock_0.Text
+msgctxt ",5BFB101943168B2F42E274828C6F18FC"
+msgid "오래된 연구일지"
+msgstr "오래된 연구 일지"
+
+#. Key:	E8C8FFF6434BF06049B5649B8FBFE1B8
+#. SourceLocation:	/Game/Blueprints/UI/WBP_PauseMenu.WBP_PauseMenu_C:WidgetTree.Txt_Exit.Text
+#: /Game/Blueprints/UI/WBP_PauseMenu.WBP_PauseMenu_C:WidgetTree.Txt_Exit.Text
+msgctxt ",E8C8FFF6434BF06049B5649B8FBFE1B8"
+msgid "EXIT"
+msgstr "종료"
+
+#. Key:	42F5BE9E44C8D22DA88A1DABD3BFCFA8
+#. SourceLocation:	/Game/Blueprints/UI/WBP_PauseMenu.WBP_PauseMenu_C:WidgetTree.Txt_Load.Text
+#: /Game/Blueprints/UI/WBP_PauseMenu.WBP_PauseMenu_C:WidgetTree.Txt_Load.Text
+msgctxt ",42F5BE9E44C8D22DA88A1DABD3BFCFA8"
+msgid "LOAD"
+msgstr "불러오기"
+
+#. Key:	9327D0F8438EB1A1CD5D44A1AE7BF4DD
+#. SourceLocation:	/Game/Blueprints/UI/WBP_PauseMenu.WBP_PauseMenu_C:WidgetTree.Txt_MainMenu.Text
+#: /Game/Blueprints/UI/WBP_PauseMenu.WBP_PauseMenu_C:WidgetTree.Txt_MainMenu.Text
+msgctxt ",9327D0F8438EB1A1CD5D44A1AE7BF4DD"
+msgid "MAINMENU"
+msgstr "메인 메뉴"
+
+#. Key:	7B0EDDB34E9991D48D51EDA0B0A31983
+#. SourceLocation:	/Game/Blueprints/UI/WBP_PauseMenu.WBP_PauseMenu_C:WidgetTree.Txt_Resume.Text
+#: /Game/Blueprints/UI/WBP_PauseMenu.WBP_PauseMenu_C:WidgetTree.Txt_Resume.Text
+msgctxt ",7B0EDDB34E9991D48D51EDA0B0A31983"
+msgid "RESUME"
+msgstr "계속 하기"
+
+#. Key:	8E1E971E47C5ED4B43675BA52580A1DF
+#. SourceLocation:	/Game/Blueprints/UI/WBP_PauseMenu.WBP_PauseMenu_C:WidgetTree.Txt_Setting.Text
+#: /Game/Blueprints/UI/WBP_PauseMenu.WBP_PauseMenu_C:WidgetTree.Txt_Setting.Text
+msgctxt ",8E1E971E47C5ED4B43675BA52580A1DF"
+msgid "SETTING"
+msgstr "설정"
+
+#. Key:	08EF6083475DCD1E3D98169534D0DE0F
+#. SourceLocation:	/Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD [Script Bytecode]
+#: /Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD
+#: [Script Bytecode]
+msgctxt ",08EF6083475DCD1E3D98169534D0DE0F"
+msgid "Operating Theater II"
+msgstr "수술실 II"
+
+#. Key:	1BC34C3B4330D683E900D0A4BE423C0A
+#. SourceLocation:	/Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD [Script Bytecode]
+#: /Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD
+#: [Script Bytecode]
+msgctxt ",1BC34C3B4330D683E900D0A4BE423C0A"
+msgid "09F"
+msgstr "09F"
+
+#. Key:	20EC42E0441B686E58900F881D80F3D9
+#. SourceLocation:	/Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD [Script Bytecode]
+#: /Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD
+#: [Script Bytecode]
+msgctxt ",20EC42E0441B686E58900F881D80F3D9"
+msgid "03F"
+msgstr "03F"
+
+#. Key:	215A896940A65EBA9175E88661B2D89E
+#. SourceLocation:	/Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD [Script Bytecode]
+#: /Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD
+#: [Script Bytecode]
+msgctxt ",215A896940A65EBA9175E88661B2D89E"
+msgid "Sealed Isolation Zone"
+msgstr "격리 구역"
+
+#. Key:	3DA2372B4E0E24878271B7B39719056C
+#. SourceLocation:	/Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD [Script Bytecode]
+#: /Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD
+#: [Script Bytecode]
+msgctxt ",3DA2372B4E0E24878271B7B39719056C"
+msgid "Consultation & General Wards"
+msgstr "진료실 및 일반 병동"
+
+#. Key:	4BB9E4BE45E0CF65D94A7FA3974C1B66
+#. SourceLocation:	/Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD [Script Bytecode]
+#: /Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD
+#: [Script Bytecode]
+msgctxt ",4BB9E4BE45E0CF65D94A7FA3974C1B66"
+msgid "05F"
+msgstr "05F"
+
+#. Key:	4BED98914ABBB0A2BE6E74B8606C5BC5
+#. SourceLocation:	/Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD [Script Bytecode]
+#: /Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD
+#: [Script Bytecode]
+msgctxt ",4BED98914ABBB0A2BE6E74B8606C5BC5"
+msgid "B1"
+msgstr "B1"
+
+#. Key:	500B181A4AA2C1AE4C852FB4C04851F5
+#. SourceLocation:	/Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD [Script Bytecode]
+#: /Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD
+#: [Script Bytecode]
+msgctxt ",500B181A4AA2C1AE4C852FB4C04851F5"
+msgid "Mortuary"
+msgstr "안치실"
+
+#. Key:	55B7BD984EA31C5C5D1F4A8C3CD1A70F
+#. SourceLocation:	/Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD [Script Bytecode]
+#: /Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD
+#: [Script Bytecode]
+msgctxt ",55B7BD984EA31C5C5D1F4A8C3CD1A70F"
+msgid "04F"
+msgstr "04F"
+
+#. Key:	5652F01A4BB5B275F037648015820FA9
+#. SourceLocation:	/Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD [Script Bytecode]
+#: /Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD
+#: [Script Bytecode]
+msgctxt ",5652F01A4BB5B275F037648015820FA9"
+msgid "Intensive Care Unit(ICU)"
+msgstr "중환자실(ICU)"
+
+#. Key:	5E819FB44A5B2417E67726870ABC0962
+#. SourceLocation:	/Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD [Script Bytecode]
+#: /Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD
+#: [Script Bytecode]
+msgctxt ",5E819FB44A5B2417E67726870ABC0962"
+msgid "02F"
+msgstr "02F"
+
+#. Key:	70E06AB14EFE8F7C963EDE896C532C8B
+#. SourceLocation:	/Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD [Script Bytecode]
+#: /Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD
+#: [Script Bytecode]
+msgctxt ",70E06AB14EFE8F7C963EDE896C532C8B"
+msgid "Operating Theater I"
+msgstr "수술실 I"
+
+#. Key:	9CF41C4347A8258016048C8AEF17750E
+#. SourceLocation:	/Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD [Script Bytecode]
+#: /Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD
+#: [Script Bytecode]
+msgctxt ",9CF41C4347A8258016048C8AEF17750E"
+msgid "08F"
+msgstr "08F"
+
+#. Key:	A5E5BDF34FCDCC47EDDB6E8B1C943CC2
+#. SourceLocation:	/Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD [Script Bytecode]
+#: /Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD
+#: [Script Bytecode]
+msgctxt ",A5E5BDF34FCDCC47EDDB6E8B1C943CC2"
+msgid "06F"
+msgstr "06F"
+
+#. Key:	A662A1544C10EB88B5E521B48D7BA171
+#. SourceLocation:	/Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD [Script Bytecode]
+#: /Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD
+#: [Script Bytecode]
+msgctxt ",A662A1544C10EB88B5E521B48D7BA171"
+msgid "07F"
+msgstr "07F"
+
+#. Key:	A8FE3D144A9F15E909B14FAE13320AE9
+#. SourceLocation:	/Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD [Script Bytecode]
+#: /Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD
+#: [Script Bytecode]
+msgctxt ",A8FE3D144A9F15E909B14FAE13320AE9"
+msgid "CT Scan & Diagnostics"
+msgstr "CT 스캔 및 진단"
+
+#. Key:	ACAF28FE4F652BAD4E6F0CBEE12A8E90
+#. SourceLocation:	/Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD [Script Bytecode]
+#: /Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD
+#: [Script Bytecode]
+msgctxt ",ACAF28FE4F652BAD4E6F0CBEE12A8E90"
+msgid "01F"
+msgstr "01F"
+
+#. Key:	AD610F0C4F02711751C0318EB6F3C653
+#. SourceLocation:	/Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD [Script Bytecode]
+#: /Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD
+#: [Script Bytecode]
+msgctxt ",AD610F0C4F02711751C0318EB6F3C653"
+msgid "Visitor's Waiting Area"
+msgstr "보호자 대기 구역"
+
+#. Key:	E65193234917BAF16B9B4F9BDD7FB345
+#. SourceLocation:	/Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD [Script Bytecode]
+#: /Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD
+#: [Script Bytecode]
+msgctxt ",E65193234917BAF16B9B4F9BDD7FB345"
+msgid "Main Lobby"
+msgstr "메인 로비"
+
+#. Key:	F689BF1E471389835A13A3B315E12047
+#. SourceLocation:	/Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD [Script Bytecode]
+#: /Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:ExecuteUbergraph_WBP_PlayerHUD
+#: [Script Bytecode]
+#, fuzzy
+msgctxt ",F689BF1E471389835A13A3B315E12047"
+msgid "Doctor's Lounge"
+msgstr "의사 휴개실"
+
+#. Key:	E84580D44988FFFA90B653842CD5A608
+#. SourceLocation:	/Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:RefreshQuickSlotCounts [Script Bytecode]
+#: /Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:RefreshQuickSlotCounts
+#: [Script Bytecode]
+#, fuzzy
+msgctxt ",E84580D44988FFFA90B653842CD5A608"
+msgid "x{Count}"
+msgstr "x{Count}"
+
+#. Key:	880314194FE6BC3BCAB3CBB086856593
+#. SourceLocation:	/Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:WidgetTree.Txt_BossName.Text
+#: /Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:WidgetTree.Txt_BossName.Text
+msgctxt ",880314194FE6BC3BCAB3CBB086856593"
+msgid "Luxeater"
+msgstr "빛을 먹는 자"
+
+#. Key:	E5B6F4B84906C51D01E6F0956A93EA36
+#. SourceLocation:	/Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:WidgetTree.Txt_BottleCount.Text
+#: /Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:WidgetTree.Txt_BottleCount.Text
+#, fuzzy
+msgctxt ",E5B6F4B84906C51D01E6F0956A93EA36"
+msgid "x0"
+msgstr "x0"
+
+#. Key:	BA95EF2743AFF1EDEE4AD197EAF63F28
+#. SourceLocation:	/Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:WidgetTree.Txt_CurrentFloor.Text
+#: /Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:WidgetTree.Txt_CurrentFloor.Text
+msgctxt ",BA95EF2743AFF1EDEE4AD197EAF63F28"
+msgid "CURRENT FLOOR"
+msgstr "현재 층"
+
+#. Key:	A0E689A3409F556D077737912229947D
+#. SourceLocation:	/Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:WidgetTree.Txt_FloorName.Text
+#: /Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:WidgetTree.Txt_FloorName.Text
+#, fuzzy
+msgctxt ",A0E689A3409F556D077737912229947D"
+msgid "Doctor's Lounge"
+msgstr "의사 휴개실"
+
+#. Key:	E3776FAC4F98FCD69F9DD28E9EDF85F5
+#. SourceLocation:	/Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:WidgetTree.Txt_FloorNumber.Text
+#: /Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:WidgetTree.Txt_FloorNumber.Text
+msgctxt ",E3776FAC4F98FCD69F9DD28E9EDF85F5"
+msgid "09F"
+msgstr "09F"
+
+#. Key:	A8535F5942C3D5AE53C633A7C0944D1B
+#. SourceLocation:	/Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:WidgetTree.Txt_FoodCount.Text
+#: /Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:WidgetTree.Txt_FoodCount.Text
+#, fuzzy
+msgctxt ",A8535F5942C3D5AE53C633A7C0944D1B"
+msgid "x0"
+msgstr "x0"
+
+#. Key:	04159C1742E102881F33419A0503EC35
+#. SourceLocation:	/Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:WidgetTree.Txt_WaterCount.Text
+#: /Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:WidgetTree.Txt_WaterCount.Text
+#, fuzzy
+msgctxt ",04159C1742E102881F33419A0503EC35"
+msgid "x0"
+msgstr "x0"
+
+#. Key:	B6E8B0544FA9E55198D7E98F35CBBBC1
+#. SourceLocation:	/Game/Blueprints/UI/WBP_RequirementNotice.WBP_RequirementNotice_C:WidgetTree.Txt_Description.Text
+#: /Game/Blueprints/UI/WBP_RequirementNotice.WBP_RequirementNotice_C:WidgetTree.Txt_Description.Text
+msgctxt ",B6E8B0544FA9E55198D7E98F35CBBBC1"
+msgid "You ndd a key to open this door."
+msgstr "열쇠 필요."
+
+#. Key:	2D269E054BC419D53B5AD2B831FC7868
+#. SourceLocation:	/Game/Blueprints/UI/WBP_RequirementNotice.WBP_RequirementNotice_C:WidgetTree.Txt_Required.Text
+#: /Game/Blueprints/UI/WBP_RequirementNotice.WBP_RequirementNotice_C:WidgetTree.Txt_Required.Text
+msgctxt ",2D269E054BC419D53B5AD2B831FC7868"
+msgid "KEY REQUIRED"
+msgstr "열쇠 필요"
+
+#. Key:	98D899624129D0889FF9A588B25536A9
+#. SourceLocation:	/Game/Blueprints/UI/WBP_Setting.WBP_Setting_C:WidgetTree.BackText.Text
+#: /Game/Blueprints/UI/WBP_Setting.WBP_Setting_C:WidgetTree.BackText.Text
+msgctxt ",98D899624129D0889FF9A588B25536A9"
+msgid "Back"
+msgstr "뒤로가기"
+
+#. Key:	288BE2C246CDB25D8DB1FF92EB46AB1D
+#. SourceLocation:	/Game/Blueprints/UI/WBP_Setting.WBP_Setting_C:WidgetTree.TextBlock.Text
+#: /Game/Blueprints/UI/WBP_Setting.WBP_Setting_C:WidgetTree.TextBlock.Text
+msgctxt ",288BE2C246CDB25D8DB1FF92EB46AB1D"
+msgid "Sound Volume"
+msgstr "음량"
+
+#. Key:	F1ADA87C43931A4CFC31CA96347399ED
+#. SourceLocation:	/Game/Blueprints/UI/WBP_Setting.WBP_Setting_C:WidgetTree.TextBlock_97.Text
+#: /Game/Blueprints/UI/WBP_Setting.WBP_Setting_C:WidgetTree.TextBlock_97.Text
+msgctxt ",F1ADA87C43931A4CFC31CA96347399ED"
+msgid "Mouse Sensitivity"
+msgstr "마우스 민감도"
+
+#. Key:	D82E28A043CABD0B02B18AA9DA3A8B8B
+#. SourceLocation:	/Game/Blueprints/Weapon/BP_BottleItem.Default__BP_BottleItem_C.ItemDescription
+#: /Game/Blueprints/Weapon/BP_BottleItem.Default__BP_BottleItem_C.ItemDescription
+#, fuzzy
+msgctxt ",D82E28A043CABD0B02B18AA9DA3A8B8B"
+msgid "Bottle that is throwable to distract monsters"
+msgstr "던질 수 있는 병으로 몬스터의 주의를 끌 수 있습니다"
+
+#. Key:	68537152436D62E90016029D99C72048
+#. SourceLocation:	/Game/Blueprints/Weapon/BP_BottleItem.Default__BP_BottleItem_C.ItemName
+#: /Game/Blueprints/Weapon/BP_BottleItem.Default__BP_BottleItem_C.ItemName
+msgctxt ",68537152436D62E90016029D99C72048"
+msgid "Bottle"
+msgstr "유리병"
