@@ -1,4 +1,4 @@
-﻿#include "Items/OblivioItemBase.h"
+#include "Items/OblivioItemBase.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/SphereComponent.h"
 #include "OblivioCharacter.h"
@@ -22,6 +22,8 @@ AOblivioItemBase::AOblivioItemBase()
     LootNiagaraComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("LootNiagaraComponent"));
     LootNiagaraComponent->SetupAttachment(RootComponent);
     LootNiagaraComponent->SetAutoActivate(false);
+
+    InteractText = NSLOCTEXT("OblivioItem", "DefaultInteractText", "Pick Up");
 }
 
 void AOblivioItemBase::BeginPlay()
@@ -37,28 +39,49 @@ void AOblivioItemBase::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent,
     UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
     bool bFromSweep, const FHitResult& SweepResult)
 {
-    if (OtherActor && OtherActor != this)
+    if (!CanShowNearbyPickupUI() || !OtherActor || OtherActor == this)
     {
-        AOblivioCharacter* Player = Cast<AOblivioCharacter>(OtherActor);
-        if (Player)
-        {
-            Player->AddNearbyItem(this);
+        return;
+    }
 
-
-            if (LootNiagaraComponent)
-            {
-                LootNiagaraComponent->Activate();
-            }
-        }
+    if (AOblivioCharacter* Player = Cast<AOblivioCharacter>(OtherActor))
+    {
+        NotifyPlayerNearbyPickup(Player, true);
     }
 }
 void AOblivioItemBase::OnSphereEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
     if (AOblivioCharacter* Player = Cast<AOblivioCharacter>(OtherActor))
     {
-        // 캐릭터에게서 아이템 정보 제거 (UI 끄기 신호)
+        NotifyPlayerNearbyPickup(Player, false);
+    }
+}
+
+void AOblivioItemBase::NotifyPlayerNearbyPickup(AOblivioCharacter* Player, bool bEnter)
+{
+    if (!IsValid(Player))
+    {
+        return;
+    }
+
+    if (bEnter)
+    {
+        if (!CanShowNearbyPickupUI())
+        {
+            return;
+        }
+
+        Player->AddNearbyItem(this);
+
+        if (LootNiagaraComponent)
+        {
+            LootNiagaraComponent->Activate();
+        }
+    }
+    else
+    {
         Player->RemoveNearbyItem(this);
-        //ItemMesh->SetRenderCustomDepth(false);
+
         if (LootNiagaraComponent)
         {
             LootNiagaraComponent->Deactivate();

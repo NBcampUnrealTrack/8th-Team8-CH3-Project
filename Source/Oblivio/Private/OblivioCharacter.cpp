@@ -1,4 +1,4 @@
-﻿#include "OblivioCharacter.h"
+#include "OblivioCharacter.h"
 #include "AIEnemy/StagingEnemy.h"
 #include "AIEnemy/CabinetEnemy.h"
 #include "Cinematic/StagingCinematicTypes.h"
@@ -11,6 +11,9 @@
 #include "OblivioComponents/PlayerCombatComponent.h"
 #include "OblivioComponents/LightAttackComponent.h"
 #include "Weapon/Flashlight.h"
+#include "Items/FlashlightPickupItem.h"
+#include "UI/OblivioFlashlightPromptWidget.h"
+#include "EngineUtils.h"
 #include "Items/OblivioItemBase.h"
 #include "Items/OblivioInventoryComponent.h"
 #include "Crafting/OblivioCrafting.h"
@@ -758,13 +761,13 @@ void AOblivioCharacter::BeginPlay()
 	FActorSpawnParameters Params;
 	Params.Owner = this;
 
-	if (GetWorld()->GetName() != "L_Floor9_DoctorsLounge") {
-		//손전등
-		if (IsValid(FlashlightClass)) {
-			FlashlightWeapon = AttachWeapon(FlashlightClass, FName("LeftHandSocket"));
-			bIsFlashlightOn = true;
-		}
+	bIsFlashlightOn = false;
+
+	if (bEquipFlashlightOnBeginPlay)
+	{
+		GrantFlashlight(true);
 	}
+
 	//섬광탄
 	if (IsValid(FlashbangClass)) {
 		FlashbangWeapon = AttachWeapon(FlashbangClass, FName("RightHandSocket"));
@@ -783,13 +786,20 @@ void AOblivioCharacter::BeginPlay()
 	//기존 기본부착 손전등 off
 	FlashlightComponent->SetVisibility(false);
 
-	UpdateFlashlightVisuals();
+	if (HasFlashlight())
+	{
+		UpdateFlashlightVisuals();
+	}
 
 	TryPlayOpeningLevelSequence();
 }
 
 void AOblivioCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	if (GetWorld())
+	{
+		GetWorldTimerManager().ClearTimer(FlashlightTurnOnPromptTimer);
+	}
 	StopOpeningLevelSequencePlayback(true);
 	ClearWallOcclusionOverlays();
 	Super::EndPlay(EndPlayReason);
@@ -1005,6 +1015,11 @@ void AOblivioCharacter::PlaceObstacle()
 
 void AOblivioCharacter::Interact()
 {
+	if (bOpeningLevelSequenceActive)
+	{
+		return;
+	}
+
 	if (TryHandleCabinetMashInput())
 	{
 		return;
@@ -1013,7 +1028,16 @@ void AOblivioCharacter::Interact()
 	// 상호작용할 대상(TargetActor) 하나만 확실하게 정하기
 	AActor* TargetActor = nullptr;
 
-	if (NearbyItemsList.Num() > 0)
+	for (AOblivioItemBase* NearbyItem : NearbyItemsList)
+	{
+		if (IsValid(NearbyItem) && NearbyItem->ActorHasTag(FName(TEXT("Flashlight"))))
+		{
+			TargetActor = NearbyItem;
+			break;
+		}
+	}
+
+	if (!TargetActor && NearbyItemsList.Num() > 0)
 	{
 		auto It = NearbyItemsList.CreateIterator();
 		if (It && IsValid(*It))
@@ -1039,6 +1063,29 @@ void AOblivioCharacter::Interact()
 		}
 	}
 	if (!TargetActor) return;
+
+	// 손전등 획득 — E키 상호작용 (액터 태그 "Flashlight")
+	if (TargetActor->ActorHasTag(FName("Flashlight")))
+	{
+		if (HasFlashlight())
+		{
+			return;
+		}
+
+		GrantFlashlight(false);
+
+		if (AOblivioItemBase* PickedItem = Cast<AOblivioItemBase>(TargetActor))
+		{
+			PickedItem->OnInteract(this);
+			RemoveNearbyItem(PickedItem);
+			PickedItem->Destroy();
+		}
+		else
+		{
+			TargetActor->Destroy();
+		}
+		return;
+	}
 
 	// 문(Door) 상호작용
 	if (ADoorBase* HitDoor = Cast<ADoorBase>(TargetActor))
@@ -1202,10 +1249,16 @@ void AOblivioCharacter::ApplyDutyReadMomentEffects(const AOblivioItemBase* ItemS
 }
 void AOblivioCharacter::AddNearbyItem(AOblivioItemBase* Item)
 {
-	if (IsValid(Item))
+	if (!IsValid(Item))
 	{
-		NearbyItemsList.Add(Item);
+		return;
+	}
 
+	NearbyItemsList.Add(Item);
+	CurrentNearbyItem = Item;
+
+	if (IsLocallyControlled())
+	{
 		OnNearbyItemChanged.Broadcast(Item);
 	}
 }
@@ -1213,6 +1266,24 @@ void AOblivioCharacter::AddNearbyItem(AOblivioItemBase* Item)
 void AOblivioCharacter::RemoveNearbyItem(AOblivioItemBase* Item)
 {
 	NearbyItemsList.Remove(Item);
+
+	if (CurrentNearbyItem == Item)
+	{
+		if (NearbyItemsList.Num() > 0)
+		{
+			auto It = NearbyItemsList.CreateConstIterator();
+			CurrentNearbyItem = *It;
+		}
+		else
+		{
+			CurrentNearbyItem = nullptr;
+		}
+	}
+
+	if (!IsLocallyControlled())
+	{
+		return;
+	}
 
 	if (NearbyItemsList.Num() > 0)
 	{
@@ -1245,7 +1316,7 @@ void AOblivioCharacter::TogglePause()
 
 void AOblivioCharacter::AdjustFocus(float Value)
 {
-	if (bCanAdjustFocus && IsValid(FlashlightWeapon))
+	if (bCanAdjustFocus && HasFlashlight())
 	{
 		FlashlightWeapon->ChangeWeaponAngle(Value * WheelControlMultiplier);
 	}
@@ -1259,7 +1330,7 @@ void AOblivioCharacter::EnableAdjustFocus()
 
 void AOblivioCharacter::ToggleFlashlight()
 {
-	if (bFlashlightForcedOff) return;   // 암전 효과 진행 중 — 토글 차단
+	if (bFlashlightForcedOff || !bFlashlightAcquired) return;   // 암전 효과 진행 중 — 토글 차단
 	if (Battery > 0.0f)
 	{
 		bIsFlashlightOn = !bIsFlashlightOn;
@@ -1267,10 +1338,170 @@ void AOblivioCharacter::ToggleFlashlight()
 	}
 }
 
+void AOblivioCharacter::GrantFlashlight(bool bTurnOn)
+{
+	if (!IsValid(FlashlightClass))
+	{
+		return;
+	}
+
+	if (!IsValid(FlashlightWeapon))
+	{
+		FlashlightWeapon = AttachWeapon(FlashlightClass, FName("LeftHandSocket"));
+	}
+
+	if (!IsValid(FlashlightWeapon))
+	{
+		return;
+	}
+
+	bFlashlightAcquired = true;
+	bFlashlightWorldPickupEnabled = false;
+	SetFlashlightWeaponVisible(true);
+	bIsFlashlightOn = bTurnOn;
+	UpdateFlashlightVisuals();
+
+	bFlashlightTurnOnPromptActive = true;
+	BeginFlashlightTurnOnPromptTimer();
+	UpdateFlashlightPromptUI();
+
+	AStagingEnemy::ActivateAllAfterFlashlightPickup(this, this);
+}
+
+void AOblivioCharacter::SetFlashlightWeaponVisible(bool bVisible)
+{
+	if (IsValid(FlashlightWeapon))
+	{
+		FlashlightWeapon->SetActorHiddenInGame(!bVisible);
+	}
+}
+
+void AOblivioCharacter::EnableFlashlightWorldPickups()
+{
+	if (!GetWorld() || HasFlashlight())
+	{
+		return;
+	}
+
+	for (TActorIterator<AFlashlightPickupItem> It(GetWorld()); It; ++It)
+	{
+		It->SetPickupInteractable(true);
+	}
+
+	TArray<AActor*> TaggedPickups;
+	UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName(TEXT("Flashlight")), TaggedPickups);
+	for (AActor* PickupActor : TaggedPickups)
+	{
+		if (!IsValid(PickupActor) || PickupActor->IsA(AFlashlightPickupItem::StaticClass()))
+		{
+			continue;
+		}
+
+		PickupActor->SetActorHiddenInGame(false);
+		PickupActor->SetActorEnableCollision(true);
+	}
+
+	bFlashlightWorldPickupEnabled = true;
+	UpdateFlashlightPromptUI();
+}
+
+void AOblivioCharacter::BeginFlashlightTurnOnPromptTimer()
+{
+	if (!GetWorld())
+	{
+		return;
+	}
+
+	GetWorldTimerManager().ClearTimer(FlashlightTurnOnPromptTimer);
+	GetWorldTimerManager().SetTimer(
+		FlashlightTurnOnPromptTimer,
+		this,
+		&AOblivioCharacter::DismissFlashlightTurnOnPrompt,
+		FMath::Max(0.1f, FlashlightTurnOnPromptDuration),
+		false);
+}
+
+void AOblivioCharacter::DismissFlashlightTurnOnPrompt()
+{
+	bFlashlightTurnOnPromptActive = false;
+	UpdateFlashlightPromptUI();
+}
+
+void AOblivioCharacter::EnsureFlashlightPromptWidget()
+{
+	if (FlashlightPromptWidget || !FlashlightPromptWidgetClass)
+	{
+		return;
+	}
+
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	if (!PC)
+	{
+		return;
+	}
+
+	FlashlightPromptWidget = CreateWidget<UOblivioFlashlightPromptWidget>(PC, FlashlightPromptWidgetClass);
+}
+
+void AOblivioCharacter::UpdateFlashlightPromptUI()
+{
+	if (!IsLocallyControlled())
+	{
+		return;
+	}
+
+	if (!FlashlightPromptWidgetClass)
+	{
+		return;
+	}
+
+	if (bOpeningLevelSequenceActive)
+	{
+		if (FlashlightPromptWidget)
+		{
+			FlashlightPromptWidget->SetPromptPhase(EFlashlightPromptPhase::Hidden, true);
+		}
+		return;
+	}
+
+	EFlashlightPromptPhase DesiredPhase = EFlashlightPromptPhase::Hidden;
+
+	if (bFlashlightTurnOnPromptActive)
+	{
+		DesiredPhase = EFlashlightPromptPhase::TurnOnWithF;
+	}
+	else if (bFlashlightWorldPickupEnabled && !HasFlashlight())
+	{
+		DesiredPhase = EFlashlightPromptPhase::AcquireWithE;
+	}
+
+	if (DesiredPhase == EFlashlightPromptPhase::Hidden)
+	{
+		if (FlashlightPromptWidget)
+		{
+			FlashlightPromptWidget->SetPromptPhase(EFlashlightPromptPhase::Hidden, false);
+		}
+		return;
+	}
+
+	EnsureFlashlightPromptWidget();
+	if (!FlashlightPromptWidget)
+	{
+		return;
+	}
+
+	if (!FlashlightPromptWidget->IsInViewport())
+	{
+		FlashlightPromptWidget->AddToViewport(20);
+	}
+
+	FlashlightPromptWidget->SetPromptPhase(DesiredPhase);
+}
+
 
 void AOblivioCharacter::UpdateFlashlightVisuals()
 {
-	if (!IsValid(FlashlightWeapon)) return;
+	if (!bFlashlightAcquired || !IsValid(FlashlightWeapon)) return;
 
 	if (IsValid(FlashlightClickSound))
 	{
@@ -1390,7 +1621,7 @@ void AOblivioCharacter::UpdateFlashlightEmbedPullback(float DeltaSeconds)
 
 void AOblivioCharacter::ReloadBattery()
 {
-	if (bIsDead) return;
+	if (bIsDead || !HasFlashlight()) return;
 
 	if (Battery >= 100.0f)
 	{
@@ -2170,6 +2401,7 @@ void AOblivioCharacter::TryPlayOpeningLevelSequence()
 	ULevelSequence* Sequence = GI->ResolveOpeningLevelSequence(World);
 	if (!Sequence)
 	{
+		EnableFlashlightWorldPickups();
 		return;
 	}
 
@@ -2177,6 +2409,7 @@ void AOblivioCharacter::TryPlayOpeningLevelSequence()
 	{
 		UE_LOG(LogTemp, Log, TEXT("TryPlayOpeningLevelSequence: skipped — already played on %s"),
 			*UGameplayStatics::GetCurrentLevelName(World, true));
+		EnableFlashlightWorldPickups();
 		return;
 	}
 
@@ -2197,6 +2430,7 @@ void AOblivioCharacter::TryPlayOpeningLevelSequence()
 		EndOpeningLevelSequenceControl();
 		AStagingEnemy::RestoreAllAfterLevelSequenceAbort(this);
 		RestoreAfterLevelSequence();
+		EnableFlashlightWorldPickups();
 		UE_LOG(LogTemp, Warning, TEXT("TryPlayOpeningLevelSequence: failed to create player for %s"), *GetNameSafe(Sequence));
 		return;
 	}
@@ -2216,6 +2450,7 @@ void AOblivioCharacter::HandleOpeningLevelSequenceFinished()
 	EndOpeningLevelSequenceControl();
 	AStagingEnemy::RestoreAllAfterLevelSequenceFinished(this);
 	RestoreAfterLevelSequence();
+	EnableFlashlightWorldPickups();
 
 	UE_LOG(LogTemp, Log, TEXT("TryPlayOpeningLevelSequence: finished — player control restored"));
 }

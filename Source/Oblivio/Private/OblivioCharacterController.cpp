@@ -1,4 +1,4 @@
-﻿#include "OblivioCharacterController.h"
+#include "OblivioCharacterController.h"
 #include "OblivioCharacter.h"
 #include "OblivioGameUserSettings.h"
 #include "Crafting/OblivioCrafting.h"
@@ -343,7 +343,14 @@ void AOblivioCharacterController::OnPlaceObstacle(const FInputActionValue& Value
 void AOblivioCharacterController::OnInteract(const FInputActionValue& Value)
 {
 	if (AOblivioCharacter* ObjChar = Cast<AOblivioCharacter>(GetPawn()))
+	{
+		if (ObjChar->IsOpeningLevelSequenceActive())
+		{
+			return;
+		}
+
 		ObjChar->Interact();
+	}
 }
 void AOblivioCharacterController::OnPauseToggle(const FInputActionValue& Value)
 {

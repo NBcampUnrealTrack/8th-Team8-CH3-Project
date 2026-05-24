@@ -11,6 +11,49 @@ void UStagingEnemyAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 {
 	Super::NativeUpdateAnimation(DeltaSeconds);
 
+	APawn* const OwnerPawn = TryGetPawnOwner();
+	const AStagingEnemy* const StagingEnemy = OwnerPawn ? Cast<AStagingEnemy>(OwnerPawn) : nullptr;
+	if (!IsValid(StagingEnemy) || !StagingEnemy->IsAlive())
+	{
+		return;
+	}
+
+	bIsPostFlashlightPickupCombatActive = StagingEnemy->IsPostFlashlightPickupCombatActive();
+
+	// 손전등 획득 후: BasicEnemy 와 동일하게 FSM(Chase/Attack)만 ABP에 전달. 연출 변수는 건드리지 않음.
+	if (bIsPostFlashlightPickupCombatActive)
+	{
+		StagingState = EStagingEnemyCinematicState::Idle;
+		bIsApproachingForGrab = false;
+		bShouldPlayGrabAnimation = false;
+		bShouldPlayKnockdownAnimation = false;
+		bShouldPlayMashKnockbackAnimation = false;
+		bShouldPlayDeadAnimation = false;
+		bShouldRemainInKnockdownPose = false;
+
+		const EEnemyAIState ResolvedFsmState = StagingEnemy->GetEnemyState();
+		const bool bSwingLocked = StagingEnemy->IsMeleeAttackSwingStateLocked();
+		const EEnemyAIState AnimCombatState =
+			bSwingLocked ? EEnemyAIState::Attack : ResolvedFsmState;
+
+		EnemyCruntState = AnimCombatState;
+		StagingEnemyAIState = AnimCombatState;
+		bShouldPlayAttackAnimation =
+			AnimCombatState == EEnemyAIState::Attack || bSwingLocked;
+		bShouldPlayChaseAnimation = AnimCombatState == EEnemyAIState::Chase && !bSwingLocked;
+
+		if (const ACharacter* const Character = Cast<ACharacter>(OwnerPawn))
+		{
+			if (const UCharacterMovementComponent* MoveComp = Character->GetCharacterMovement())
+			{
+				GroundSpeed = MoveComp->Velocity.Size2D();
+			}
+		}
+
+		bIsMoving = GroundSpeed > 10.f;
+		return;
+	}
+
 #if OBLIVIO_STAGING_GRAB_CINEMATIC_ENABLED
 	const EStagingEnemyCinematicState PrevAnimState = StagingState;
 	const bool bPrevApproaching = bIsApproachingForGrab;
@@ -29,13 +72,11 @@ void UStagingEnemyAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	bShouldPlayDeadAnimation = false;
 	GroundSpeed = 0.f;
 	bIsMoving = false;
-
-	APawn* const OwnerPawn = TryGetPawnOwner();
-	const AStagingEnemy* const StagingEnemy = OwnerPawn ? Cast<AStagingEnemy>(OwnerPawn) : nullptr;
-	if (!IsValid(StagingEnemy) || !StagingEnemy->IsAlive())
-	{
-		return;
-	}
+	bShouldRemainInKnockdownPose = false;
+	EnemyCruntState = EEnemyAIState::Idle;
+	StagingEnemyAIState = EEnemyAIState::Idle;
+	bShouldPlayAttackAnimation = false;
+	bShouldPlayChaseAnimation = false;
 
 	StagingState = StagingEnemy->GetStagingState();
 	bIsApproachingForGrab = StagingEnemy->IsApproachingForGrab();
@@ -43,6 +84,7 @@ void UStagingEnemyAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	bShouldPlayKnockdownAnimation = StagingEnemy->ShouldPlayKnockdownAnimation();
 	bShouldPlayMashKnockbackAnimation = StagingEnemy->ShouldPlayMashKnockbackAnimation();
 	bShouldPlayDeadAnimation = StagingEnemy->ShouldPlayDeadAnimation();
+	bShouldRemainInKnockdownPose = StagingEnemy->ShouldRemainInKnockdownPose();
 
 	if (const ACharacter* const Character = Cast<ACharacter>(OwnerPawn))
 	{
@@ -53,9 +95,9 @@ void UStagingEnemyAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	}
 
 	const bool bSuppressLocomotionForCinematic =
-		StagingState == EStagingEnemyCinematicState::PushReaction
+		bShouldRemainInKnockdownPose
+		|| StagingState == EStagingEnemyCinematicState::PushReaction
 		|| StagingState == EStagingEnemyCinematicState::MashEscapeSuccess
-		|| StagingState == EStagingEnemyCinematicState::KnockedDown
 		|| bShouldPlayDeadAnimation;
 
 	if (bSuppressLocomotionForCinematic)
