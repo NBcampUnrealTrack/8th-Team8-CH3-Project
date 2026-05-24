@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "CoreMinimal.h"
 #include "Engine/EngineTypes.h"
@@ -14,6 +14,7 @@
 #include "OblivioCharacter.generated.h"
 
 class AStagingEnemy;
+class UOblivioFlashlightPromptWidget;
 
 // 피격 판정용 델리게이트
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FPlayerDamagedSignature, float, DamageAmount, float, CurrentHealth, float, MaxHealth);
@@ -315,6 +316,7 @@ public:
 	void UpdateStatus(float DeltaTime);
 	void UpdateFlashlightVisuals();
 	void UpdateFlashlightEmbedPullback(float DeltaSeconds);
+	void SetFlashlightWeaponVisible(bool bVisible);
 	void ReloadBattery();
 
 	UFUNCTION(BlueprintCallable, Category = "Status|Health")
@@ -325,6 +327,38 @@ public:
 	//==================================
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	TSubclassOf<AWeaponBase> FlashlightClass;
+
+	/** true면 BeginPlay에서 손전등을 바로 장착·표시. false면 GrantFlashlight() 호출 전까지 숨김. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Flashlight")
+	bool bEquipFlashlightOnBeginPlay = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon|Flashlight")
+	bool bFlashlightAcquired = false;
+
+	UFUNCTION(BlueprintCallable, Category = "Weapon|Flashlight")
+	void GrantFlashlight(bool bTurnOn = true);
+
+	UFUNCTION(BlueprintPure, Category = "Weapon|Flashlight")
+	bool HasFlashlight() const { return bFlashlightAcquired && IsValid(FlashlightWeapon); }
+
+	/** 오프닝 시네마틱 이후 월드 손전등 픽업(E) 활성화. */
+	UFUNCTION(BlueprintCallable, Category = "Weapon|Flashlight")
+	void EnableFlashlightWorldPickups();
+
+	/** 손전등 E/F 튜토리얼 포스트 메시지 UI 갱신. */
+	UFUNCTION(BlueprintCallable, Category = "UI|Flashlight Prompt")
+	void UpdateFlashlightPromptUI();
+
+	/** WBP 자식(예: WBP_FlashlightPrompt)을 Parent Class 로 지정. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI|Flashlight Prompt")
+	TSubclassOf<UOblivioFlashlightPromptWidget> FlashlightPromptWidgetClass;
+
+	/** F키 안내 UI가 사라지기까지 대기 시간(초). */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI|Flashlight Prompt", meta = (ClampMin = "0.1"))
+	float FlashlightTurnOnPromptDuration = 3.f;
+
+	UPROPERTY(Transient, BlueprintReadOnly, Category = "UI|Flashlight Prompt")
+	TObjectPtr<UOblivioFlashlightPromptWidget> FlashlightPromptWidget;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	TSubclassOf<AWeaponBase> FlashbangClass;
@@ -638,6 +672,14 @@ private:
 
 	UPROPERTY()
 	class AOblivioItemBase* CurrentNearbyItem = nullptr;
+
+	void EnsureFlashlightPromptWidget();
+	void DismissFlashlightTurnOnPrompt();
+	void BeginFlashlightTurnOnPromptTimer();
+
+	bool bFlashlightWorldPickupEnabled = false;
+	bool bFlashlightTurnOnPromptActive = false;
+	FTimerHandle FlashlightTurnOnPromptTimer;
 
 	bool bFlashlightForcedOff = false;
 	bool bMovementInverted    = false;

@@ -37,6 +37,16 @@ public:
 
 	virtual void Die() override;
 
+	virtual void ApplyCCStun(float Duration = 0.0f) override;
+	virtual void ApplyCCSlow(float SpeedMultiplier, float Duration = 0.0f) override;
+	virtual void OnLightHit(float Intensity, float Duration) override;
+
+	virtual bool IsTargetInAttackRange() const override;
+
+	virtual EEnemyAIState SelectStateWhileAggroed() const override;
+
+	virtual void UpdateState() override;
+
 	UFUNCTION(BlueprintCallable, Category = "Staging|Cinematic")
 	void StartOpeningCinematic(AOblivioCharacter* Player);
 
@@ -69,6 +79,10 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Staging|Anim")
 	virtual bool ShouldPlayKnockdownAnimation() const;
+
+	/** ABP Knockdown 유지 — 오프닝 LS 종료 후 true, 손전등 획득 시 false. */
+	UFUNCTION(BlueprintPure, Category = "Staging|Anim")
+	bool ShouldRemainInKnockdownPose() const;
 
 	/** E 연타 성공 넉백 구간(CabinetEnemy). ABP 전환용. */
 	UFUNCTION(BlueprintPure, Category = "Staging|Anim")
@@ -109,6 +123,16 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Staging|LevelSequence", meta = (WorldContext = "WorldContextObject"))
 	static void RestoreAllAfterLevelSequenceFinished(const UObject* WorldContextObject);
+
+	/** 플레이어가 월드 손전등을 획득한 뒤 연출 적을 전투 AI(추격·공격)로 전환. */
+	UFUNCTION(BlueprintCallable, Category = "Staging|Combat")
+	void ActivatePostFlashlightPickupCombat(AOblivioCharacter* Player);
+
+	UFUNCTION(BlueprintCallable, Category = "Staging|Combat", meta = (WorldContext = "WorldContextObject"))
+	static void ActivateAllAfterFlashlightPickup(const UObject* WorldContextObject, AOblivioCharacter* Player);
+
+	UFUNCTION(BlueprintPure, Category = "Staging|Combat")
+	bool IsPostFlashlightPickupCombatActive() const { return bPostFlashlightPickupCombatActive; }
 
 	UFUNCTION(BlueprintPure, Category = "Staging|Cinematic")
 	AOblivioCharacter* GetLinkedPlayer() const { return LinkedPlayer.Get(); }
@@ -170,8 +194,43 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Staging|LevelSequence")
 	TObjectPtr<UAnimSequence> PostLevelSequenceAnimSequence;
 
+	/** LS 종료 후 SingleNode 대신 ABP Knockdown 상태 머신 사용. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Staging|PostPickupCombat")
+	bool bPreferAnimBlueprintKnockdownAfterLevelSequence = true;
+
+	/** LS 종료 후 ABP Knockdown 상태 유지(손전등 획득 전). */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Staging|PostPickupCombat")
+	bool bHoldKnockdownAfterOpeningCinematic = false;
+
+	/** true면 플레이어 손전등 획득 시 넉다운 해제 + 추격·공격 AI. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Staging|PostPickupCombat")
+	bool bActivateCombatOnFlashlightPickup = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Staging|PostPickupCombat", meta = (ClampMin = "0.0"))
+	float PostPickupAttackDamage = 10.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Staging|PostPickupCombat", meta = (ClampMin = "0.0"))
+	float PostPickupAggroRadius = 1000.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Staging|PostPickupCombat", meta = (ClampMin = "50.0"))
+	float PostPickupChaseMoveSpeed = 150.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Staging|PostPickupCombat", meta = (ClampMin = "50.0"))
+	float PostPickupAttackRange = 180.f;
+
+	/** true면 손전등 획득 시 BasicEnemy 와 동일한 전투 스탯·AI·CC(스턴/둔화) 적용. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Staging|PostPickupCombat")
+	bool bUseBasicEnemyCombatAfterPickup = true;
+
+	/** 비어 있으면 현재 Mesh Anim Class 재초기화. BasicEnemy ABP 를 쓰려면 여기에 지정. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Staging|PostPickupCombat")
+	TSubclassOf<UAnimInstance> CombatAnimInstanceClassAfterPickup;
+
 	void EnterCinematicMode();
 	void ExitCinematicMode();
+	void RestoreCombatLocomotionAfterPickup();
+	void ApplyBasicEnemyCombatProfile();
+	bool IsInPostPickupMeleeRange() const;
 	void ApplyKnockdownLaunch(const FVector& PushDir, bool bHorizontalOnly = true);
 	void RestoreLevelSequenceAnimation(bool bApplyPostSequencePose);
 	void UpdateStagingApproach(float DeltaSeconds);
@@ -192,5 +251,7 @@ protected:
 
 	/** Level Sequence 재생 준비 중. */
 	bool bPreparedForLevelSequence = false;
+	bool bPostFlashlightPickupCombatActive = false;
 	TSubclassOf<UAnimInstance> CachedAnimClassForLevelSequence;
+	TSubclassOf<UAnimInstance> DefaultCombatAnimClass;
 };

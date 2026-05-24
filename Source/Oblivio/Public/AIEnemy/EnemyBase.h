@@ -139,6 +139,14 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Enemy|CrowdControl")
 	bool IsCCStunned() const { return bCCStunned; }
 
+	/** PerformAttack 직후 스윙 락 구간 — ABP Attack 유지 판정용. */
+	UFUNCTION(BlueprintPure, Category = "Enemy|Combat")
+	bool IsMeleeAttackSwingStateLocked() const;
+
+	/** PerformAttack 직후 강제 Chase 구간 — SelectStateWhileAggroed 판정용. */
+	UFUNCTION(BlueprintPure, Category = "Enemy|Combat")
+	bool IsMeleePostAttackForcedChaseActive() const;
+
 	UFUNCTION(BlueprintPure, Category = "Enemy|Damage")
 	bool WasLastDamageFromLight() const { return bLastDamageWasLight; }
 

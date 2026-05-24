@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
@@ -49,6 +49,11 @@ protected:
     virtual void OnSphereEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
         UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
+    /** NearbyItem / 픽업 VFX 표시 가능 여부. FlashlightPickupItem 등에서 오버라이드. */
+    virtual bool CanShowNearbyPickupUI() const { return true; }
+
+    virtual void NotifyPlayerNearbyPickup(class AOblivioCharacter* Player, bool bEnter);
+
 public:
     // ==========================================
     // Components
@@ -73,6 +78,9 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Settings", meta = (MultiLine = true))
     FText ItemDescription;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Settings")
+    FText InteractText;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Settings")
     int32 MaxQuantity = 1;

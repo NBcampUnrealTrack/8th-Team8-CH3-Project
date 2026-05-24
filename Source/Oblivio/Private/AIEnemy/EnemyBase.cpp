@@ -675,6 +675,24 @@ void AEnemyBase::FindDefaultTarget()
 	TargetActor = UGameplayStatics::GetPlayerPawn(this, 0);
 }
 
+bool AEnemyBase::IsMeleeAttackSwingStateLocked() const
+{
+	if (const UWorld* World = GetWorld())
+	{
+		return World->GetTimeSeconds() < MeleeAttackSwingStateLockEndWorldTime;
+	}
+	return false;
+}
+
+bool AEnemyBase::IsMeleePostAttackForcedChaseActive() const
+{
+	if (const UWorld* World = GetWorld())
+	{
+		return World->GetTimeSeconds() < MeleePostAttackForcedChaseEndWorldTime;
+	}
+	return false;
+}
+
 bool AEnemyBase::IsAggroDistanceToTargetInsideCylinderIgnoringLos() const
 {
 	if (!IsValid(TargetActor))
