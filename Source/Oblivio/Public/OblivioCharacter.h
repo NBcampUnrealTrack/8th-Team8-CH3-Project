@@ -342,6 +342,12 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Weapon|Flashlight")
 	bool HasFlashlight() const { return bFlashlightAcquired && IsValid(FlashlightWeapon); }
 
+	UFUNCTION(BlueprintPure, Category = "Weapon|Flashlight")
+	bool IsFlashlightAcquired() const { return bFlashlightAcquired; }
+
+	/** GameInstance·세이브 연동용 손전등 상태 동기화. */
+	void SyncFlashlightStateToGameInstance() const;
+
 	/** 오프닝 시네마틱 이후 월드 손전등 픽업(E) 활성화. */
 	UFUNCTION(BlueprintCallable, Category = "Weapon|Flashlight")
 	void EnableFlashlightWorldPickups();
@@ -700,6 +706,7 @@ private:
 	void EnsureCabinetMashWidget();
 	void DismissFlashlightTurnOnPrompt();
 	void BeginFlashlightTurnOnPromptTimer();
+	void RestorePersistedFlashlight();
 	/** 9층(L_Floor9) 오프닝·손전등 튜토리얼 토스트 표시 가능 여부. */
 	bool IsFlashlightPromptFloorActive() const;
 

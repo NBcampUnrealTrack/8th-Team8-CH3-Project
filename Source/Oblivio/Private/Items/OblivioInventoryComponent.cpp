@@ -254,6 +254,7 @@ void UOblivioInventoryComponent::SyncInventoryToGameInstance()
 			GI->CurrentBattery = Player->Battery;
 			GI->CurrentHunger = Player->Hunger;
 			GI->CurrentThirst = Player->Thirst;
+			Player->SyncFlashlightStateToGameInstance();
 		}
 	}
 }

@@ -87,6 +87,7 @@ void ADoorBase::ExecuteLevelTransition()
 		GI->CurrentBattery = Player->Battery;
 		GI->CurrentHunger = Player->Hunger;
 		GI->CurrentThirst = Player->Thirst;
+		Player->SyncFlashlightStateToGameInstance();
 		GI->CurrentFloor -= 1;
 
 		GI->SaveGameData(SlotName); // 자동 저장

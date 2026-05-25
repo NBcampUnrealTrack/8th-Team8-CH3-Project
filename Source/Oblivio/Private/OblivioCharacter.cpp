@@ -766,7 +766,10 @@ void AOblivioCharacter::BeginPlay()
 
 	bIsFlashlightOn = false;
 
-	if (bEquipFlashlightOnBeginPlay)
+	const UOblivioGameInstance* PersistGI = Cast<UOblivioGameInstance>(GetGameInstance());
+	const bool bShouldRestoreFlashlight = PersistGI && PersistGI->bFlashlightAcquired;
+
+	if (bEquipFlashlightOnBeginPlay && !bShouldRestoreFlashlight)
 	{
 		GrantFlashlight(true);
 	}
@@ -789,7 +792,11 @@ void AOblivioCharacter::BeginPlay()
 	//기존 기본부착 손전등 off
 	FlashlightComponent->SetVisibility(false);
 
-	if (HasFlashlight())
+	if (bShouldRestoreFlashlight)
+	{
+		RestorePersistedFlashlight();
+	}
+	else if (HasFlashlight())
 	{
 		UpdateFlashlightVisuals();
 	}
@@ -902,6 +909,7 @@ void AOblivioCharacter::UpdateStatus(float DeltaTime)
 		{
 			bIsFlashlightOn = false;
 			UpdateFlashlightVisuals();
+			SyncFlashlightStateToGameInstance();
 		}
 	}
 
@@ -1355,7 +1363,63 @@ void AOblivioCharacter::ToggleFlashlight()
 	{
 		bIsFlashlightOn = !bIsFlashlightOn;
 		UpdateFlashlightVisuals();
+		SyncFlashlightStateToGameInstance();
 	}
+}
+
+void AOblivioCharacter::SyncFlashlightStateToGameInstance() const
+{
+	if (UOblivioGameInstance* GI = Cast<UOblivioGameInstance>(GetGameInstance()))
+	{
+		GI->bFlashlightAcquired = bFlashlightAcquired;
+		GI->bFlashlightOn = bIsFlashlightOn;
+	}
+}
+
+void AOblivioCharacter::RestorePersistedFlashlight()
+{
+	if (bFlashlightAcquired || !IsValid(FlashlightClass))
+	{
+		return;
+	}
+
+	const UOblivioGameInstance* GI = Cast<UOblivioGameInstance>(GetGameInstance());
+	if (!GI || !GI->bFlashlightAcquired)
+	{
+		return;
+	}
+
+	if (!IsValid(FlashlightWeapon))
+	{
+		FlashlightWeapon = AttachWeapon(FlashlightClass, FName("LeftHandSocket"));
+	}
+
+	if (!IsValid(FlashlightWeapon))
+	{
+		return;
+	}
+
+	bFlashlightAcquired = true;
+	bFlashlightWorldPickupEnabled = false;
+	bFlashlightTurnOnPromptActive = false;
+	if (GetWorld())
+	{
+		GetWorldTimerManager().ClearTimer(FlashlightTurnOnPromptTimer);
+	}
+
+	SetFlashlightWeaponVisible(true);
+	bIsFlashlightOn = GI->bFlashlightOn && Battery > 0.f;
+	if (bIsFlashlightOn)
+	{
+		FlashlightWeapon->UseWeapon();
+	}
+	else
+	{
+		FlashlightWeapon->StopWeapon();
+	}
+
+	SyncFlashlightStateToGameInstance();
+	UpdateFlashlightPromptUI();
 }
 
 void AOblivioCharacter::GrantFlashlight(bool bTurnOn)
@@ -1386,6 +1450,7 @@ void AOblivioCharacter::GrantFlashlight(bool bTurnOn)
 	UpdateFlashlightPromptUI();
 
 	AStagingEnemy::ActivateAllAfterFlashlightPickup(this, this);
+	SyncFlashlightStateToGameInstance();
 }
 
 void AOblivioCharacter::SetFlashlightWeaponVisible(bool bVisible)
