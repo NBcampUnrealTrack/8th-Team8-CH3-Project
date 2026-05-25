@@ -30,6 +30,7 @@ void AOblivioGameMode::NextFloor()
 		GI->CurrentBattery = Player->Battery;
 		GI->CurrentHunger = Player->Hunger;
 		GI->CurrentThirst = Player->Thirst;
+		Player->SyncFlashlightStateToGameInstance();
 
 		GI->CurrentFloor--;
 

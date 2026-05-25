@@ -29,6 +29,8 @@ public:
 		CurrentHunger = 100.f;
 		CurrentThirst = 100.f;
 		bMementoEyeCollected = false;
+		bFlashlightAcquired = false;
+		bFlashlightOn = false;
 		PlayedOpeningLevelSequenceLevels.Empty();
 		UnlockedMonsters.Empty();
 	}
@@ -56,6 +58,12 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "PlayerStatus")
 	float CurrentThirst = 100.0f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "PlayerStatus|Flashlight")
+	bool bFlashlightAcquired = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "PlayerStatus|Flashlight")
+	bool bFlashlightOn = false;
 
 	//몬스터 도감
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Persistence|Bestiary")

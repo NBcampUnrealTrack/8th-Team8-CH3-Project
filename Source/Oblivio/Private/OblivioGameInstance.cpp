@@ -99,6 +99,8 @@ void UOblivioGameInstance::SaveGameData(FString SlotName)
 	SaveInstance->SavedMementos = TotalMementos;
 	SaveInstance->SavedPlayedOpeningLevelSequences = PlayedOpeningLevelSequenceLevels;
 	SaveInstance->SavedUnlockedMonsters = UnlockedMonsters;
+	SaveInstance->SavedFlashlightAcquired = bFlashlightAcquired;
+	SaveInstance->SavedFlashlightOn = bFlashlightOn;
 
 	if (SlotName.Len() <= 0)
 	{
@@ -140,6 +142,8 @@ void UOblivioGameInstance::LoadGameData(FString SlotName)
 	TotalMementos = LoadInstance->SavedMementos;
 	PlayedOpeningLevelSequenceLevels = LoadInstance->SavedPlayedOpeningLevelSequences;
 	UnlockedMonsters = LoadInstance->SavedUnlockedMonsters;
+	bFlashlightAcquired = LoadInstance->SavedFlashlightAcquired;
+	bFlashlightOn = LoadInstance->SavedFlashlightOn;
 
 	UE_LOG(LogTemp, Warning, TEXT("Game Loaded Successfully from '%s'."), *SlotName);
 }

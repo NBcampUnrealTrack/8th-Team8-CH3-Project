@@ -29,6 +29,10 @@ public:
 	UPROPERTY()
 	bool SavedMementoEyeCollected = false;
 	UPROPERTY()
+	bool SavedFlashlightAcquired = false;
+	UPROPERTY()
+	bool SavedFlashlightOn = false;
+	UPROPERTY()
 	TArray<FName> SavedPlayedOpeningLevelSequences;
 	UPROPERTY()
 	TArray<FInventorySlot> SavedInventorySlots;
