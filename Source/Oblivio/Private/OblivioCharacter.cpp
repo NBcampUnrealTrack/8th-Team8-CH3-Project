@@ -13,6 +13,7 @@
 #include "Weapon/Flashlight.h"
 #include "Items/FlashlightPickupItem.h"
 #include "UI/OblivioFlashlightPromptWidget.h"
+#include "UI/OblivioCabinetMashWidget.h"
 #include "EngineUtils.h"
 #include "Items/OblivioItemBase.h"
 #include "Items/OblivioInventoryComponent.h"
@@ -1498,6 +1499,62 @@ void AOblivioCharacter::UpdateFlashlightPromptUI()
 	FlashlightPromptWidget->SetPromptPhase(DesiredPhase);
 }
 
+void AOblivioCharacter::EnsureCabinetMashWidget()
+{
+	if (CabinetMashWidget || !CabinetMashWidgetClass)
+	{
+		return;
+	}
+
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	if (!PC)
+	{
+		return;
+	}
+
+	CabinetMashWidget = CreateWidget<UOblivioCabinetMashWidget>(PC, CabinetMashWidgetClass);
+}
+
+void AOblivioCharacter::UpdateCabinetMashUI(bool bActive, int32 CurrentPressCount, int32 RequiredPressCount)
+{
+	if (!IsLocallyControlled())
+	{
+		return;
+	}
+
+	if (!CabinetMashWidgetClass)
+	{
+		return;
+	}
+
+	if (!bActive)
+	{
+		if (CabinetMashWidget)
+		{
+			CabinetMashWidget->HideMashPrompt(false);
+		}
+		return;
+	}
+
+	EnsureCabinetMashWidget();
+	if (!CabinetMashWidget)
+	{
+		return;
+	}
+
+	if (!CabinetMashWidget->IsInViewport())
+	{
+		CabinetMashWidget->AddToViewport(25);
+		CabinetMashWidget->ShowMashPrompt(RequiredPressCount, false);
+	}
+
+	if (CurrentPressCount > 0)
+	{
+		CabinetMashWidget->SetMashProgress(CurrentPressCount, RequiredPressCount);
+		CabinetMashWidget->PlayMashPressFeedback();
+	}
+}
+
 
 void AOblivioCharacter::UpdateFlashlightVisuals()
 {
@@ -2111,6 +2168,7 @@ void AOblivioCharacter::BeginStagingCinematic(AStagingEnemy* StagingEnemy)
 
 void AOblivioCharacter::EndStagingCinematic()
 {
+	UpdateCabinetMashUI(false, 0, 0);
 	RestoreGameplayCamera();
 	LinkedStagingEnemy = nullptr;
 	SetPlayerCinematicState(EPlayerCinematicState::Released);
@@ -2119,6 +2177,23 @@ void AOblivioCharacter::EndStagingCinematic()
 bool AOblivioCharacter::TryHandleCabinetMashInput()
 {
 	ACabinetEnemy* CabinetEnemy = Cast<ACabinetEnemy>(LinkedStagingEnemy.Get());
+
+	if (!IsValid(CabinetEnemy) || !CabinetEnemy->IsMashWindowActive())
+	{
+		for (TActorIterator<ACabinetEnemy> It(GetWorld()); It; ++It)
+		{
+			ACabinetEnemy* const Candidate = *It;
+			if (IsValid(Candidate)
+				&& Candidate->GetLinkedPlayer() == this
+				&& Candidate->IsMashWindowActive())
+			{
+				CabinetEnemy = Candidate;
+				LinkedStagingEnemy = CabinetEnemy;
+				break;
+			}
+		}
+	}
+
 	if (!IsValid(CabinetEnemy) || !CabinetEnemy->IsMashWindowActive())
 	{
 		return false;

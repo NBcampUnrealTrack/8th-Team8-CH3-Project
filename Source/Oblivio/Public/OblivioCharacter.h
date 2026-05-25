@@ -15,6 +15,7 @@
 
 class AStagingEnemy;
 class UOblivioFlashlightPromptWidget;
+class UOblivioCabinetMashWidget;
 
 // 피격 판정용 델리게이트
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FPlayerDamagedSignature, float, DamageAmount, float, CurrentHealth, float, MaxHealth);
@@ -360,6 +361,17 @@ public:
 	UPROPERTY(Transient, BlueprintReadOnly, Category = "UI|Flashlight Prompt")
 	TObjectPtr<UOblivioFlashlightPromptWidget> FlashlightPromptWidget;
 
+	/** 캐비넷 E 연타 탈출 QTE UI 갱신. */
+	UFUNCTION(BlueprintCallable, Category = "UI|Cabinet Mash")
+	void UpdateCabinetMashUI(bool bActive, int32 CurrentPressCount = 0, int32 RequiredPressCount = 0);
+
+	/** WBP 자식(예: WBP_CabinetMash)을 Parent Class로 지정. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI|Cabinet Mash")
+	TSubclassOf<UOblivioCabinetMashWidget> CabinetMashWidgetClass;
+
+	UPROPERTY(Transient, BlueprintReadOnly, Category = "UI|Cabinet Mash")
+	TObjectPtr<UOblivioCabinetMashWidget> CabinetMashWidget;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	TSubclassOf<AWeaponBase> FlashbangClass;
 
@@ -674,6 +686,7 @@ private:
 	class AOblivioItemBase* CurrentNearbyItem = nullptr;
 
 	void EnsureFlashlightPromptWidget();
+	void EnsureCabinetMashWidget();
 	void DismissFlashlightTurnOnPrompt();
 	void BeginFlashlightTurnOnPromptTimer();
 
