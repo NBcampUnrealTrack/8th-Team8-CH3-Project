@@ -1,4 +1,4 @@
-#include "OblivioCharacter.h"
+﻿#include "OblivioCharacter.h"
 #include "AIEnemy/StagingEnemy.h"
 #include "AIEnemy/CabinetEnemy.h"
 #include "Cinematic/StagingCinematicTypes.h"
@@ -1344,7 +1344,7 @@ void AOblivioCharacter::TogglePause()
 
 void AOblivioCharacter::AdjustFocus(float Value)
 {
-	if (bCanAdjustFocus && HasFlashlight())
+	if (bCanAdjustFocus && HasFlashlight() && IsValid(FlashlightWeapon))
 	{
 		FlashlightWeapon->ChangeWeaponAngle(Value * WheelControlMultiplier);
 	}
