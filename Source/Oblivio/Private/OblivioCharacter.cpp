@@ -50,6 +50,8 @@
 #include "Components/AudioComponent.h"
 #include "Sound/SoundBase.h"
 #include "GameFramework/PlayerController.h"
+#include "Blueprint/UserWidget.h"
+#include "UObject/UObjectIterator.h"
 
 namespace
 {
@@ -792,7 +794,18 @@ void AOblivioCharacter::BeginPlay()
 		UpdateFlashlightVisuals();
 	}
 
+	if (!IsFlashlightPromptFloorActive())
+	{
+		bFlashlightWorldPickupEnabled = false;
+		bFlashlightTurnOnPromptActive = false;
+		if (GetWorld())
+		{
+			GetWorldTimerManager().ClearTimer(FlashlightTurnOnPromptTimer);
+		}
+	}
+
 	TryPlayOpeningLevelSequence();
+	UpdateFlashlightPromptUI();
 }
 
 void AOblivioCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -813,6 +826,12 @@ void AOblivioCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void AOblivioCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	if (bOpeningLevelSequenceActive && IsLocallyControlled())
+	{
+		MaintainOpeningLevelSequenceUIHidden();
+	}
+
 	EnforceCabinetGrabWorldTransformLock();
 	UpdateStatus(DeltaTime);
 	UpdateWallOcclusionDither();
@@ -1250,7 +1269,7 @@ void AOblivioCharacter::ApplyDutyReadMomentEffects(const AOblivioItemBase* ItemS
 }
 void AOblivioCharacter::AddNearbyItem(AOblivioItemBase* Item)
 {
-	if (!IsValid(Item))
+	if (!IsValid(Item) || ShouldIgnoreItemPickupOverlap())
 	{
 		return;
 	}
@@ -1258,7 +1277,7 @@ void AOblivioCharacter::AddNearbyItem(AOblivioItemBase* Item)
 	NearbyItemsList.Add(Item);
 	CurrentNearbyItem = Item;
 
-	if (IsLocallyControlled())
+	if (IsLocallyControlled() && !bSuppressNearbyPickupUIDuringOpeningSequence)
 	{
 		OnNearbyItemChanged.Broadcast(Item);
 	}
@@ -1281,7 +1300,7 @@ void AOblivioCharacter::RemoveNearbyItem(AOblivioItemBase* Item)
 		}
 	}
 
-	if (!IsLocallyControlled())
+	if (!IsLocallyControlled() || bSuppressNearbyPickupUIDuringOpeningSequence)
 	{
 		return;
 	}
@@ -1379,7 +1398,7 @@ void AOblivioCharacter::SetFlashlightWeaponVisible(bool bVisible)
 
 void AOblivioCharacter::EnableFlashlightWorldPickups()
 {
-	if (!GetWorld() || HasFlashlight())
+	if (!GetWorld() || HasFlashlight() || !IsFlashlightPromptFloorActive())
 	{
 		return;
 	}
@@ -1444,6 +1463,29 @@ void AOblivioCharacter::EnsureFlashlightPromptWidget()
 	FlashlightPromptWidget = CreateWidget<UOblivioFlashlightPromptWidget>(PC, FlashlightPromptWidgetClass);
 }
 
+bool AOblivioCharacter::IsFlashlightPromptFloorActive() const
+{
+	const UWorld* World = GetWorld();
+	if (!World)
+	{
+		return false;
+	}
+
+	static const FName Floor9LevelName(TEXT("L_Floor9_DoctorsLounge"));
+	const FName CurrentLevelName = FName(*UGameplayStatics::GetCurrentLevelName(World, true));
+	if (CurrentLevelName != Floor9LevelName)
+	{
+		return false;
+	}
+
+	if (const UOblivioGameInstance* GI = Cast<UOblivioGameInstance>(GetGameInstance()))
+	{
+		return GI->CurrentFloor == 9;
+	}
+
+	return true;
+}
+
 void AOblivioCharacter::UpdateFlashlightPromptUI()
 {
 	if (!IsLocallyControlled())
@@ -1457,6 +1499,15 @@ void AOblivioCharacter::UpdateFlashlightPromptUI()
 	}
 
 	if (bOpeningLevelSequenceActive)
+	{
+		if (FlashlightPromptWidget)
+		{
+			FlashlightPromptWidget->SetPromptPhase(EFlashlightPromptPhase::Hidden, true);
+		}
+		return;
+	}
+
+	if (!IsFlashlightPromptFloorActive())
 	{
 		if (FlashlightPromptWidget)
 		{
@@ -2418,6 +2469,147 @@ void AOblivioCharacter::RestoreAfterLevelSequence()
 	SkelMesh->InitAnim(true);
 }
 
+bool AOblivioCharacter::ShouldIgnoreItemPickupOverlap() const
+{
+	return bOpeningLevelSequenceActive || bCinematicMovementLocked;
+}
+
+void AOblivioCharacter::ClearNearbyPickupItems()
+{
+	NearbyItemsList.Empty();
+	CurrentNearbyItem = nullptr;
+
+	if (IsLocallyControlled())
+	{
+		OnNearbyItemChanged.Broadcast(nullptr);
+	}
+}
+
+void AOblivioCharacter::SetWorldItemPickupCollisionsEnabled(bool bEnabled)
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	for (TActorIterator<AOblivioItemBase> It(World); It; ++It)
+	{
+		if (IsValid(*It))
+		{
+			It->SetPickupCollisionEnabled(bEnabled);
+		}
+	}
+}
+
+void AOblivioCharacter::ResolvePlayerHUDWidget()
+{
+	if (PlayerHUDWidget)
+	{
+		return;
+	}
+
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	if (!PC)
+	{
+		return;
+	}
+
+	for (TObjectIterator<UUserWidget> It; It; ++It)
+	{
+		UUserWidget* Widget = *It;
+		if (!IsValid(Widget) || !Widget->IsInViewport())
+		{
+			continue;
+		}
+
+		if (Widget->GetOwningPlayer() != PC)
+		{
+			continue;
+		}
+
+		if (PlayerHUDWidgetClass && Widget->IsA(PlayerHUDWidgetClass))
+		{
+			PlayerHUDWidget = Widget;
+			return;
+		}
+
+		const FString WidgetClassName = Widget->GetClass()->GetName();
+		if (WidgetClassName.Contains(TEXT("WBP_PlayerHUD")))
+		{
+			PlayerHUDWidget = Widget;
+			return;
+		}
+	}
+}
+
+void AOblivioCharacter::ApplyOpeningLevelSequenceUIVisibility(bool bUIVisible, bool bNotifyBlueprintEvent)
+{
+	if (!IsLocallyControlled())
+	{
+		return;
+	}
+
+	ResolvePlayerHUDWidget();
+	if (PlayerHUDWidget)
+	{
+		PlayerHUDWidget->SetVisibility(
+			bUIVisible ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
+	}
+
+	UpdateFlashlightPromptUI();
+	UpdateCabinetMashUI(false);
+
+	bSuppressNearbyPickupUIDuringOpeningSequence = !bUIVisible;
+
+	if (!bUIVisible)
+	{
+		ClearNearbyPickupItems();
+		SetWorldItemPickupCollisionsEnabled(false);
+
+		if (!bOpeningSequenceUIHidden)
+		{
+			bOpeningSequenceUIHidden = true;
+		}
+	}
+	else
+	{
+		bOpeningSequenceUIHidden = false;
+		SetWorldItemPickupCollisionsEnabled(true);
+
+		if (IsValid(CurrentNearbyItem))
+		{
+			OnNearbyItemChanged.Broadcast(CurrentNearbyItem);
+		}
+		else if (NearbyItemsList.Num() > 0)
+		{
+			auto It = NearbyItemsList.CreateConstIterator();
+			OnNearbyItemChanged.Broadcast(*It);
+		}
+		else
+		{
+			OnNearbyItemChanged.Broadcast(nullptr);
+		}
+	}
+
+	if (bNotifyBlueprintEvent)
+	{
+		OnOpeningLevelSequenceUIChanged(bUIVisible);
+	}
+}
+
+void AOblivioCharacter::MaintainOpeningLevelSequenceUIHidden()
+{
+	ResolvePlayerHUDWidget();
+	if (PlayerHUDWidget)
+	{
+		PlayerHUDWidget->SetVisibility(ESlateVisibility::Collapsed);
+	}
+
+	UpdateFlashlightPromptUI();
+	UpdateCabinetMashUI(false);
+}
+
 void AOblivioCharacter::BeginOpeningLevelSequenceControl()
 {
 	if (bOpeningLevelSequenceActive)
@@ -2426,6 +2618,7 @@ void AOblivioCharacter::BeginOpeningLevelSequenceControl()
 	}
 
 	bOpeningLevelSequenceActive = true;
+	bOpeningSequenceUIHidden = false;
 
 	if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
 	{
@@ -2434,7 +2627,7 @@ void AOblivioCharacter::BeginOpeningLevelSequenceControl()
 		MoveComp->DisableMovement();
 	}
 
-	OnOpeningLevelSequenceUIChanged(false);
+	ApplyOpeningLevelSequenceUIVisibility(false);
 }
 
 void AOblivioCharacter::EndOpeningLevelSequenceControl()
@@ -2451,7 +2644,7 @@ void AOblivioCharacter::EndOpeningLevelSequenceControl()
 		MoveComp->SetMovementMode(CachedMovementModeForLevelSequence);
 	}
 
-	OnOpeningLevelSequenceUIChanged(true);
+	ApplyOpeningLevelSequenceUIVisibility(true);
 }
 
 void AOblivioCharacter::TryPlayOpeningLevelSequence()

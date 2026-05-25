@@ -103,3 +103,31 @@ void AFlashlightPickupItem::ClearOverlappingPlayers()
 		NotifyPlayerNearbyPickup(Cast<AOblivioCharacter>(Actor), false);
 	}
 }
+
+void AFlashlightPickupItem::SetPickupCollisionEnabled(bool bEnabled)
+{
+	if (!bEnabled)
+	{
+		ClearOverlappingPlayers();
+
+		if (InteractionSphere)
+		{
+			InteractionSphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			InteractionSphere->SetGenerateOverlapEvents(false);
+		}
+		return;
+	}
+
+	if (!bPickupInteractable)
+	{
+		return;
+	}
+
+	if (InteractionSphere)
+	{
+		InteractionSphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+		InteractionSphere->SetGenerateOverlapEvents(true);
+	}
+
+	RefreshOverlappingPlayers();
+}

@@ -46,6 +46,11 @@ void AOblivioItemBase::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent,
 
     if (AOblivioCharacter* Player = Cast<AOblivioCharacter>(OtherActor))
     {
+        if (ShouldIgnorePlayerPickupOverlap(Player))
+        {
+            return;
+        }
+
         NotifyPlayerNearbyPickup(Player, true);
     }
 }
@@ -57,6 +62,11 @@ void AOblivioItemBase::OnSphereEndOverlap(UPrimitiveComponent* OverlappedCompone
     }
 }
 
+bool AOblivioItemBase::ShouldIgnorePlayerPickupOverlap(const AOblivioCharacter* Player)
+{
+    return IsValid(Player) && Player->ShouldIgnoreItemPickupOverlap();
+}
+
 void AOblivioItemBase::NotifyPlayerNearbyPickup(AOblivioCharacter* Player, bool bEnter)
 {
     if (!IsValid(Player))
@@ -66,7 +76,7 @@ void AOblivioItemBase::NotifyPlayerNearbyPickup(AOblivioCharacter* Player, bool 
 
     if (bEnter)
     {
-        if (!CanShowNearbyPickupUI())
+        if (!CanShowNearbyPickupUI() || ShouldIgnorePlayerPickupOverlap(Player))
         {
             return;
         }
@@ -87,6 +97,35 @@ void AOblivioItemBase::NotifyPlayerNearbyPickup(AOblivioCharacter* Player, bool 
             LootNiagaraComponent->Deactivate();
         }
     }
+}
+
+void AOblivioItemBase::SetPickupCollisionEnabled(bool bEnabled)
+{
+    if (!InteractionSphere)
+    {
+        return;
+    }
+
+    if (!bEnabled)
+    {
+        TArray<AActor*> OverlappingActors;
+        InteractionSphere->GetOverlappingActors(OverlappingActors, AOblivioCharacter::StaticClass());
+        for (AActor* Actor : OverlappingActors)
+        {
+            if (AOblivioCharacter* Player = Cast<AOblivioCharacter>(Actor))
+            {
+                NotifyPlayerNearbyPickup(Player, false);
+            }
+        }
+
+        InteractionSphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        InteractionSphere->SetGenerateOverlapEvents(false);
+        return;
+    }
+
+    InteractionSphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+    InteractionSphere->SetGenerateOverlapEvents(true);
+    InteractionSphere->UpdateOverlaps();
 }
 
 void AOblivioItemBase::OnInteract_Implementation(AActor* Interactor)
