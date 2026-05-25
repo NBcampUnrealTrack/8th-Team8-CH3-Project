@@ -19,6 +19,8 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Pickup")
 	bool IsPickupInteractable() const { return bPickupInteractable; }
 
+	virtual void SetPickupCollisionEnabled(bool bEnabled) override;
+
 protected:
 	virtual void BeginPlay() override;
 	virtual bool CanShowNearbyPickupUI() const override { return bPickupInteractable; }

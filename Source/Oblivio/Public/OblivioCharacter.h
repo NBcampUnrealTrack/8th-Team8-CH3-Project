@@ -372,6 +372,13 @@ public:
 	UPROPERTY(Transient, BlueprintReadOnly, Category = "UI|Cabinet Mash")
 	TObjectPtr<UOblivioCabinetMashWidget> CabinetMashWidget;
 
+	/** WBP_PlayerHUD 등 게임플레이 HUD. 오프닝 LS 중 숨김 처리에 사용. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI|HUD")
+	TSubclassOf<class UUserWidget> PlayerHUDWidgetClass;
+
+	UPROPERTY(Transient, BlueprintReadOnly, Category = "UI|HUD")
+	TObjectPtr<class UUserWidget> PlayerHUDWidget;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	TSubclassOf<AWeaponBase> FlashbangClass;
 
@@ -524,6 +531,10 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Cinematic|LevelSequence")
 	bool IsOpeningLevelSequenceActive() const { return bOpeningLevelSequenceActive; }
+
+	/** 오프닝 LS·연출 이동 잠금 중 아이템 픽업 오버랩 무시 여부. */
+	UFUNCTION(BlueprintPure, Category = "Interaction")
+	bool ShouldIgnoreItemPickupOverlap() const;
 
 	/** LS 재생 중 HUD 등 UI 표시/숨김 — BP_OblivioCharacter Event Graph에서 처리. */
 	UFUNCTION(BlueprintImplementableEvent, Category = "Cinematic|LevelSequence")
@@ -689,6 +700,8 @@ private:
 	void EnsureCabinetMashWidget();
 	void DismissFlashlightTurnOnPrompt();
 	void BeginFlashlightTurnOnPromptTimer();
+	/** 9층(L_Floor9) 오프닝·손전등 튜토리얼 토스트 표시 가능 여부. */
+	bool IsFlashlightPromptFloorActive() const;
 
 	bool bFlashlightWorldPickupEnabled = false;
 	bool bFlashlightTurnOnPromptActive = false;
@@ -734,4 +747,12 @@ private:
 	void HandleOpeningLevelSequenceFinished();
 	void ReleaseOpeningLevelSequencePlayer();
 	void StopOpeningLevelSequencePlayback(bool bRestoreAnim);
+	void ApplyOpeningLevelSequenceUIVisibility(bool bUIVisible, bool bNotifyBlueprintEvent = true);
+	void MaintainOpeningLevelSequenceUIHidden();
+	void ResolvePlayerHUDWidget();
+	void ClearNearbyPickupItems();
+	void SetWorldItemPickupCollisionsEnabled(bool bEnabled);
+
+	bool bSuppressNearbyPickupUIDuringOpeningSequence = false;
+	bool bOpeningSequenceUIHidden = false;
 };

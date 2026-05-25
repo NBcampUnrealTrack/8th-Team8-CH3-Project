@@ -54,6 +54,8 @@ protected:
 
     virtual void NotifyPlayerNearbyPickup(class AOblivioCharacter* Player, bool bEnter);
 
+    static bool ShouldIgnorePlayerPickupOverlap(const class AOblivioCharacter* Player);
+
 public:
     // ==========================================
     // Components
@@ -148,6 +150,10 @@ public:
     UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Interaction")
     void OnInteract(AActor* Interactor);
     virtual void OnInteract_Implementation(AActor* Interactor);
+
+    /** 오프닝 LS 등 시네마틱 중 픽업 오버랩 Sphere 토글. */
+    UFUNCTION(BlueprintCallable, Category = "Interaction")
+    virtual void SetPickupCollisionEnabled(bool bEnabled);
 
 protected:
     // [추가] 나이아가라 루팅 이펙트 컴포넌트
