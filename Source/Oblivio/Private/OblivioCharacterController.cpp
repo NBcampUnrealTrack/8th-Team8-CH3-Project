@@ -1,4 +1,4 @@
-#include "OblivioCharacterController.h"
+﻿#include "OblivioCharacterController.h"
 #include "OblivioCharacter.h"
 #include "OblivioGameUserSettings.h"
 #include "Crafting/OblivioCrafting.h"
@@ -232,7 +232,7 @@ void AOblivioCharacterController::OnFlashbang(const FInputActionValue& Value)
 void AOblivioCharacterController::OnThrowBottle(const FInputActionValue& Value)
 {
 	if (AOblivioCharacter* ObjChar = Cast<AOblivioCharacter>(GetPawn()))
-		if (IsValid(ObjChar->BottleClass))
+		if (IsValid(ObjChar->BottleWeapon))
 			ObjChar->ThrowBottle();
 }
 

@@ -2,6 +2,7 @@
 #include "Crafting/ObstacleBase.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
+#include "Engine/Engine.h"
 
 #include "OblivioCharacter.h"
 #include "Items/OblivioInventoryComponent.h"
@@ -70,6 +71,11 @@ void UOblivioCrafting::SelectObstacle(int32 Index)
     {
         SelectedObstacleClass = CraftingRecipes[Index];
 
+        if (!IsValid(SelectedObstacleClass))
+        {
+            if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("Error: Recipe Class is empty (None)!"));
+            return;
+        }
             
         if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Cyan, FString::Printf(TEXT("Item %d Selected"), Index));
 

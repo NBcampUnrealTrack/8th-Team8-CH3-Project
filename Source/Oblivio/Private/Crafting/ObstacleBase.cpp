@@ -108,11 +108,12 @@ void AObstacleBase::HandleDestruction()
     }
     FTimerHandle DestroyTimeHandler;
     FTimerDelegate TimerDelegate;
-    TimerDelegate.BindLambda([this]()
+    TWeakObjectPtr<AObstacleBase> WeakThis(this);
+    TimerDelegate.BindLambda([WeakThis]()
         {
-            if (IsValid(this))
+            if (WeakThis.IsValid())
             {
-                this->Destroy();
+                WeakThis->Destroy();
             }
         });
     GetWorldTimerManager().SetTimer(DestroyTimeHandler, TimerDelegate, 2.0f, false);
