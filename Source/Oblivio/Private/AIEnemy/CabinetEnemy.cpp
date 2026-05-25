@@ -722,19 +722,11 @@ void ACabinetEnemy::BeginMashWindow(int32 InRequiredPressCount)
 	{
 		Player->ActivateGrabFirstPersonCamera();
 		Player->HandlePlayerCinematicNotify(EPlayerCinematicNotify::EnterStandoff);
+		Player->UpdateCabinetMashUI(true, 0, RequiredMashPressCount);
 	}
 
 	UE_LOG(LogCabinetEnemy, Log, TEXT("%s: mash window opened — need %d presses (notify=%d, bp=%d)"),
 		*GetName(), RequiredMashPressCount, InRequiredPressCount, DefaultRequiredMashPressCount);
-
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(
-			-1,
-			3.f,
-			FColor::Yellow,
-			FString::Printf(TEXT("E Mash: 0 / %d"), RequiredMashPressCount));
-	}
 }
 
 void ACabinetEnemy::EndMashWindow()
@@ -758,13 +750,9 @@ void ACabinetEnemy::RegisterMashPress()
 	++CurrentMashPressCount;
 	OnMashProgressChanged.Broadcast(CurrentMashPressCount);
 
-	if (GEngine)
+	if (AOblivioCharacter* Player = LinkedPlayer.Get())
 	{
-		GEngine->AddOnScreenDebugMessage(
-			-1,
-			1.f,
-			FColor::Cyan,
-			FString::Printf(TEXT("Cabinet Mash: %d / %d"), CurrentMashPressCount, RequiredMashPressCount));
+		Player->UpdateCabinetMashUI(true, CurrentMashPressCount, RequiredMashPressCount);
 	}
 
 	if (CurrentMashPressCount >= RequiredMashPressCount)
@@ -776,6 +764,12 @@ void ACabinetEnemy::RegisterMashPress()
 void ACabinetEnemy::ResolveMashEscape(bool bSuccess)
 {
 	bMashWindowActive = false;
+
+	if (AOblivioCharacter* Player = LinkedPlayer.Get())
+	{
+		Player->UpdateCabinetMashUI(false, 0, 0);
+	}
+
 	OnCabinetMashResolved(bSuccess);
 
 	GetWorld()->GetTimerManager().ClearTimer(RestoreAnimBlueprintTimerHandle);
