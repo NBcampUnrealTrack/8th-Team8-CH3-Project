@@ -11,6 +11,15 @@ struct FInventorySlot
 {
 	GENERATED_BODY()
 
+	FInventorySlot()
+		: ItemID(NAME_None), 
+		Quantity(0), 
+		MaxStack(1), 
+		ItemType(EItemType::Food), 
+		ItemIcon(nullptr), 
+		ItemClass(nullptr)
+	{}
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FName ItemID = NAME_None;
 
@@ -27,7 +36,7 @@ struct FInventorySlot
 	int32 MaxStack = 1;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	EItemType ItemType;
+	EItemType ItemType = EItemType::Food;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FText ItemDescription;

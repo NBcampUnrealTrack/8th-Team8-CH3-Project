@@ -16,6 +16,7 @@ UOblivioInventoryComponent::UOblivioInventoryComponent()
 void UOblivioInventoryComponent::BeginPlay()
 {
 	Super::BeginPlay();
+	if (InventorySize <= 0) InventorySize = 20;
 
 	InventorySlots.SetNum(InventorySize);
 
