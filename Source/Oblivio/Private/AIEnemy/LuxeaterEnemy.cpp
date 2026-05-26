@@ -1,5 +1,6 @@
 #include "AIEnemy/LuxeaterEnemy.h"
 
+#include "AIController.h"
 #include "OblivioCharacter.h"
 #include "Weapon/Flashlight.h"
 #include "OblivioComponents/LightAttackComponent.h"
@@ -162,10 +163,10 @@ ALuxeaterEnemy::ALuxeaterEnemy()
 	MoveSpeed = 180.0f;
 	ChaseMoveSpeed = 230.0f;
 	AttackDamage = 0.0f;
-	AttackRange = 1.0f;
+	AttackRange = 2000.0f;
 	AttackCooldown = 1.2f;
-	ChaseAcceptanceRadius = 65.0f;
-	ChaseProximityBuffer = 45.0f;
+	ChaseAcceptanceRadius = 80.0f;
+	ChaseProximityBuffer = 40.0f;
 	bAggroUseHorizontalDistance = true;
 	bEnableIdleWander = false;
 	bEnableLightTracking = false;
@@ -275,6 +276,10 @@ void ALuxeaterEnemy::BeginPlay()
 		NextLaserAttackTimeSeconds = Now;
 		NextLightAbsorbAvailableTimeSeconds = Now;
 	}
+
+	LuxeaterFightMinDistance = FMath::Max(LuxeaterFightMinDistance, 400.f);
+	LuxeaterFightMaxDistance = FMath::Max(LuxeaterFightMaxDistance, LuxeaterFightMinDistance + 300.f);
+	AttackRange = LuxeaterFightMaxDistance;
 
 	Super::BeginPlay();
 }
@@ -424,8 +429,72 @@ bool ALuxeaterEnemy::HasValidAggroTarget() const
 	return bInRange;
 }
 
+bool ALuxeaterEnemy::IsTargetInAttackRange() const
+{
+	if (!IsValid(TargetActor))
+	{
+		return false;
+	}
+
+	const float DistSq2D = FVector::DistSquared2D(GetActorLocation(), TargetActor->GetActorLocation());
+	return DistSq2D >= FMath::Square(LuxeaterFightMinDistance)
+		&& DistSq2D <= FMath::Square(LuxeaterFightMaxDistance);
+}
+
+void ALuxeaterEnemy::UpdateChase()
+{
+	AAIController* const AI = Cast<AAIController>(GetController());
+	if (!AI || !IsValid(TargetActor))
+	{
+		return;
+	}
+
+	MaintainEngagementDistance(AI);
+}
+
 void ALuxeaterEnemy::UpdateAttack()
 {
+	AAIController* const AI = Cast<AAIController>(GetController());
+	if (!AI || !IsValid(TargetActor))
+	{
+		return;
+	}
+
+	MaintainEngagementDistance(AI);
+}
+
+void ALuxeaterEnemy::MaintainEngagementDistance(AAIController* AI)
+{
+	if (!AI || !IsValid(TargetActor))
+	{
+		return;
+	}
+
+	const FVector EnemyLoc = GetActorLocation();
+	const FVector TargetLoc = TargetActor->GetActorLocation();
+	FVector FromPlayerToEnemy = EnemyLoc - TargetLoc;
+	FromPlayerToEnemy.Z = 0.f;
+
+	const float Dist = FromPlayerToEnemy.Size();
+	FVector DirOut = Dist > KINDA_SMALL_NUMBER ? FromPlayerToEnemy / Dist : GetActorForwardVector().GetSafeNormal2D();
+	if (DirOut.IsNearlyZero())
+	{
+		DirOut = FVector::ForwardVector;
+	}
+
+	const float Span = LuxeaterFightMaxDistance - LuxeaterFightMinDistance;
+	const float DesiredRadius = LuxeaterFightMinDistance + FMath::Max(100.f, Span * 0.35f);
+	const float MoveAcceptance = 64.f;
+
+	if (Dist < LuxeaterFightMinDistance || Dist > LuxeaterFightMaxDistance)
+	{
+		FVector Goal = TargetLoc + DirOut * DesiredRadius;
+		Goal.Z = EnemyLoc.Z;
+		AI->MoveToLocation(Goal, MoveAcceptance, false);
+		return;
+	}
+
+	AI->StopMovement();
 }
 
 void ALuxeaterEnemy::TryComputeMaxHealthFromPlayerFlashlight()
