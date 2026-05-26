@@ -8,7 +8,7 @@ USTRUCT(BlueprintType)
 struct FBestiaryData : public FTableRowBase
 {
     GENERATED_BODY()
-
+    FBestiaryData() : MonsterImage(nullptr) {}
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bestiary")
     FName MonsterName; // 예: "The Limping Chaser"
 
