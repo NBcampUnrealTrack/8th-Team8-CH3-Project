@@ -90,16 +90,16 @@ void ACraftingFire::ApplyFireEffect(float DeltaTime)
         if (!IsValid(Actor) || Actor == this) continue;
         if (AOblivioCharacter* Player = Cast<AOblivioCharacter>(Actor))
         {
-            if (Player->CurrentHealth < Player->MaxHealth)
+            if (Player->CurrentHealth > 0 && Player->CurrentHealth < Player->MaxHealth)
             {
-                Player->CurrentHealth = FMath::Clamp(Player->CurrentHealth + (10.0f * DeltaTime), 0.0f, Player->MaxHealth);
+                Player->CurrentHealth = FMath::Clamp(Player->CurrentHealth + (3.0f * DeltaTime), 0.0f, Player->MaxHealth);
                 Player->OnPlayerDamaged.Broadcast(0.0f, Player->CurrentHealth, Player->MaxHealth);
             }
 
             // 2. 배터리가 깎여있을 때만 회복
             if (Player->Battery < 100.0f)
             {
-                Player->Battery = FMath::Clamp(Player->Battery + (10.0f * DeltaTime), 0.0f, 100.0f);
+                Player->Battery = FMath::Clamp(Player->Battery + (5.0f * DeltaTime), 0.0f, 100.0f);
                 Player->OnBatteryChanged.Broadcast(Player->Battery, 100.0f);
             }
 
