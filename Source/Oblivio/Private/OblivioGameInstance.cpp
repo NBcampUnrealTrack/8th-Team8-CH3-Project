@@ -167,3 +167,14 @@ bool UOblivioGameInstance::IsMonsterUnlocked(FName MonsterID) const
 {
 	return UnlockedMonsters.Contains(MonsterID);
 }
+
+
+void UOblivioGameInstance::SetLanguage(FString NewLanguage)
+{
+	CurrentLanguage = NewLanguage;
+}
+
+FString UOblivioGameInstance::GetCurrentLanguage() const
+{
+	return CurrentLanguage;
+}

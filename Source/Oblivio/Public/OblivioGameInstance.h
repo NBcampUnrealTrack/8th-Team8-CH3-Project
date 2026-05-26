@@ -131,4 +131,13 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Progress|Tank")
 	bool HasPlayerMetTankOnce() const { return bPlayerMetTankOnce; }
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Settings")
+	FString CurrentLanguage = TEXT("en"); // 기본값 설정
+
+	UFUNCTION(BlueprintCallable, Category = "Settings")
+	void SetLanguage(FString NewLanguage);
+
+	UFUNCTION(BlueprintCallable, Category = "Settings")
+	FString GetCurrentLanguage() const;
 };
