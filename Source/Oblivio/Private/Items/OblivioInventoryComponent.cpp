@@ -1,4 +1,4 @@
-﻿#include "Items/OblivioInventoryComponent.h"
+#include "Items/OblivioInventoryComponent.h"
 #include "Items/OblivioItemBase.h"
 #include "OblivioCharacter.h"
 #include "OblivioGameInstance.h"

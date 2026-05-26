@@ -23,7 +23,11 @@ void UTankEnemyAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	}
 
 	TankAnimEnemyState = Tank->GetEnemyState();
-	EnemyCruntState = TankAnimEnemyState;
+	const bool bSwingLocked = Tank->IsMeleeAttackSwingStateLocked();
+	const EEnemyAIState AnimCombatState =
+		bSwingLocked ? EEnemyAIState::Attack : TankAnimEnemyState;
+	TankAnimEnemyState = AnimCombatState;
+	EnemyCruntState = AnimCombatState;
 	if (!Tank->IsAlive())
 	{
 		return;

@@ -44,6 +44,8 @@ ATankEnemy::ATankEnemy()
 	ChaseProximityBuffer = 48.0f;
 	AggroRadius = 1000.0f;
 	CorpseLifeSpan = 3.0f;
+	// 근접 몽타주가 AttackCooldown(1.25s)보다 길 수 있음 — 스윙 중 FSM/ABP Attack 유지
+	MeleeAttackStateLockDurationSeconds = 2.5f;
 
 	TankHeartMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("TankHeartMesh"));
 	TankHeartMeshComponent->SetupAttachment(GetMesh());
@@ -506,6 +508,10 @@ EEnemyAIState ATankEnemy::GetEnemyState() const
 	{
 		return EEnemyAIState::Membrane;
 	}
+	if (IsMeleeAttackSwingStateLocked())
+	{
+		return EEnemyAIState::Attack;
+	}
 	return EnemyState;
 }
 
@@ -597,6 +603,7 @@ void ATankEnemy::Die()
 		DestroyTankPlacentaShellIfAny_Server();
 		bTankPlacentaDefenseActive = false;
 	}
+	HideBossHUD();
 	Super::Die();
 }
 
@@ -2012,6 +2019,17 @@ void ATankEnemy::ApplyHealth(float Damage)
 	}
 }
 
+void ATankEnemy::NotifyEnemyDamageApplied(float AppliedDamage)
+{
+	Super::NotifyEnemyDamageApplied(AppliedDamage);
+	RefreshBossHUD();
+
+	if (CurrentHealth <= 0.f)
+	{
+		HideBossHUD();
+	}
+}
+
 void ATankEnemy::DispatchEnemyAttackCommitted(AActor* Target, float DamageAmount,
 	TSubclassOf<UDamageType> DamageTypeClass)
 {
@@ -2181,6 +2199,7 @@ void ATankEnemy::TickTankPlacentaHeal_Server()
 	if (TankPlacentaHealPerSecondPercentOfMax > KINDA_SMALL_NUMBER)
 	{
 		Heal(MaxHealth * TankPlacentaHealPerSecondPercentOfMax);
+		RefreshBossHUD();
 	}
 
 	--TankPlacentaHealTicksRemaining_Server;

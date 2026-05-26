@@ -1,4 +1,4 @@
-﻿#include "DoorBase.h"
+#include "DoorBase.h"
 #include "Kismet/GameplayStatics.h"
 #include "OblivioGameInstance.h"
 #include "OblivioCharacter.h"
