@@ -5,6 +5,7 @@
 #include "AIEnemy/LuxeaterLaserMeshProbeActor.h"
 #include "LuxeaterEnemy.generated.h"
 
+class AAIController;
 class UAudioComponent;
 class UNiagaraComponent;
 class UNiagaraSystem;
@@ -88,6 +89,8 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void UpdateAttack() override;
+	virtual void UpdateChase() override;
+	virtual bool IsTargetInAttackRange() const override;
 	virtual bool HasValidAggroTarget() const override;
 	void NotifyStickyAggroIfPlayerDamagedBeyondRange(float AppliedDamage, AController const* EventInstigator,
 		AActor const* DamageCauser) override;
@@ -219,6 +222,14 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Luxeater|Aggro")
 	bool bStickyAggroOnceTriggered = true;
 
+	/** 이 거리(cm, 수평)보다 가까워지면 뒤로 물러난다. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Luxeater|Combat", meta = (ClampMin = "100.0"))
+	float LuxeaterFightMinDistance = 500.f;
+
+	/** 이 거리(cm, 수평)보다 멀어지면 접근한다. MinDistance보다 커야 한다. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Luxeater|Combat", meta = (ClampMin = "200.0"))
+	float LuxeaterFightMaxDistance = 2000.f;
+
 	/** 스케일 보간 속도(FInterpTo). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Luxeater|Float", meta = (ClampMin = "0.01"))
 	float ScaleInterpSpeed = 0.4f;
@@ -234,6 +245,8 @@ protected:
 	float FloatSpeed = 1.2f;
 
 private:
+	void MaintainEngagementDistance(AAIController* AI);
+
 	void StopLuxeaterChannelSfxForRestart(TObjectPtr<UAudioComponent>& Comp);
 	void FadeOutLuxeaterChannelSfxOnCastEnd(TObjectPtr<UAudioComponent>& Comp);
 

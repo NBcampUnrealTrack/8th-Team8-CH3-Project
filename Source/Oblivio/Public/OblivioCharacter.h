@@ -644,6 +644,10 @@ public:
 	UFUNCTION(Exec, Category = "Cheats")
 	void CheatGodMode();
 
+	/** 콘솔: CheatGrantFlashlight — 어느 층에서든 손전등 즉시 획득(F키 ON). */
+	UFUNCTION(Exec, Category = "Cheats")
+	void CheatGrantFlashlight();
+
 	/** 2층 홍수 기믹: 현재 월드의 수위 (FloodLevelActor가 매 틱 업데이트함) */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Flood")
 	float CurrentWaterLevel = -1000.0f; // 초기값은 매우 낮게 설정

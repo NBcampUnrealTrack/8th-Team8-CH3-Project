@@ -740,13 +740,14 @@ EEnemyAIState AEnemyBase::SelectStateWhileAggroed() const
 	if (const UWorld* World = GetWorld())
 	{
 		const float Now = World->GetTimeSeconds();
-		if (Now < MeleePostAttackForcedChaseEndWorldTime)
-		{
-			return EEnemyAIState::Chase;
-		}
+		// 스윙 락이 forced Chase보다 우선 — 근접 몽타주 재생 중 Chase로 떨어지며 애니가 끊기는 것 방지
 		if (Now < MeleeAttackSwingStateLockEndWorldTime)
 		{
 			return EEnemyAIState::Attack;
+		}
+		if (Now < MeleePostAttackForcedChaseEndWorldTime)
+		{
+			return EEnemyAIState::Chase;
 		}
 	}
 

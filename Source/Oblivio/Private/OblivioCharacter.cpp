@@ -2064,6 +2064,7 @@ void AOblivioCharacter::HandleDeath()
 		bIsFlashlightOn = false;
 		UpdateFlashlightVisuals();
 	}
+	SyncFlashlightStateToGameInstance();
 
 	if (APlayerController* PC = Cast<APlayerController>(GetController()))
 	{
@@ -2840,4 +2841,30 @@ void AOblivioCharacter::CheatGodMode()
 {
 	bCheatGodMode = !bCheatGodMode;
 	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green, FString::Printf(TEXT("God Mode (Invincible): %s"), bCheatGodMode ? TEXT("ON") : TEXT("OFF")));
+}
+
+void AOblivioCharacter::CheatGrantFlashlight()
+{
+	if (HasFlashlight())
+	{
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Yellow, TEXT("Flashlight already acquired."));
+		}
+		return;
+	}
+
+	GrantFlashlight(true);
+
+	bFlashlightTurnOnPromptActive = false;
+	if (GetWorld())
+	{
+		GetWorldTimerManager().ClearTimer(FlashlightTurnOnPromptTimer);
+	}
+	UpdateFlashlightPromptUI();
+
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green, TEXT("Flashlight granted (cheat)."));
+	}
 }

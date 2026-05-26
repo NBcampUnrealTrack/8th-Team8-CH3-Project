@@ -116,6 +116,8 @@ public:
 
 	void ApplyHealth(float Damage) override;
 
+	virtual void NotifyEnemyDamageApplied(float AppliedDamage) override;
+
 	/** 로코용: 양막 패턴 복제 구간(bTankMembranePatternCycleActive) 활성. */
 	UFUNCTION(BlueprintPure, Category = "Enemy|Tank|Membrane")
 	bool IsTankMembraneFsmActiveForAnim() const;

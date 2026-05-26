@@ -1,4 +1,4 @@
-﻿#include "OblivioGameMode.h"
+#include "OblivioGameMode.h"
 #include "OblivioCharacter.h"
 #include "OblivioCharacterController.h"
 #include "OblivioGameInstance.h"
@@ -154,9 +154,28 @@ void AOblivioGameMode::HandleFloodTimeout()
 void AOblivioGameMode::GameOver()
 {
 	UOblivioGameInstance* GI = Cast<UOblivioGameInstance>(GetGameInstance());
-	if (!GI) return;
+	if (!GI)
+	{
+		return;
+	}
+
+	if (AOblivioCharacter* Player = Cast<AOblivioCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0)))
+	{
+		Player->SyncFlashlightStateToGameInstance();
+	}
+
+	// Continue(게임 오버 UI) 시 같은 층·손전등·오프닝 LS 재생 기록 유지
+	const bool bSavedFlashlightAcquired = GI->bFlashlightAcquired;
+	const bool bSavedFlashlightOn = GI->bFlashlightOn;
+	const int32 SavedFloor = GI->CurrentFloor;
+	const TArray<FName> SavedPlayedOpeningLS = GI->PlayedOpeningLevelSequenceLevels;
 
 	GI->ResetGameData();
+
+	GI->bFlashlightAcquired = bSavedFlashlightAcquired;
+	GI->bFlashlightOn = bSavedFlashlightOn;
+	GI->CurrentFloor = SavedFloor;
+	GI->PlayedOpeningLevelSequenceLevels = SavedPlayedOpeningLS;
 
 	UE_LOG(LogTemp, Warning, TEXT("Game Over!"));
 }

@@ -1,4 +1,4 @@
-﻿#include "OblivioGameInstance.h"
+#include "OblivioGameInstance.h"
 #include "OblivioSaveGame.h"
 #include "LevelSequence.h"
 #include "Kismet/GameplayStatics.h"
