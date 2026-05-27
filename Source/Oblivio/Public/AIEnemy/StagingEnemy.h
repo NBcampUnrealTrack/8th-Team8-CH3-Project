@@ -27,6 +27,7 @@ public:
 	AStagingEnemy();
 
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void Tick(float DeltaSeconds) override;
 
 	virtual EEnemyAIState GetEnemyState() const override;
@@ -131,6 +132,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Staging|Combat", meta = (WorldContext = "WorldContextObject"))
 	static void ActivateAllAfterFlashlightPickup(const UObject* WorldContextObject, AOblivioCharacter* Player);
 
+	/** GameInstance에 처치 기록된 연출 적을 월드에서 제거(GI 준비 지연 대비). */
+	UFUNCTION(BlueprintCallable, Category = "Staging|Persistence", meta = (WorldContext = "WorldContextObject"))
+	static void DestroyAllDefeatedInWorld(const UObject* WorldContextObject);
+
 	UFUNCTION(BlueprintPure, Category = "Staging|Combat")
 	bool IsPostFlashlightPickupCombatActive() const { return bPostFlashlightPickupCombatActive; }
 
@@ -206,6 +211,14 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Staging|PostPickupCombat")
 	bool bActivateCombatOnFlashlightPickup = true;
 
+	/** true면 사망 후 GameInstance에 기록 — 메인메뉴·맵 재입장 시 재스폰하지 않음. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Staging|Persistence")
+	bool bPersistDefeatAcrossSessions = true;
+
+	/** 비어 있으면 `맵이름|액터라벨(GetActorNameOrLabel)`로 자동 키 생성. 라벨 없으면 `맵이름|StagingEnemy`. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Staging|Persistence")
+	FName StagingDefeatPersistenceKey = NAME_None;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Staging|PostPickupCombat", meta = (ClampMin = "0.0"))
 	float PostPickupAttackDamage = 10.f;
 
@@ -241,6 +254,11 @@ protected:
 	void ApplyDeferredCinematicDeath();
 
 	void StagingDebugLog(const FString& Message, FColor ScreenColor = FColor::Yellow, float ScreenDuration = 2.f) const;
+
+	FName GetStagingDefeatPersistenceKey() const;
+	bool IsDefeatPersistedForThisActor() const;
+	void MarkDefeatPersistedForThisActor() const;
+	void TryMarkDefeatPersisted() const;
 
 	FTimerHandle DeferredDeathTimerHandle;
 

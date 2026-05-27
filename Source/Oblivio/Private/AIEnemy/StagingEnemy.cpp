@@ -5,14 +5,76 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/DamageEvents.h"
 #include "Engine/Engine.h"
+#include "EngineUtils.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "OblivioCharacter.h"
+#include "OblivioGameInstance.h"
 #include "TimerManager.h"
 #include "Math/UnrealMathUtility.h"
 
+namespace
+{
+	static FName GetLevelNameFromWorld(const UWorld* World)
+	{
+		return World ? FName(*UGameplayStatics::GetCurrentLevelName(World, true)) : NAME_None;
+	}
+
+	static bool IsStagingEnemyActorDefeated(const UOblivioGameInstance* GI, const UWorld* World, const AActor* Actor)
+	{
+		if (!GI || !World || !IsValid(Actor))
+		{
+			return false;
+		}
+
+		const FName LevelName = GetLevelNameFromWorld(World);
+		if (!LevelName.IsNone() && GI->IsStagingEnemyDefeatedForLevel(LevelName))
+		{
+			return true;
+		}
+
+		if (!LevelName.IsNone())
+		{
+			const FString LevelPrefix = LevelName.ToString() + TEXT("|");
+			for (const FName Key : GI->DefeatedStagingEnemyKeys)
+			{
+				const FString KeyString = Key.ToString();
+				if (KeyString.StartsWith(LevelPrefix) || Key == LevelName)
+				{
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	static bool IsStagingEnemyWorldActor(const AActor* Actor)
+	{
+		if (!IsValid(Actor))
+		{
+			return false;
+		}
+
+		if (Actor->IsA(AStagingEnemy::StaticClass()))
+		{
+			return true;
+		}
+
+		if (Actor->ActorHasTag(FName(TEXT("StagingEnemy"))))
+		{
+			return true;
+		}
+
+		const FString ActorName = Actor->GetName();
+		return ActorName.Contains(TEXT("StagingEnemy"), ESearchCase::IgnoreCase);
+	}
+}
+
 AStagingEnemy::AStagingEnemy()
 {
+	Tags.Add(FName(TEXT("StagingEnemy")));
+
 	MaxHealth = 100.f;
 	CurrentHealth = MaxHealth;
 	AttackDamage = 0.f;
@@ -23,6 +85,20 @@ AStagingEnemy::AStagingEnemy()
 
 void AStagingEnemy::BeginPlay()
 {
+	if (bPersistDefeatAcrossSessions)
+	{
+		if (UOblivioGameInstance* GI = Cast<UOblivioGameInstance>(GetGameInstance()))
+		{
+			GI->LoadSessionPersistence();
+		}
+	}
+
+	if (bPersistDefeatAcrossSessions && IsDefeatPersistedForThisActor())
+	{
+		Destroy();
+		return;
+	}
+
 	Super::BeginPlay();
 
 	if (USkeletalMeshComponent* SkelMesh = GetMesh())
@@ -30,6 +106,23 @@ void AStagingEnemy::BeginPlay()
 		if (TSubclassOf<UAnimInstance> AnimClass = SkelMesh->GetAnimClass())
 		{
 			DefaultCombatAnimClass = AnimClass;
+		}
+	}
+
+	if (bPersistDefeatAcrossSessions)
+	{
+		if (UWorld* World = GetWorld())
+		{
+			TWeakObjectPtr<AStagingEnemy> WeakThis(this);
+			World->GetTimerManager().SetTimerForNextTick([WeakThis]()
+			{
+				if (WeakThis.IsValid()
+					&& WeakThis->bPersistDefeatAcrossSessions
+					&& WeakThis->IsDefeatPersistedForThisActor())
+				{
+					WeakThis->Destroy();
+				}
+			});
 		}
 	}
 
@@ -47,12 +140,29 @@ void AStagingEnemy::BeginPlay()
 			{
 				if (AOblivioCharacter* Player = Cast<AOblivioCharacter>(UGameplayStatics::GetPlayerPawn(this, 0)))
 				{
+					if (Player->IsFlashlightAcquired() || Player->HasFlashlight())
+					{
+						ActivatePostFlashlightPickupCombat(Player);
+						return;
+					}
+
 					StartOpeningCinematic(Player);
 				}
 			},
 			AutoStartDelaySeconds,
 			false);
 	}
+}
+
+void AStagingEnemy::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (bPersistDefeatAcrossSessions
+		&& (StagingState == EStagingEnemyCinematicState::Dead || !IsAlive()))
+	{
+		TryMarkDefeatPersisted();
+	}
+
+	Super::EndPlay(EndPlayReason);
 }
 
 void AStagingEnemy::Tick(float DeltaSeconds)
@@ -302,6 +412,7 @@ void AStagingEnemy::SetStagingState(EStagingEnemyCinematicState NewState)
 	if (StagingState == EStagingEnemyCinematicState::Dead)
 	{
 		bCinematicModeActive = false;
+		TryMarkDefeatPersisted();
 	}
 }
 
@@ -482,6 +593,7 @@ void AStagingEnemy::FinishCinematicDeath()
 {
 	if (!IsAlive())
 	{
+		TryMarkDefeatPersisted();
 		SetStagingState(EStagingEnemyCinematicState::Dead);
 		return;
 	}
@@ -491,6 +603,8 @@ void AStagingEnemy::FinishCinematicDeath()
 
 void AStagingEnemy::Die()
 {
+	TryMarkDefeatPersisted();
+
 	SetStagingState(EStagingEnemyCinematicState::Dead);
 	bCinematicModeActive = false;
 
@@ -803,6 +917,155 @@ void AStagingEnemy::ActivateAllAfterFlashlightPickup(const UObject* WorldContext
 	}
 
 	UE_LOG(LogTemp, Log, TEXT("[StagingEnemy] Activated post-flashlight combat on %d actor(s)"), StagingEnemies.Num());
+}
+
+void AStagingEnemy::DestroyAllDefeatedInWorld(const UObject* WorldContextObject)
+{
+	UWorld* World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull);
+	if (!World)
+	{
+		return;
+	}
+
+	const UOblivioGameInstance* GI = Cast<UOblivioGameInstance>(UGameplayStatics::GetGameInstance(WorldContextObject));
+	if (!GI)
+	{
+		return;
+	}
+
+	if (UOblivioGameInstance* MutableGI = const_cast<UOblivioGameInstance*>(GI))
+	{
+		MutableGI->LoadSessionPersistence();
+	}
+
+	TSet<AActor*> CandidateActors;
+
+	for (TActorIterator<AStagingEnemy> It(World); It; ++It)
+	{
+		CandidateActors.Add(*It);
+	}
+
+	TArray<AActor*> TaggedActors;
+	UGameplayStatics::GetAllActorsWithTag(World, FName(TEXT("StagingEnemy")), TaggedActors);
+	for (AActor* Actor : TaggedActors)
+	{
+		if (IsValid(Actor))
+		{
+			CandidateActors.Add(Actor);
+		}
+	}
+
+	for (TActorIterator<AActor> It(World); It; ++It)
+	{
+		if (IsStagingEnemyWorldActor(*It))
+		{
+			CandidateActors.Add(*It);
+		}
+	}
+
+	for (AActor* Actor : CandidateActors)
+	{
+		if (AStagingEnemy* StagingEnemy = Cast<AStagingEnemy>(Actor))
+		{
+			if (StagingEnemy->bPersistDefeatAcrossSessions && StagingEnemy->IsDefeatPersistedForThisActor())
+			{
+				StagingEnemy->Destroy();
+			}
+		}
+		else if (IsStagingEnemyActorDefeated(GI, World, Actor))
+		{
+			Actor->Destroy();
+		}
+	}
+}
+
+FName AStagingEnemy::GetStagingDefeatPersistenceKey() const
+{
+	if (!StagingDefeatPersistenceKey.IsNone())
+	{
+		return StagingDefeatPersistenceKey;
+	}
+
+	const UWorld* World = GetWorld();
+	const FName LevelName = GetLevelNameFromWorld(World);
+	if (LevelName.IsNone())
+	{
+		return NAME_None;
+	}
+
+	const FString StableActorName = GetActorNameOrLabel();
+	if (StableActorName.IsEmpty())
+	{
+		return FName(*FString::Printf(TEXT("%s|StagingEnemy"), *LevelName.ToString()));
+	}
+
+	return FName(*FString::Printf(TEXT("%s|%s"), *LevelName.ToString(), *StableActorName));
+}
+
+bool AStagingEnemy::IsDefeatPersistedForThisActor() const
+{
+	const FName Key = GetStagingDefeatPersistenceKey();
+	if (Key.IsNone())
+	{
+		return false;
+	}
+
+	const UOblivioGameInstance* GI = Cast<UOblivioGameInstance>(GetGameInstance());
+	if (!GI)
+	{
+		return false;
+	}
+
+	if (GI->IsStagingEnemyDefeated(Key))
+	{
+		return true;
+	}
+
+	const UWorld* World = GetWorld();
+	const FName LevelName = GetLevelNameFromWorld(World);
+	if (LevelName.IsNone())
+	{
+		return false;
+	}
+
+	if (GI->IsStagingEnemyDefeatedForLevel(LevelName))
+	{
+		return true;
+	}
+
+	const FName LevelOnlyKey = FName(*FString::Printf(TEXT("%s|StagingEnemy"), *LevelName.ToString()));
+	return GI->IsStagingEnemyDefeated(LevelOnlyKey);
+}
+
+void AStagingEnemy::TryMarkDefeatPersisted() const
+{
+	if (bPersistDefeatAcrossSessions)
+	{
+		MarkDefeatPersistedForThisActor();
+	}
+}
+
+void AStagingEnemy::MarkDefeatPersistedForThisActor() const
+{
+	const FName Key = GetStagingDefeatPersistenceKey();
+	if (Key.IsNone())
+	{
+		return;
+	}
+
+	if (UOblivioGameInstance* GI = Cast<UOblivioGameInstance>(GetGameInstance()))
+	{
+		GI->MarkStagingEnemyDefeated(Key);
+
+		const UWorld* World = GetWorld();
+		const FName LevelName = GetLevelNameFromWorld(World);
+		if (!LevelName.IsNone())
+		{
+			GI->MarkStagingEnemyDefeatedForLevel(LevelName);
+		}
+
+		GI->SaveSessionPersistence();
+	}
 }
 
 void AStagingEnemy::StagingDebugLog(const FString& Message, FColor ScreenColor, float ScreenDuration) const

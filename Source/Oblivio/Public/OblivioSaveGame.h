@@ -33,7 +33,13 @@ public:
 	UPROPERTY()
 	bool SavedFlashlightOn = false;
 	UPROPERTY()
+	bool SavedFlashlightWorldPickupCollected = false;
+	UPROPERTY()
 	TArray<FName> SavedPlayedOpeningLevelSequences;
+	UPROPERTY()
+	TArray<FName> SavedDefeatedStagingEnemyKeys;
+	UPROPERTY()
+	TArray<FName> SavedDefeatedStagingEnemyLevels;
 	UPROPERTY()
 	TArray<FInventorySlot> SavedInventorySlots;
 	UPROPERTY()

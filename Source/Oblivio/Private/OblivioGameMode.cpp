@@ -2,7 +2,10 @@
 #include "OblivioCharacter.h"
 #include "OblivioCharacterController.h"
 #include "OblivioGameInstance.h"
+#include "AIEnemy/Tank/TankEncounterBarrierActor.h"
+#include "AIEnemy/TankEnemy.h"
 #include "Memento/FloodLevelActor.h"
+#include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
 
 AOblivioGameMode::AOblivioGameMode()
@@ -14,6 +17,31 @@ AOblivioGameMode::AOblivioGameMode()
 void AOblivioGameMode::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	UOblivioGameInstance* const GI = Cast<UOblivioGameInstance>(GetGameInstance());
+	if (!GI || !GI->bResetTankEncounterOnNextLevelLoad)
+	{
+		return;
+	}
+
+	const bool bPendingTankEncounterReset = GI->bResetTankEncounterOnNextLevelLoad;
+	GI->bResetTankEncounterOnNextLevelLoad = false;
+
+	if (!bPendingTankEncounterReset)
+	{
+		return;
+	}
+
+	GetWorldTimerManager().SetTimerForNextTick([this]()
+	{
+		ATankEncounterBarrierActor::ResetAllEncounterBarriersForPlayerRetry(this);
+		ATankEnemy::ResetAllTankBossEncountersForPlayerRetry(this);
+	});
 }
 
 void AOblivioGameMode::NextFloor()
@@ -164,18 +192,59 @@ void AOblivioGameMode::GameOver()
 		Player->SyncFlashlightStateToGameInstance();
 	}
 
-	// Continue(게임 오버 UI) 시 같은 층·손전등·오프닝 LS 재생 기록 유지
+	// Continue(게임 오버 UI) 시 같은 층·손전등·오프닝 LS·연출 에너미 처치 기록 유지
 	const bool bSavedFlashlightAcquired = GI->bFlashlightAcquired;
 	const bool bSavedFlashlightOn = GI->bFlashlightOn;
+	const bool bSavedFlashlightWorldPickupCollected = GI->bFlashlightWorldPickupCollected;
 	const int32 SavedFloor = GI->CurrentFloor;
 	const TArray<FName> SavedPlayedOpeningLS = GI->PlayedOpeningLevelSequenceLevels;
+	const TArray<FName> SavedDefeatedStaging = GI->DefeatedStagingEnemyKeys;
+	const TArray<FName> SavedDefeatedStagingLevels = GI->DefeatedStagingEnemyLevels;
 
 	GI->ResetGameData();
 
 	GI->bFlashlightAcquired = bSavedFlashlightAcquired;
 	GI->bFlashlightOn = bSavedFlashlightOn;
+	GI->bFlashlightWorldPickupCollected = bSavedFlashlightWorldPickupCollected;
 	GI->CurrentFloor = SavedFloor;
 	GI->PlayedOpeningLevelSequenceLevels = SavedPlayedOpeningLS;
+	GI->DefeatedStagingEnemyKeys = SavedDefeatedStaging;
+	GI->DefeatedStagingEnemyLevels = SavedDefeatedStagingLevels;
+
+	GI->SaveSessionPersistence();
+
+	if (UWorld* const World = GetWorld())
+	{
+		bool bHadActiveTankEncounter = false;
+		for (TActorIterator<ATankEncounterBarrierActor> It(World); It; ++It)
+		{
+			if (IsValid(*It) && (It->IsBarrierBlockingPlayers() || It->HasTankEncounterBegun()))
+			{
+				bHadActiveTankEncounter = true;
+				break;
+			}
+		}
+
+		if (!bHadActiveTankEncounter)
+		{
+			for (TActorIterator<ATankEnemy> It(World); It; ++It)
+			{
+				if (IsValid(*It) && It->IsAlive() && It->IsTankStickyAggroLocked())
+				{
+					bHadActiveTankEncounter = true;
+					break;
+				}
+			}
+		}
+
+		if (bHadActiveTankEncounter)
+		{
+			GI->bResetTankEncounterOnNextLevelLoad = true;
+		}
+
+		ATankEncounterBarrierActor::ResetAllEncounterBarriersForPlayerRetry(this);
+		ATankEnemy::ResetAllTankBossEncountersForPlayerRetry(this);
+	}
 
 	UE_LOG(LogTemp, Warning, TEXT("Game Over!"));
 }

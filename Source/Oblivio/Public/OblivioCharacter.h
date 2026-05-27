@@ -364,6 +364,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI|Flashlight Prompt", meta = (ClampMin = "0.1"))
 	float FlashlightTurnOnPromptDuration = 3.f;
 
+	/** 토스트는 HUD·메뉴 뒤에 두기 위해 낮은 ZOrder(일시정지·메인메뉴가 위). */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI|Flashlight Prompt")
+	int32 FlashlightPromptViewportZOrder = 0;
+
 	UPROPERTY(Transient, BlueprintReadOnly, Category = "UI|Flashlight Prompt")
 	TObjectPtr<UOblivioFlashlightPromptWidget> FlashlightPromptWidget;
 
@@ -711,6 +715,8 @@ private:
 	void DismissFlashlightTurnOnPrompt();
 	void BeginFlashlightTurnOnPromptTimer();
 	void RestorePersistedFlashlight();
+	/** 레벨 시작 시 손전등 장착(9층 E/F 튜토리얼·오프닝 시네마틱 없음). */
+	void EquipStartingFlashlight(bool bTurnOn = false);
 	/** 9층(L_Floor9) 오프닝·손전등 튜토리얼 토스트 표시 가능 여부. */
 	bool IsFlashlightPromptFloorActive() const;
 

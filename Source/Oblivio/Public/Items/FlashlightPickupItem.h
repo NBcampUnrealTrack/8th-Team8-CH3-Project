@@ -16,6 +16,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Pickup")
 	void SetPickupInteractable(bool bInteractable, bool bForce = false);
 
+	/** GameInstance에 손전등 획득 기록이 있으면 월드의 픽업 액터를 모두 제거. */
+	UFUNCTION(BlueprintCallable, Category = "Pickup", meta = (WorldContext = "WorldContextObject"))
+	static void DestroyAllInWorldIfFlashlightAlreadyAcquired(const UObject* WorldContextObject);
+
+	void HideAndDestroyWorldPickup();
+
 	UFUNCTION(BlueprintPure, Category = "Pickup")
 	bool IsPickupInteractable() const { return bPickupInteractable; }
 
