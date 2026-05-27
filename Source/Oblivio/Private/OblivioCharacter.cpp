@@ -119,8 +119,6 @@ AOblivioCharacter::AOblivioCharacter()
 	FlashlightComponent->SetupAttachment(RootComponent);
 	FlashlightComponent->SetRelativeLocation(FVector(40.f, 0.f, 40.f));
 
-	bCanAdjustFocus = false;
-
 	FlashbangLight = CreateDefaultSubobject<UPointLightComponent>(TEXT("FlashbangLight"));
 	FlashbangLight->SetupAttachment(RootComponent);
 	FlashbangLight->SetIntensity(0.0f); // 평소에는 꺼둠
@@ -2773,11 +2771,6 @@ void AOblivioCharacter::BeginOpeningLevelSequenceControl()
 	}
 
 	ApplyOpeningLevelSequenceUIVisibility(false);
-
-	if (PlayerHUDWidget)
-	{
-		PlayerHUDWidget->SetVisibility(ESlateVisibility::Collapsed);
-	}
 }
 
 void AOblivioCharacter::EndOpeningLevelSequenceControl()
@@ -2795,11 +2788,6 @@ void AOblivioCharacter::EndOpeningLevelSequenceControl()
 	}
 
 	ApplyOpeningLevelSequenceUIVisibility(true);
-
-	if (PlayerHUDWidget)
-	{
-		PlayerHUDWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
-	}
 }
 
 void AOblivioCharacter::TryPlayOpeningLevelSequence()
