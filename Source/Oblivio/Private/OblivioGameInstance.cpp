@@ -11,11 +11,6 @@ namespace OblivioSessionPersistence
 
 UOblivioGameInstance::UOblivioGameInstance()
 {
-	FLevelOpeningSequenceEntry Floor9Entry;
-	Floor9Entry.LevelName = FName(TEXT("L_Floor9_DoctorsLounge"));
-	Floor9Entry.LevelSequence = TSoftObjectPtr<ULevelSequence>(
-		FSoftObjectPath(TEXT("/Game/LevelSequence/LS_Foor9.LS_Foor9")));
-	LevelOpeningSequenceEntries.Add(Floor9Entry);
 }
 
 ULevelSequence* UOblivioGameInstance::ResolveOpeningLevelSequence(const UWorld* World) const

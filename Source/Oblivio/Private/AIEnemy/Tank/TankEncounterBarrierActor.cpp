@@ -6,6 +6,8 @@
 #include "Components/BoxComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
+#include "Engine/World.h"
+#include "EngineUtils.h"
 #include "GameFramework/Pawn.h"
 #include "Net/UnrealNetwork.h"
 #include "TimerManager.h"
@@ -416,6 +418,38 @@ void ATankEncounterBarrierActor::MarkEncounterBegun_Server()
 	}
 	bTankEncounterBegun = true;
 	RefreshPresentationFromDerivedState();
+}
+
+void ATankEncounterBarrierActor::ResetEncounterBarrier_Server()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+	ResetEncounterBarrierState_Server();
+}
+
+void ATankEncounterBarrierActor::ResetEncounterBarrierState_Server()
+{
+	bTankEncounterBegun = false;
+	RefreshPresentationFromDerivedState();
+}
+
+void ATankEncounterBarrierActor::ResetAllEncounterBarriersForPlayerRetry(UObject* WorldContextObject)
+{
+	UWorld* const World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull);
+	if (!World)
+	{
+		return;
+	}
+
+	for (TActorIterator<ATankEncounterBarrierActor> It(World); It; ++It)
+	{
+		if (IsValid(*It))
+		{
+			It->ResetEncounterBarrier_Server();
+		}
+	}
 }
 
 void ATankEncounterBarrierActor::DestroyBarrierIfAuthorized()

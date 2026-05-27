@@ -771,11 +771,6 @@ void AOblivioCharacter::BeginPlay()
 	const UOblivioGameInstance* PersistGI = Cast<UOblivioGameInstance>(GetGameInstance());
 	const bool bShouldRestoreFlashlight = PersistGI && PersistGI->bFlashlightAcquired;
 
-	if (bEquipFlashlightOnBeginPlay && !bShouldRestoreFlashlight)
-	{
-		GrantFlashlight(true);
-	}
-
 	//섬광탄
 	if (IsValid(FlashbangClass)) {
 		FlashbangWeapon = AttachWeapon(FlashbangClass, FName("RightHandSocket"));
@@ -798,7 +793,11 @@ void AOblivioCharacter::BeginPlay()
 	{
 		RestorePersistedFlashlight();
 	}
-	else if (HasFlashlight())
+	else if (!HasFlashlight())
+	{
+		EquipStartingFlashlight(bEquipFlashlightOnBeginPlay);
+	}
+	else
 	{
 		UpdateFlashlightVisuals();
 	}
@@ -813,7 +812,10 @@ void AOblivioCharacter::BeginPlay()
 		}
 	}
 
-	TryPlayOpeningLevelSequence();
+	if (!IsFlashlightPromptFloorActive())
+	{
+		TryPlayOpeningLevelSequence();
+	}
 	UpdateFlashlightPromptUI();
 
 	AFlashlightPickupItem::DestroyAllInWorldIfFlashlightAlreadyAcquired(this);
@@ -1442,6 +1444,48 @@ void AOblivioCharacter::RestorePersistedFlashlight()
 	}
 
 	SyncFlashlightStateToGameInstance();
+	UpdateFlashlightPromptUI();
+}
+
+void AOblivioCharacter::EquipStartingFlashlight(bool bTurnOn)
+{
+	if (HasFlashlight() || !IsValid(FlashlightClass))
+	{
+		return;
+	}
+
+	if (!IsValid(FlashlightWeapon))
+	{
+		FlashlightWeapon = AttachWeapon(FlashlightClass, FName("LeftHandSocket"));
+	}
+
+	if (!IsValid(FlashlightWeapon))
+	{
+		return;
+	}
+
+	bFlashlightAcquired = true;
+	bFlashlightWorldPickupEnabled = false;
+	bFlashlightTurnOnPromptActive = false;
+	if (GetWorld())
+	{
+		GetWorldTimerManager().ClearTimer(FlashlightTurnOnPromptTimer);
+	}
+
+	SetFlashlightWeaponVisible(true);
+	bIsFlashlightOn = bTurnOn && Battery > 0.f;
+	if (bIsFlashlightOn)
+	{
+		FlashlightWeapon->UseWeapon();
+	}
+	else
+	{
+		FlashlightWeapon->StopWeapon();
+	}
+
+	SyncFlashlightStateToGameInstance();
+	AFlashlightPickupItem::DestroyAllInWorldIfFlashlightAlreadyAcquired(this);
+	AStagingEnemy::ActivateAllAfterFlashlightPickup(this, this);
 	UpdateFlashlightPromptUI();
 }
 
@@ -2768,7 +2812,10 @@ void AOblivioCharacter::TryPlayOpeningLevelSequence()
 	ULevelSequence* Sequence = GI->ResolveOpeningLevelSequence(World);
 	if (!Sequence)
 	{
-		EnableFlashlightWorldPickups();
+		if (!HasFlashlight() && !IsFlashlightAcquired())
+		{
+			EnableFlashlightWorldPickups();
+		}
 		return;
 	}
 
@@ -2776,7 +2823,10 @@ void AOblivioCharacter::TryPlayOpeningLevelSequence()
 	{
 		UE_LOG(LogTemp, Log, TEXT("TryPlayOpeningLevelSequence: skipped — already played on %s"),
 			*UGameplayStatics::GetCurrentLevelName(World, true));
-		EnableFlashlightWorldPickups();
+		if (!HasFlashlight() && !IsFlashlightAcquired())
+		{
+			EnableFlashlightWorldPickups();
+		}
 		return;
 	}
 
