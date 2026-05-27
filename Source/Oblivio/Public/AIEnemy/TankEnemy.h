@@ -52,6 +52,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Enemy|Tank|Heartbeat")
 	void PulseTankHeartDamageFlash();
 
+	UFUNCTION(BlueprintPure, Category = "Enemy|Tank|Encounter")
+	bool IsTankStickyAggroLocked() const { return bTankStickyAggroUntilDeath; }
+
+	/** 서버 — 플레이어 사망·층 재시작 시 보스 어그로·추격 잠금 해제. */
+	UFUNCTION(BlueprintCallable, Category = "Enemy|Tank|Encounter")
+	void ResetBossEncounterForPlayerRetry_Server();
+
+	/** 월드 내 모든 TankEnemy 에 ResetBossEncounterForPlayerRetry_Server 적용. */
+	UFUNCTION(BlueprintCallable, Category = "Enemy|Tank|Encounter", meta = (WorldContext = "WorldContextObject"))
+	static void ResetAllTankBossEncountersForPlayerRetry(UObject* WorldContextObject);
+
 	virtual void Die() override;
 
 	/** 기본 AggroRadius 진입 시부터 sticky 추격 거리 무시. 조우 판에는 시야(LOS) 포함. 심작 AoE 거리만으로 추격 시작하지 않음. */

@@ -140,6 +140,12 @@ void AStagingEnemy::BeginPlay()
 			{
 				if (AOblivioCharacter* Player = Cast<AOblivioCharacter>(UGameplayStatics::GetPlayerPawn(this, 0)))
 				{
+					if (Player->IsFlashlightAcquired() || Player->HasFlashlight())
+					{
+						ActivatePostFlashlightPickupCombat(Player);
+						return;
+					}
+
 					StartOpeningCinematic(Player);
 				}
 			},

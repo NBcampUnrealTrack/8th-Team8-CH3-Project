@@ -3,6 +3,7 @@
 #include "Combat/TankHeartbeatDamageType.h"
 #include "Combat/TankJumpAttackDamageType.h"
 
+#include "AIController.h"
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimSequence.h"
 #include "Components/CapsuleComponent.h"
@@ -12,6 +13,7 @@
 #include "Engine/CollisionProfile.h"
 #include "Engine/OverlapResult.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Pawn.h"
@@ -562,6 +564,38 @@ void ATankEnemy::FinishHeartbeatAttackFromAnimNotify()
 bool ATankEnemy::IsTankHeartbeatChannelingForAnim() const
 {
 	return bUseHeartbeatAoEAttack && bHeartbeatChanneling && IsAlive();
+}
+
+void ATankEnemy::ResetBossEncounterForPlayerRetry_Server()
+{
+	if (!HasAuthority() || !IsAlive())
+	{
+		return;
+	}
+
+	bTankStickyAggroUntilDeath = false;
+	HideBossHUD();
+
+	StopEnemyMovement();
+	SetTargetActor(nullptr);
+	SetEnemyState(EEnemyAIState::Idle, true);
+}
+
+void ATankEnemy::ResetAllTankBossEncountersForPlayerRetry(UObject* WorldContextObject)
+{
+	UWorld* const World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull);
+	if (!World)
+	{
+		return;
+	}
+
+	for (TActorIterator<ATankEnemy> It(World); It; ++It)
+	{
+		if (IsValid(*It))
+		{
+			It->ResetBossEncounterForPlayerRetry_Server();
+		}
+	}
 }
 
 void ATankEnemy::Die()

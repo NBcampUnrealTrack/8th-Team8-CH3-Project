@@ -715,6 +715,8 @@ private:
 	void DismissFlashlightTurnOnPrompt();
 	void BeginFlashlightTurnOnPromptTimer();
 	void RestorePersistedFlashlight();
+	/** 레벨 시작 시 손전등 장착(9층 E/F 튜토리얼·오프닝 시네마틱 없음). */
+	void EquipStartingFlashlight(bool bTurnOn = false);
 	/** 9층(L_Floor9) 오프닝·손전등 튜토리얼 토스트 표시 가능 여부. */
 	bool IsFlashlightPromptFloorActive() const;
 

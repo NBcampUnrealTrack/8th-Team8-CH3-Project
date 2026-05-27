@@ -172,6 +172,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Progress|Tank")
 	bool HasPlayerMetTankOnce() const { return bPlayerMetTankOnce; }
 
+	/**
+	 * 플레이어 사망 직후 설정 — Continue 로 같은 층을 다시 열 때 탱커 어그로·조우 울타리가
+	 * 즉시 재활성화되지 않도록 GameMode BeginPlay 에서 1회 초기화한다.
+	 */
+	UPROPERTY(Transient, BlueprintReadWrite, Category = "Progress|Tank")
+	bool bResetTankEncounterOnNextLevelLoad = false;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Settings")
 	FString CurrentLanguage = TEXT("en"); // 기본값 설정
 
