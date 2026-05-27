@@ -164,18 +164,26 @@ void AOblivioGameMode::GameOver()
 		Player->SyncFlashlightStateToGameInstance();
 	}
 
-	// Continue(게임 오버 UI) 시 같은 층·손전등·오프닝 LS 재생 기록 유지
+	// Continue(게임 오버 UI) 시 같은 층·손전등·오프닝 LS·연출 에너미 처치 기록 유지
 	const bool bSavedFlashlightAcquired = GI->bFlashlightAcquired;
 	const bool bSavedFlashlightOn = GI->bFlashlightOn;
+	const bool bSavedFlashlightWorldPickupCollected = GI->bFlashlightWorldPickupCollected;
 	const int32 SavedFloor = GI->CurrentFloor;
 	const TArray<FName> SavedPlayedOpeningLS = GI->PlayedOpeningLevelSequenceLevels;
+	const TArray<FName> SavedDefeatedStaging = GI->DefeatedStagingEnemyKeys;
+	const TArray<FName> SavedDefeatedStagingLevels = GI->DefeatedStagingEnemyLevels;
 
 	GI->ResetGameData();
 
 	GI->bFlashlightAcquired = bSavedFlashlightAcquired;
 	GI->bFlashlightOn = bSavedFlashlightOn;
+	GI->bFlashlightWorldPickupCollected = bSavedFlashlightWorldPickupCollected;
 	GI->CurrentFloor = SavedFloor;
 	GI->PlayedOpeningLevelSequenceLevels = SavedPlayedOpeningLS;
+	GI->DefeatedStagingEnemyKeys = SavedDefeatedStaging;
+	GI->DefeatedStagingEnemyLevels = SavedDefeatedStagingLevels;
+
+	GI->SaveSessionPersistence();
 
 	UE_LOG(LogTemp, Warning, TEXT("Game Over!"));
 }

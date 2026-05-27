@@ -17,6 +17,10 @@ class OBLIVIO_API UOblivioGameInstance : public UGameInstance
 public:
 	UOblivioGameInstance();
 
+	/** 메인 메뉴 이동 시 BP에서 ResetGameData 대신 호출 — 연출 에너미 처치·손전등·오프닝 LS 기록 유지. */
+	UFUNCTION(BlueprintCallable, Category = "SaveSystem")
+	void PreserveSessionStateForMainMenuReturn();
+
 	//게임 재시작 시 데이터 초기화용
 	void ResetGameData()
 	{
@@ -31,7 +35,10 @@ public:
 		bMementoEyeCollected = false;
 		bFlashlightAcquired = false;
 		bFlashlightOn = false;
+		bFlashlightWorldPickupCollected = false;
 		PlayedOpeningLevelSequenceLevels.Empty();
+		DefeatedStagingEnemyKeys.Empty();
+		DefeatedStagingEnemyLevels.Empty();
 		UnlockedMonsters.Empty();
 	}
 
@@ -65,6 +72,10 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "PlayerStatus|Flashlight")
 	bool bFlashlightOn = false;
 
+	/** 9층 책상 등 월드 손전등 픽업(E)을 이미 획득했으면 true — 픽업 액터·VFX 재표시 방지. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "PlayerStatus|Flashlight")
+	bool bFlashlightWorldPickupCollected = false;
+
 	//몬스터 도감
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Persistence|Bestiary")
 	TArray<FName> UnlockedMonsters;
@@ -94,6 +105,35 @@ public:
 	/** 이미 재생 완료한 맵의 오프닝 LS (세이브 연동). */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Cinematic")
 	TArray<FName> PlayedOpeningLevelSequenceLevels;
+
+	/** 처치한 연출(Staging) 에너미 키 — 맵 재입장·메인메뉴 복귀 시 재스폰 방지. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Progress|Staging")
+	TArray<FName> DefeatedStagingEnemyKeys;
+
+	/** 처치 완료된 맵 — 액터 이름과 무관하게 해당 맵의 연출 에너미 전부 제거. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Progress|Staging")
+	TArray<FName> DefeatedStagingEnemyLevels;
+
+	UFUNCTION(BlueprintPure, Category = "Progress|Staging")
+	bool IsStagingEnemyDefeated(FName PersistenceKey) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Progress|Staging")
+	void MarkStagingEnemyDefeated(FName PersistenceKey);
+
+	UFUNCTION(BlueprintPure, Category = "Progress|Staging")
+	bool IsStagingEnemyDefeatedForLevel(FName LevelName) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Progress|Staging")
+	void MarkStagingEnemyDefeatedForLevel(FName LevelName);
+
+	UFUNCTION(BlueprintCallable, Category = "SaveSystem")
+	void SaveSessionPersistence();
+
+	UFUNCTION(BlueprintCallable, Category = "SaveSystem")
+	void LoadSessionPersistence();
+
+	UFUNCTION(BlueprintCallable, Category = "SaveSystem")
+	void ClearSessionPersistence();
 
 	/** 현재 월드 맵 이름에 맞는 Level Sequence. 없거나 비어 있으면 nullptr. */
 	ULevelSequence* ResolveOpeningLevelSequence(const UWorld* World) const;
