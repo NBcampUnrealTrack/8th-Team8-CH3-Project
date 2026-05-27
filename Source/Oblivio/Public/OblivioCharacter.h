@@ -364,6 +364,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI|Flashlight Prompt", meta = (ClampMin = "0.1"))
 	float FlashlightTurnOnPromptDuration = 3.f;
 
+	/** 토스트는 HUD·메뉴 뒤에 두기 위해 낮은 ZOrder(일시정지·메인메뉴가 위). */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI|Flashlight Prompt")
+	int32 FlashlightPromptViewportZOrder = 0;
+
 	UPROPERTY(Transient, BlueprintReadOnly, Category = "UI|Flashlight Prompt")
 	TObjectPtr<UOblivioFlashlightPromptWidget> FlashlightPromptWidget;
 

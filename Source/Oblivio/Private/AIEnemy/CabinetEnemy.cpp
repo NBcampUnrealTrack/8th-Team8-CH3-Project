@@ -83,6 +83,7 @@ namespace
 ACabinetEnemy::ACabinetEnemy()
 {
 	bAutoStartOpeningCinematic = false;
+	bPersistDefeatAcrossSessions = false;
 	PrimaryActorTick.bCanEverTick = true;
 	bEnableLightTracking = false;
 
