@@ -2,7 +2,10 @@
 #include "OblivioCharacter.h"
 #include "OblivioCharacterController.h"
 #include "OblivioGameInstance.h"
+#include "AIEnemy/Tank/TankEncounterBarrierActor.h"
+#include "AIEnemy/TankEnemy.h"
 #include "Memento/FloodLevelActor.h"
+#include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
 
 AOblivioGameMode::AOblivioGameMode()
@@ -14,6 +17,31 @@ AOblivioGameMode::AOblivioGameMode()
 void AOblivioGameMode::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	UOblivioGameInstance* const GI = Cast<UOblivioGameInstance>(GetGameInstance());
+	if (!GI || !GI->bResetTankEncounterOnNextLevelLoad)
+	{
+		return;
+	}
+
+	const bool bPendingTankEncounterReset = GI->bResetTankEncounterOnNextLevelLoad;
+	GI->bResetTankEncounterOnNextLevelLoad = false;
+
+	if (!bPendingTankEncounterReset)
+	{
+		return;
+	}
+
+	GetWorldTimerManager().SetTimerForNextTick([this]()
+	{
+		ATankEncounterBarrierActor::ResetAllEncounterBarriersForPlayerRetry(this);
+		ATankEnemy::ResetAllTankBossEncountersForPlayerRetry(this);
+	});
 }
 
 void AOblivioGameMode::NextFloor()
@@ -184,6 +212,39 @@ void AOblivioGameMode::GameOver()
 	GI->DefeatedStagingEnemyLevels = SavedDefeatedStagingLevels;
 
 	GI->SaveSessionPersistence();
+
+	if (UWorld* const World = GetWorld())
+	{
+		bool bHadActiveTankEncounter = false;
+		for (TActorIterator<ATankEncounterBarrierActor> It(World); It; ++It)
+		{
+			if (IsValid(*It) && (It->IsBarrierBlockingPlayers() || It->HasTankEncounterBegun()))
+			{
+				bHadActiveTankEncounter = true;
+				break;
+			}
+		}
+
+		if (!bHadActiveTankEncounter)
+		{
+			for (TActorIterator<ATankEnemy> It(World); It; ++It)
+			{
+				if (IsValid(*It) && It->IsAlive() && It->IsTankStickyAggroLocked())
+				{
+					bHadActiveTankEncounter = true;
+					break;
+				}
+			}
+		}
+
+		if (bHadActiveTankEncounter)
+		{
+			GI->bResetTankEncounterOnNextLevelLoad = true;
+		}
+
+		ATankEncounterBarrierActor::ResetAllEncounterBarriersForPlayerRetry(this);
+		ATankEnemy::ResetAllTankBossEncountersForPlayerRetry(this);
+	}
 
 	UE_LOG(LogTemp, Warning, TEXT("Game Over!"));
 }

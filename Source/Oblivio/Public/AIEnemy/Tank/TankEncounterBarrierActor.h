@@ -52,6 +52,17 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Tank|EncounterBarrier")
 	bool IsBarrierBlockingPlayers() const;
 
+	UFUNCTION(BlueprintPure, Category = "Tank|EncounterBarrier")
+	bool HasTankEncounterBegun() const { return bTankEncounterBegun; }
+
+	/** 서버 — 조우 플래그·차단 콜리전 초기화(플레이어 사망·층 재시작). */
+	UFUNCTION(BlueprintCallable, Category = "Tank|EncounterBarrier")
+	void ResetEncounterBarrier_Server();
+
+	/** 월드 내 모든 TankEncounterBarrier 초기화(게임 오버·재시작). */
+	UFUNCTION(BlueprintCallable, Category = "Tank|EncounterBarrier", meta = (WorldContext = "WorldContextObject"))
+	static void ResetAllEncounterBarriersForPlayerRetry(UObject* WorldContextObject);
+
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tank|EncounterBarrier")
 	TObjectPtr<UBoxComponent> BlockingVolume;
@@ -146,6 +157,7 @@ private:
 	void RefreshPresentationFromDerivedState();
 
 	void MarkEncounterBegun_Server();
+	void ResetEncounterBarrierState_Server();
 	void DestroyBarrierIfAuthorized();
 
 	void ApplyEncounterBarrierSizing();
