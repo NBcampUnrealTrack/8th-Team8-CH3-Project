@@ -1815,9 +1815,9 @@ void AOblivioCharacter::ReloadBattery()
 	{
 		// 배터리 아이템이 없을 때의 경고 메시지
 		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("No Battery in Inventory!"));
-	}
 	
-	OnShowNoBatteryNotice();
+		OnShowNoBatteryNotice();
+	}
 }
 
 //무기 장착 함수
