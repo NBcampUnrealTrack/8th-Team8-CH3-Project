@@ -3,8 +3,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: Game\n"
-"POT-Creation-Date: 2026-05-26 08:40\n"
-"PO-Revision-Date: 2026-05-26 17:42+0900\n"
+"POT-Creation-Date: 2026-05-27 15:12\n"
+"PO-Revision-Date: 2026-05-28 00:15+0900\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: ko\n"
@@ -203,7 +203,7 @@ msgstr "메스"
 #: /Game/Blueprints/InteractingProps/6F/BP_FlashlightEnabler.Default__BP_FlashlightEnabler_C.ItemDescription
 msgctxt ",BD61591A4AE251AA5D6D6597CAF679A5"
 msgid "Tactical Flashlight Modification Guide. By adjusting the front focal lens, you can concentrate the beam into a narrow, high-intensity spot. This consumes battery power significantly faster, but the concentrated light can temporarily blind light-sensitive anomalies"
-msgstr ""
+msgstr "전술 손전등 개조 가이드. 전면 초점 렌즈를 조절하면 빔을 좁고 높은 강도의 지점에 집중시킬 수 있습니다. 이로 인해 배터리 소모가 훨씬 빨라지지만, 집중된 빛이 일시적으로 빛에 민감한 이상 현상을 가릴 수 있습니다"
 
 #. Key:	B7C0D9244AAAB45B9BA33C896315954E
 #. SourceLocation:	/Game/Blueprints/InteractingProps/6F/BP_FlashlightEnabler.Default__BP_FlashlightEnabler_C.ItemName
@@ -217,7 +217,7 @@ msgstr "일기"
 #: /Game/Blueprints/InteractingProps/6F/BP_Scalpel.Default__BP_Scalpel_C.ItemDescription
 msgctxt ",D038865049765BEDC4B519AD774CF20E"
 msgid "It feeds on the light. The brighter your beam, the faster it finds you. I tried to defend myself with this scalpel, but physical weapons are useless against the void. If you hear the clicking sound from the ceiling... turn off your flashlight immediately. Let the darkness take you, or IT will"
-msgstr ""
+msgstr "빛을 먹고 살아. 빔이 밝을수록 더 빨리 찾아옵니다. 이 메스로 방어하려 했지만, 물리적 무기는 공허 앞에서는 소용없어. 천장에서 딸깍거리는 소리가 들리면... 손전등을 즉시 꺼. 어둠에 데려가게 두든가, 아니면 그것이 그럴 것이다"
 
 #. Key:	0E04235747F0FF6FA5AE8D8F574533AE
 #. SourceLocation:	/Game/Blueprints/InteractingProps/6F/BP_Scalpel.Default__BP_Scalpel_C.ItemName
@@ -401,7 +401,7 @@ msgstr "장애물 제작에 사용됨"
 #: /Game/Blueprints/Items/BP_Iron.Default__BP_Iron_C.ItemName
 msgctxt ",304204164BFA4397BD7A459BFE163090"
 msgid "Iron"
-msgstr "아이론"
+msgstr "철"
 
 #. Key:	2B2BEBD04E9C01DA4DBAA1971AABED46
 #. SourceLocation:	/Game/Blueprints/Items/BP_Key.Default__BP_Key_C.ItemDescription
@@ -799,8 +799,8 @@ msgstr "환자 기록"
 #. SourceLocation:	/Game/Blueprints/UI/WBP_Load.WBP_Load_C:WidgetTree.Txt_Save.Text
 #: /Game/Blueprints/UI/WBP_Load.WBP_Load_C:WidgetTree.Txt_Save.Text
 msgctxt ",98EE1F8248717A69359716B8EFE87DD7"
-msgid "SAVE"
-msgstr "저장"
+msgid "LOAD"
+msgstr "불러오기"
 
 #. Key:	9F25CD0542154D0319F8B9AB6726F584
 #. SourceLocation:	/Game/Blueprints/UI/WBP_Load.WBP_Load_C:WidgetTree.Txt_Savingdata.Text
@@ -1128,8 +1128,8 @@ msgstr "설정"
 #. SourceLocation:	/Game/Blueprints/UI/WBP_Memento.WBP_Memento_C:WidgetTree.TextBlock_0.Text
 #: /Game/Blueprints/UI/WBP_Memento.WBP_Memento_C:WidgetTree.TextBlock_0.Text
 msgctxt ",5BFB101943168B2F42E274828C6F18FC"
-msgid "오래된 연구일지"
-msgstr "오래된 연구 일지"
+msgid "Memento"
+msgstr "메멘토"
 
 #. Key:	E8C8FFF6434BF06049B5649B8FBFE1B8
 #. SourceLocation:	/Game/Blueprints/UI/WBP_PauseMenu.WBP_PauseMenu_C:WidgetTree.Txt_Exit.Text
@@ -1361,7 +1361,7 @@ msgstr "빛을 먹는 자"
 #: /Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:WidgetTree.Txt_BottleCount.Text
 msgctxt ",E5B6F4B84906C51D01E6F0956A93EA36"
 msgid "0"
-msgstr ""
+msgstr "x0"
 
 #. Key:	BA95EF2743AFF1EDEE4AD197EAF63F28
 #. SourceLocation:	/Game/Blueprints/UI/WBP_PlayerHUD.WBP_PlayerHUD_C:WidgetTree.Txt_CurrentFloor.Text
@@ -1446,6 +1446,34 @@ msgstr "번역"
 msgctxt ",F1ADA87C43931A4CFC31CA96347399ED"
 msgid "Mouse Sensitivity"
 msgstr "마우스 민감도"
+
+#. Key:	A8789499448A3083EAFBA99360245B0D
+#. SourceLocation:	/Game/Blueprints/UI/WBP_WarningScreen.WBP_WarningScreen_C:WidgetTree.TextBlock_0.Text
+#: /Game/Blueprints/UI/WBP_WarningScreen.WBP_WarningScreen_C:WidgetTree.TextBlock_0.Text
+msgctxt ",A8789499448A3083EAFBA99360245B0D"
+msgid "WARNING"
+msgstr "경고"
+
+#. Key:	2784F9E543E826463D6ECBA8827CE9C9
+#. SourceLocation:	/Game/Blueprints/UI/WBP_WarningScreen.WBP_WarningScreen_C:WidgetTree.TextBlock_1.Text
+#: /Game/Blueprints/UI/WBP_WarningScreen.WBP_WarningScreen_C:WidgetTree.TextBlock_1.Text
+msgctxt ",2784F9E543E826463D6ECBA8827CE9C9"
+msgid ""
+"THIS FILE CONTAINS GRAPHIC VIOLENCE, DISTURBING IMAGES,\r\n"
+"\r\n"
+"JUMP SCARES, AND CONTENT THAT MAY TRIGGER \r\n"
+"\r\n"
+"PHOTOSENSITIVE REACTIONS.\r\n"
+"\r\n"
+"VIEWER DISCRETION IS ADVISED."
+msgstr ""
+"이 파일에는 충격적인 폭력, 불쾌한 이미지가 포함되어 있습니다.\r\n"
+"\r\n"
+"점프 스케어가 될 수 있는 콘텐츠 \r\n"
+"\r\n"
+"광민반응.\r\n"
+"\r\n"
+"시청자 재량을 권합니다."
 
 #. Key:	D82E28A043CABD0B02B18AA9DA3A8B8B
 #. SourceLocation:	/Game/Blueprints/Weapon/BP_BottleItem.Default__BP_BottleItem_C.ItemDescription
