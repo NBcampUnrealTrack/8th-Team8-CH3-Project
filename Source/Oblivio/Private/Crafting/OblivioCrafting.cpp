@@ -7,6 +7,7 @@
 #include "OblivioCharacter.h"
 #include "Items/OblivioInventoryComponent.h"
 #include "Items/OblivioItemBase.h"
+#include "Crafting/CraftingFire.h"
 
 UOblivioCrafting::UOblivioCrafting()
 {
@@ -184,10 +185,19 @@ void UOblivioCrafting::PlaceObstacle()
             // 인벤토리에서 자원 차감
             if (Player && Player->InventoryComponent && !Player->bCheatFreeCraft)
             {
+                if (PreviewActor->IsA(ACraftingFire::StaticClass()))
+                {
+                    // 배터리 5% 차감 (0보다 작아지지 않게 Clamp 처리)
+                    Player->Battery = FMath::Clamp(Player->Battery - 5.0f, 0.0f, 100.0f);
+
+                    // UI 갱신을 위해 델리게이트 호출
+                    Player->OnBatteryChanged.Broadcast(Player->Battery, 100.0f);
+
+                    if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Orange, TEXT("배터리 5% 소모됨!"));
+                }
+
                 Player->InventoryComponent->ConsumeItem(EItemType::Wood, PreviewActor->GetWoodCost());
                 Player->InventoryComponent->ConsumeItem(EItemType::Iron, PreviewActor->GetIronCost());
-
-                if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Orange, TEXT("Resources Consumed!"));
             }
 
             // 아이템 설치 확정
